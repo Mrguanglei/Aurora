@@ -7,7 +7,11 @@ __pycache__/
 
 # C extensions
 *.so
-
+.cursor/
+.vscode/
+.history/
+.env.local
+.env
 # Distribution / packaging
 .Python
 build/
