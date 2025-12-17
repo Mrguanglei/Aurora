@@ -324,10 +324,20 @@ class Configuration:
     REDIS_DRAMATIQ_MAX_CONNECTIONS: Optional[int] = 5  # Max connections for Dramatiq broker per process (default 5)
     REDIS_SSL: Optional[bool] = True
     
-    # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
-    DAYTONA_API_KEY: Optional[str] = None
-    DAYTONA_SERVER_URL: Optional[str] = None
-    DAYTONA_TARGET: Optional[str] = None
+    # Docker sandbox configuration (on-demand container management)
+    # Replaces Daytona with native Docker support
+    DOCKER_SOCKET_PATH: Optional[str] = None  # Usually /var/run/docker.sock
+    DOCKER_HOST: Optional[str] = None  # e.g., unix:///var/run/docker.sock or tcp://localhost:2375
+    DOCKER_NETWORK: Optional[str] = "bridge"  # Docker network mode
+    
+    # Sandbox image configuration
+    SANDBOX_IMAGE_NAME = "kortix/aurora:0.1.3.25"
+    SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+    
+    # Sandbox container limits
+    SANDBOX_CPU_LIMIT: Optional[float] = None  # CPU cores limit
+    SANDBOX_MEMORY_LIMIT: Optional[str] = None  # Memory limit (e.g., "2g")
+    SANDBOX_DISK_LIMIT: Optional[str] = None  # Disk limit (e.g., "10g")
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None
@@ -361,11 +371,6 @@ class Configuration:
     # Stripe Product IDs
     STRIPE_PRODUCT_ID_PROD: Optional[str] = 'prod_SCl7AQ2C8kK1CD'
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
-    
-    # Sandbox configuration
-    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.26"
-    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.26"
-    SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
     
     # Debug configuration
     # Set to True to save LLM API call inputs and stream outputs to debug_streams/ directory

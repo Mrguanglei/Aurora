@@ -3,11 +3,10 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from daytona_sdk import AsyncSandbox
 from core.utils.logger import logger
 
 
-async def generate_unique_filename(sandbox: AsyncSandbox, base_path: str, original_filename: str) -> str:
+async def generate_unique_filename(sandbox, base_path: str, original_filename: str) -> str:
     """
     Generate a unique filename by appending a timestamp if the file already exists.
     

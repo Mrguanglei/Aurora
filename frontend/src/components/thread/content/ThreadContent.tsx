@@ -13,7 +13,7 @@ import {
     safeJsonParse,
     HIDE_STREAMING_XML_TAGS,
 } from '@/components/thread/utils';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { AgentLoader } from './loader';
 import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
@@ -100,7 +100,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
     project,
     isPreviewMode = false,
     agentName = 'Kortix',
-    agentAvatar = <KortixLogo size={14} />,
+    agentAvatar = <AuroraLogo size={14} />,
     emptyStateComponent,
     threadMetadata,
     scrollContainerRef,
@@ -159,7 +159,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                 name: recentAssistantWithAgent.agents.name,
                 avatar: (
                     <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                        <KortixLogo size={14} />
+                        <AuroraLogo size={14} />
                     </div>
                 )
             };

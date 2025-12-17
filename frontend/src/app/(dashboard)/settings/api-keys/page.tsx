@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Key, Plus, Trash2, Copy, Shield, ExternalLink } from 'lucide-react';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -55,7 +55,7 @@ interface NewAPIKeyData {
   title: string;
   description: string;
   expiresInDays: string;
-}
+<AuroraLogo
 
 export default function APIKeysPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -63,7 +63,7 @@ export default function APIKeysPage() {
     title: '',
     description: '',
     expiresInDays: 'never',
-  });
+  <AuroraLogo
   const [createdApiKey, setCreatedApiKey] =
     useState<APIKeyCreateResponse | null>(null);
   const [showCreatedKey, setShowCreatedKey] = useState(false);
@@ -78,7 +78,7 @@ export default function APIKeysPage() {
   } = useQuery({
     queryKey: ['api-keys'],
     queryFn: () => apiKeysApi.list(),
-  });
+  <AuroraLogo
 
   const apiKeys = apiKeysResponse?.data || [];
 
@@ -96,13 +96,13 @@ export default function APIKeysPage() {
         setNewKeyData({ title: '', description: '', expiresInDays: 'never' });
       } else {
         toast.error(response.error?.message || 'Failed to create API key');
-      }
-    },
+      <AuroraLogo
+    <AuroraLogo
     onError: (error) => {
       toast.error('Failed to create API key');
       console.error('Error creating API key:', error);
-    },
-  });
+    <AuroraLogo
+  <AuroraLogo
 
   // Revoke API key mutation
   const revokeMutation = useMutation({
@@ -110,12 +110,12 @@ export default function APIKeysPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       toast.success('API key revoked successfully');
-    },
+    <AuroraLogo
     onError: (error) => {
       toast.error('Failed to revoke API key');
       console.error('Error revoking API key:', error);
-    },
-  });
+    <AuroraLogo
+  <AuroraLogo
 
   // Delete API key mutation
   const deleteMutation = useMutation({
@@ -123,12 +123,12 @@ export default function APIKeysPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       toast.success('API key deleted successfully');
-    },
+    <AuroraLogo
     onError: (error) => {
       toast.error('Failed to delete API key');
       console.error('Error deleting API key:', error);
-    },
-  });
+    <AuroraLogo
+  <AuroraLogo
 
   const handleCreateAPIKey = () => {
     const request: APIKeyCreateRequest = {
@@ -138,10 +138,10 @@ export default function APIKeysPage() {
         newKeyData.expiresInDays && newKeyData.expiresInDays !== 'never'
           ? parseInt(newKeyData.expiresInDays)
           : undefined,
-    };
+    <AuroraLogo
 
     createMutation.mutate(request);
-  };
+  <AuroraLogo
 
   const handleCopyKey = async (key: string, keyType: string = 'key') => {
     try {
@@ -149,8 +149,8 @@ export default function APIKeysPage() {
       toast.success(`${keyType} copied to clipboard`);
     } catch (error) {
       toast.error(`Failed to copy ${keyType}`);
-    }
-  };
+    <AuroraLogo
+  <AuroraLogo
 
   const handleCopyFullKey = async (publicKey: string, secretKey: string) => {
     try {
@@ -159,8 +159,8 @@ export default function APIKeysPage() {
       toast.success('Full API key copied to clipboard');
     } catch (error) {
       toast.error('Failed to copy full API key');
-    }
-  };
+    <AuroraLogo
+  <AuroraLogo
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -169,8 +169,8 @@ export default function APIKeysPage() {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
-  };
+    <AuroraLogo
+  <AuroraLogo
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -179,28 +179,28 @@ export default function APIKeysPage() {
           <Badge className="bg-green-100 text-green-800 border-green-200">
             Active
           </Badge>
-        );
+        <AuroraLogo
       case 'revoked':
         return (
           <Badge className="bg-red-100 text-red-800 border-red-200">
             Revoked
           </Badge>
-        );
+        <AuroraLogo
       case 'expired':
         return (
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
             Expired
           </Badge>
-        );
+        <AuroraLogo
       default:
         return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+    <AuroraLogo
+  <AuroraLogo
 
   const isKeyExpired = (expiresAt?: string) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
-  };
+  <AuroraLogo
 
 
   return (
@@ -220,7 +220,7 @@ export default function APIKeysPage() {
           <CardContent className="">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-600/10 border border-blue-500/20">
-                <KortixLogo size={22} variant="symbol" className="[filter:invert(37%)_sepia(93%)_saturate(1352%)_hue-rotate(207deg)_brightness(97%)_contrast(95%)] dark:[filter:invert(68%)_sepia(44%)_saturate(913%)_hue-rotate(186deg)_brightness(101%)_contrast(96%)]" />
+                <AuroraLogo size={22} variant="symbol" className="[filter:invert(37%)_sepia(93%)_saturate(1352%)_hue-rotate(207deg)_brightness(97%)_contrast(95%)] dark:[filter:invert(68%)_sepia(44%)_saturate(913%)_hue-rotate(186deg)_brightness(101%)_contrast(96%)]" />
               </div>
               <div className="flex-1 space-y-3">
                 <div>
@@ -241,7 +241,7 @@ export default function APIKeysPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                  >
+                  <AuroraLogo
                     <span>View API Documentation</span>
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -263,7 +263,7 @@ export default function APIKeysPage() {
           <Dialog
             open={isCreateDialogOpen}
             onOpenChange={setIsCreateDialogOpen}
-          >
+          <AuroraLogo
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -291,9 +291,9 @@ export default function APIKeysPage() {
                       setNewKeyData((prev) => ({
                         ...prev,
                         title: e.target.value,
-                      }))
-                    }
-                  />
+                      <AuroraLogo
+                    <AuroraLogo
+                  <AuroraLogo
                 </div>
 
                 <div>
@@ -308,9 +308,9 @@ export default function APIKeysPage() {
                       setNewKeyData((prev) => ({
                         ...prev,
                         description: e.target.value,
-                      }))
-                    }
-                  />
+                      <AuroraLogo
+                    <AuroraLogo
+                  <AuroraLogo
                 </div>
 
                 <div>
@@ -323,9 +323,9 @@ export default function APIKeysPage() {
                       setNewKeyData((prev) => ({
                         ...prev,
                         expiresInDays: value,
-                      }))
-                    }
-                  >
+                      <AuroraLogo
+                    <AuroraLogo
+                  <AuroraLogo
                     <SelectTrigger>
                       <SelectValue placeholder="Never expires" />
                     </SelectTrigger>
@@ -344,15 +344,15 @@ export default function APIKeysPage() {
                 <Button
                   variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
-                >
+                <AuroraLogo
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreateAPIKey}
                   disabled={
                     !newKeyData.title.trim() || createMutation.isPending
-                  }
-                >
+                  <AuroraLogo
+                <AuroraLogo
                   {createMutation.isPending ? 'Creating...' : 'Create API Key'}
                 </Button>
               </div>
@@ -373,7 +373,7 @@ export default function APIKeysPage() {
                   <div className="h-3 bg-muted rounded w-3/4"></div>
                 </CardContent>
               </Card>
-            ))}
+            <AuroraLogo
           </div>
         ) : error ? (
           <Card>
@@ -406,8 +406,8 @@ export default function APIKeysPage() {
                 key={apiKey.key_id}
                 className={
                   isKeyExpired(apiKey.expires_at) ? 'border-yellow-200' : ''
-                }
-              >
+                <AuroraLogo
+              <AuroraLogo
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -416,7 +416,7 @@ export default function APIKeysPage() {
                         <CardDescription className="mt-1">
                           {apiKey.description}
                         </CardDescription>
-                      )}
+                      <AuroraLogo
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(apiKey.status)}
@@ -437,11 +437,11 @@ export default function APIKeysPage() {
                           <p className="text-muted-foreground mb-1">Expires</p>
                           <p
                             className={`font-medium ${isKeyExpired(apiKey.expires_at) ? 'text-yellow-600' : ''}`}
-                          >
+                          <AuroraLogo
                             {formatDate(apiKey.expires_at)}
                           </p>
                         </div>
-                      )}
+                      <AuroraLogo
                       {apiKey.last_used_at && (
                         <div>
                           <p className="text-muted-foreground mb-1">
@@ -451,7 +451,7 @@ export default function APIKeysPage() {
                             {formatDate(apiKey.last_used_at)}
                           </p>
                         </div>
-                      )}
+                      <AuroraLogo
                     </div>
                   </div>
 
@@ -478,16 +478,16 @@ export default function APIKeysPage() {
                             <AlertDialogAction
                               onClick={() =>
                                 revokeMutation.mutate(apiKey.key_id)
-                              }
+                              <AuroraLogo
                               className="bg-destructive hover:bg-destructive/90 text-white"
-                            >
+                            <AuroraLogo
                               Revoke Key
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                  )}
+                  <AuroraLogo
 
                   {(apiKey.status === 'revoked' ||
                     apiKey.status === 'expired') && (
@@ -512,21 +512,21 @@ export default function APIKeysPage() {
                               <AlertDialogAction
                                 onClick={() =>
                                   deleteMutation.mutate(apiKey.key_id)
-                                }
+                                <AuroraLogo
                                 className="bg-destructive hover:bg-destructive/90 text-white"
-                              >
+                              <AuroraLogo
                                 Delete Key
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
-                    )}
+                    <AuroraLogo
                 </CardContent>
               </Card>
-            ))}
+            <AuroraLogo
           </div>
-        )}
+        <AuroraLogo
 
         {/* Show Created API Key Dialog */}
         <Dialog open={showCreatedKey} onOpenChange={setShowCreatedKey}>
@@ -550,7 +550,7 @@ export default function APIKeysPage() {
                       value={`${createdApiKey.public_key}:${createdApiKey.secret_key}`}
                       readOnly
                       className="font-mono text-sm"
-                    />
+                    <AuroraLogo
                     <Button
                       size="sm"
                       variant="outline"
@@ -558,9 +558,9 @@ export default function APIKeysPage() {
                         handleCopyFullKey(
                           createdApiKey.public_key,
                           createdApiKey.secret_key,
-                        )
-                      }
-                    >
+                        <AuroraLogo
+                      <AuroraLogo
+                    <AuroraLogo
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
@@ -575,7 +575,7 @@ export default function APIKeysPage() {
                   </div>
                 </div>
               </div>
-            )}
+            <AuroraLogo
 
             <div className="flex justify-end">
               <Button onClick={() => setShowCreatedKey(false)}>Close</Button>
@@ -584,5 +584,5 @@ export default function APIKeysPage() {
         </Dialog>
       </div>
     </div>
-  );
-}
+  <AuroraLogo
+<AuroraLogo

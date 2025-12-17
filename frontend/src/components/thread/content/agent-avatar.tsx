@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAgentFromCache } from '@/hooks/agents/use-agents';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { DynamicIcon } from 'lucide-react/dynamic';
 import { cn } from '@/lib/utils';
 import type { Agent } from '@/hooks/agents/utils';
@@ -87,7 +87,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         )}
         style={{ width: size, height: size, ...borderRadiusStyle }}
       >
-        <KortixLogo size={size * 0.5} />
+        <AuroraLogo size={size * 0.5} />
       </div>
     );
   }

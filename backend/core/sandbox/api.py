@@ -8,9 +8,9 @@ from typing import Optional, TypeVar, Callable, Awaitable
 from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
-from daytona_sdk import AsyncSandbox, SessionExecuteRequest
 
-from core.sandbox.sandbox import get_or_start_sandbox, delete_sandbox, create_sandbox, daytona
+from core.sandbox.sandbox import get_or_start_sandbox, delete_sandbox, create_sandbox
+from core.sandbox.docker_sandbox import SessionExecuteRequest
 from core.utils.logger import logger
 from core.utils.auth_utils import get_optional_user_id, verify_and_get_user_id_from_jwt, verify_sandbox_access, verify_sandbox_access_optional
 from core.services.supabase import DBConnection
@@ -147,7 +147,7 @@ def normalize_path(path: str) -> str:
 
 
 
-async def get_sandbox_by_id_safely(client, sandbox_id: str) -> AsyncSandbox:
+async def get_sandbox_by_id_safely(client, sandbox_id: str):
     """
     Safely retrieve a sandbox object by its ID, using the project that owns it.
     
@@ -156,7 +156,7 @@ async def get_sandbox_by_id_safely(client, sandbox_id: str) -> AsyncSandbox:
         sandbox_id: The sandbox ID to retrieve
     
     Returns:
-        AsyncSandbox: The sandbox object
+        DockerSandbox: The sandbox object
         
     Raises:
         HTTPException: If the sandbox doesn't exist or can't be retrieved
@@ -524,30 +524,14 @@ async def get_project_sandbox_details(
         sandbox_id = sandbox_info['id']
         
         logger.debug(f"Fetching sandbox details for sandbox {sandbox_id} (project {project_id})")
-        sandbox = await daytona.get(sandbox_id)
+        sandbox = await get_or_start_sandbox(sandbox_id)
         
         sandbox_details = {
             "sandbox_id": sandbox.id,
-            "state": sandbox.state.value if hasattr(sandbox.state, 'value') else str(sandbox.state),
             "project_id": project_id,
             "vnc_preview": sandbox_info.get('vnc_preview'),
             "sandbox_url": sandbox_info.get('sandbox_url'),
         }
-        
-        if hasattr(sandbox, 'created_at') and sandbox.created_at:
-            sandbox_details["created_at"] = str(sandbox.created_at)
-        if hasattr(sandbox, 'updated_at') and sandbox.updated_at:
-            sandbox_details["updated_at"] = str(sandbox.updated_at)
-        if hasattr(sandbox, 'target') and sandbox.target:
-            sandbox_details["target"] = sandbox.target
-        if hasattr(sandbox, 'cpu') and sandbox.cpu:
-            sandbox_details["cpu"] = sandbox.cpu
-        if hasattr(sandbox, 'memory') and sandbox.memory:
-            sandbox_details["memory"] = sandbox.memory
-        if hasattr(sandbox, 'disk') and sandbox.disk:
-            sandbox_details["disk"] = sandbox.disk
-        if hasattr(sandbox, 'labels') and sandbox.labels:
-            sandbox_details["labels"] = sandbox.labels
         
         logger.debug(f"Successfully fetched sandbox details for project {project_id}")
         

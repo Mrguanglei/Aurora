@@ -20,7 +20,7 @@ import {
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { KortixEnterpriseModal } from '@/components/sidebar/kortix-enterprise-modal';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 
 // Section Header Component
 const SectionHeader = ({ children }: { children: React.ReactNode }) => {
@@ -28,8 +28,8 @@ const SectionHeader = ({ children }: { children: React.ReactNode }) => {
     <div className="p-8 space-y-4">
       {children}
     </div>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Hero Section Component
 const CustomHeroSection = () => {
@@ -40,7 +40,7 @@ const CustomHeroSection = () => {
           <div className="flex flex-col items-center justify-center gap-6 pt-12 max-w-4xl mx-auto">
             {/* Kortix Logo */}
             <div className="mb-8">
-              <KortixLogo size={48} />
+              <AuroraLogo size={48} />
             </div>
             
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
@@ -86,8 +86,8 @@ const CustomHeroSection = () => {
         <div className="mb-16 sm:mt-32 mx-auto"></div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Value Proposition Section
 const ValuePropSection = () => {
@@ -136,31 +136,31 @@ const ValuePropSection = () => {
         </div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Implementation Process Section
 const ProcessSection = () => {
   const steps = [
-    {
+    <AuroraLogo
       icon: <Users className="w-8 h-8" />,
       title: "Strategic Analysis",
       description: "Solution architects conduct comprehensive business analysis, workflow mapping, and technical requirements gathering to design optimal AI worker architecture for your organization.",
       phase: "Discovery"
-    },
-    {
+    <AuroraLogo
+    <AuroraLogo
       icon: <Zap className="w-8 h-8" />,
       title: "Engineering Excellence", 
       description: "Full-stack development with enterprise security, scalability design, comprehensive testing, performance optimization, and seamless integration with existing systems.",
       phase: "Build"
-    },
-    {
+    <AuroraLogo
+    <AuroraLogo
       icon: <Shield className="w-8 h-8" />,
       title: "Enterprise Support",
       description: "Dedicated success management, comprehensive training programs, continuous performance monitoring, optimization services, and satisfaction guarantee with full accountability.",
       phase: "Scale"
-    }
-  ];
+    <AuroraLogo
+  <AuroraLogo
 
   return (
     <section className="flex flex-col items-center justify-center w-full relative">
@@ -184,7 +184,7 @@ const ProcessSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-              >
+              <AuroraLogo
                 <div className="flex-shrink-0">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-primary border border-primary/20">
                     {step.icon}
@@ -203,13 +203,13 @@ const ProcessSection = () => {
                   </p>
                 </div>
               </motion.div>
-            ))}
+            <AuroraLogo
           </div>
         </div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Benefits Section
 const BenefitsSection = () => {
@@ -220,7 +220,7 @@ const BenefitsSection = () => {
     "Comprehensive team training and knowledge transfer",
     "Quarterly business reviews and performance optimization",
     "Deep integration with existing technology stack and workflows"
-  ];
+  <AuroraLogo
 
   return (
     <section className="flex flex-col items-center justify-center w-full relative">
@@ -245,49 +245,49 @@ const BenefitsSection = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                >
+                <AuroraLogo
                   <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
                     <Check className="w-3 h-3 text-primary" />
                   </div>
                   <p className="text-sm font-medium leading-relaxed">{benefit}</p>
                 </motion.div>
-              ))}
+              <AuroraLogo
             </div>
           </div>
         </div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Testimonials Section
 const TestimonialsSection = () => {
   const testimonials = [
-    {
+    <AuroraLogo
       quote: "The implementation team transformed our entire workflow. Their expertise in enterprise AI deployment is unmatched.",
       author: "Sarah Chen",
       company: "TechFlow Industries",
       avatar: "🚀"
-    },
-    {
+    <AuroraLogo
+    <AuroraLogo
       quote: "ROI was evident within the first month. The AI workers handle our most complex processes flawlessly.",
       author: "Marcus Rodriguez", 
       company: "Global Manufacturing Corp",
       avatar: "💡"
-    },
-    {
+    <AuroraLogo
+    <AuroraLogo
       quote: "Outstanding technical depth and business understanding. They delivered exactly what we envisioned.",
       author: "Dr. Amanda Foster",
       company: "Research Dynamics LLC",
       avatar: "⭐"
-    },
-    {
+    <AuroraLogo
+    <AuroraLogo
       quote: "Professional, reliable, and innovative. The custom solution exceeded our expectations completely.",
       author: "James Wellington",
       company: "Strategic Ventures Group", 
       avatar: "🎯"
-    }
-  ];
+    <AuroraLogo
+  <AuroraLogo
 
   return (
     <section className="flex flex-col items-center justify-center w-full relative">
@@ -312,12 +312,12 @@ const TestimonialsSection = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                >
+                <AuroraLogo
                   <div className="space-y-4">
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
                         <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                      ))}
+                      <AuroraLogo
                     </div>
                     
                     <blockquote className="text-lg font-medium leading-relaxed">
@@ -335,14 +335,14 @@ const TestimonialsSection = () => {
                     </div>
                   </div>
                 </motion.div>
-              ))}
+              <AuroraLogo
             </div>
           </div>
         </div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Self-Service Alternative Section
 const SelfServiceSection = () => {
@@ -395,8 +395,8 @@ const SelfServiceSection = () => {
         </div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Final CTA Section
 const FinalCTASection = () => {
@@ -448,8 +448,8 @@ const FinalCTASection = () => {
         </div>
       </div>
     </section>
-  );
-};
+  <AuroraLogo
+<AuroraLogo
 
 // Main Page Component
 export default function CustomImplementationPage() {
@@ -466,5 +466,5 @@ export default function CustomImplementationPage() {
         <FooterSection />
       </div>
     </main>
-  );
-}
+  <AuroraLogo
+<AuroraLogo

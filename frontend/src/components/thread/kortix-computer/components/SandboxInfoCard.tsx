@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Cpu, HardDrive, MemoryStick, MapPin, Loader2 } from 'lucide-react';
 import { LiquidGlass } from '@liquidglass/react';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { cn } from '@/lib/utils';
 import { SandboxDetails } from '@/hooks/files/use-sandbox-details';
 
@@ -104,7 +104,7 @@ export const SandboxInfoCard = memo(function SandboxInfoCard({
           <div className="p-6 min-w-[320px] max-w-[380px]">
           <div className="flex flex-col items-center justify-center gap-3 mb-5">
             <div className="w-16 h-16 rounded-3xl bg-background flex items-center justify-center border mx-auto">
-              <KortixLogo size={32} />
+              <AuroraLogo size={32} />
             </div>
             <div className="flex flex-col items-center justify-center">
               <h3 className="text-foreground font-semibold text-lg text-center">Kortix Computer</h3>

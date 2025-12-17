@@ -4,7 +4,6 @@ import asyncio
 
 from core.agentpress.thread_manager import ThreadManager
 from core.agentpress.tool import Tool
-from daytona_sdk import AsyncSandbox
 from core.sandbox.sandbox import get_or_start_sandbox, create_sandbox, delete_sandbox
 from core.utils.logger import logger
 from core.utils.files_utils import clean_path
@@ -26,7 +25,7 @@ class SandboxToolsBase(Tool):
         self._sandbox_pass = None
         self._sandbox_url = None
 
-    async def _ensure_sandbox(self) -> AsyncSandbox:
+    async def _ensure_sandbox(self):
         """Ensure we have a valid sandbox instance, retrieving it from the project if needed.
 
         If the project does not yet have a sandbox, create it lazily and persist
@@ -122,7 +121,7 @@ class SandboxToolsBase(Tool):
         return self._sandbox
 
     @property
-    def sandbox(self) -> AsyncSandbox:
+    def sandbox(self):
         """Get the sandbox instance, ensuring it exists."""
         if self._sandbox is None:
             raise RuntimeError("Sandbox not initialized. Call _ensure_sandbox() first.")

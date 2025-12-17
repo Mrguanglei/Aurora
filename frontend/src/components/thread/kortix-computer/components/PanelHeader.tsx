@@ -5,7 +5,7 @@ import { CircleDashed, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DrawerTitle } from '@/components/ui/drawer';
 import { ViewType } from '@/stores/kortix-computer-store';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { cn } from '@/lib/utils';
 import { ViewToggle } from './ViewToggle';
 import { ToolbarButtons } from './ToolbarButtons';
@@ -48,7 +48,7 @@ export const PanelHeader = memo(function PanelHeader({
       <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 flex items-center justify-center">
-            <KortixLogo size={18}/>
+            <AuroraLogo size={18}/>
           </div>
           <DrawerTitle className="text-sm font-semibold text-foreground">
             {title}
@@ -88,7 +88,7 @@ export const PanelHeader = memo(function PanelHeader({
       {/* Center: Logo and title (always centered) */}
       <div className="flex items-center justify-center gap-2">
         <div className="w-6 h-6 flex items-center justify-center">
-          <KortixLogo size={18}/>
+          <AuroraLogo size={18}/>
         </div>
         <h2 className="text-md font-semibold text-foreground">
           {title}

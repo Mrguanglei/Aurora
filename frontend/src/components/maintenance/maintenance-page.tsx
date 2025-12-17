@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { isLocalMode } from '@/lib/config';
 import { AnimatedBg } from '@/components/ui/animated-bg';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 
 export function MaintenancePage() {
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -40,7 +40,7 @@ export function MaintenancePage() {
 
         <div className="relative z-10 w-full max-w-[456px] flex flex-col items-center gap-8">
           {/* Logo - 32px height */}
-          <KortixLogo size={32} />
+          <AuroraLogo size={32} />
 
           {/* Title - 43px */}
           <h1 className="text-[43px] font-normal tracking-tight textforeground leading-none">

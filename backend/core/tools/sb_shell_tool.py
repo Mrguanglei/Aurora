@@ -226,7 +226,7 @@ class SandboxShellTool(SandboxToolsBase):
         session_id = await self._ensure_session("raw_commands")
         
         # Execute command in session
-        from daytona_sdk import SessionExecuteRequest
+        from core.sandbox.docker_sandbox import SessionExecuteRequest
         req = SessionExecuteRequest(
             command=command,
             var_async=False,

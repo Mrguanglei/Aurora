@@ -10,7 +10,7 @@ import {
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PricingSection } from './pricing-section';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { cn } from '@/lib/utils';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
@@ -68,7 +68,7 @@ export function PlanSelectionModal({
                     <div className="flex-1" />
                     
                     <div className="absolute -translate-y-1/2 top-1/2 left-1/2 -translate-x-1/2 pointer-events-none">
-                        <KortixLogo size={20} variant="logomark" />
+                        <AuroraLogo size={20} variant="logomark" />
                     </div>
                     
                     <div className="flex-1 flex justify-end pointer-events-auto">

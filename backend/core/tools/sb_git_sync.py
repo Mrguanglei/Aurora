@@ -9,7 +9,7 @@ from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 from core.utils.logger import logger
-from daytona_sdk import SessionExecuteRequest
+from core.sandbox.docker_sandbox import SessionExecuteRequest
 
 GIT_AGENT_COMMIT_GUIDELINES = """
 You are working in a local-only git repository inside a sandbox workspace (/workspace).

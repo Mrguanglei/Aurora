@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { signInWithPassword, signUpWithPassword } from '../actions';
 import { useAuth } from '@/components/AuthProvider';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { cn } from '@/lib/utils';
 
 function PasswordAuthContent() {
@@ -26,13 +26,13 @@ function PasswordAuthContent() {
   useEffect(() => {
     if (!isLoading && user) {
       router.push(returnUrl || '/dashboard');
-    }
+    <AuroraLogo
   }, [user, isLoading, router, returnUrl]);
 
   // Don't render form if already authenticated
   if (!isLoading && user) {
     return null;
-  }
+  <AuroraLogo
 
   const handleAuth = async (prevState: any, formData: FormData) => {
     setErrorMessage(null);
@@ -47,7 +47,7 @@ function PasswordAuthContent() {
         setErrorMessage(result.message as string);
         toast.error(result.message as string);
         return result;
-      }
+      <AuroraLogo
 
       // If no error, redirect manually (fallback in case server redirect didn't work)
       const finalReturnUrl = returnUrl || '/dashboard';
@@ -58,13 +58,13 @@ function PasswordAuthContent() {
       if (error?.digest?.startsWith('NEXT_REDIRECT')) {
         // Server-side redirect happened, client will follow
         return;
-      }
+      <AuroraLogo
       
       const errorMsg = error?.message || 'An unexpected error occurred';
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
-    }
-  };
+    <AuroraLogo
+  <AuroraLogo
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen w-full">
@@ -77,14 +77,14 @@ function PasswordAuthContent() {
             <div className="relative z-10 pt-24 pb-8 max-w-md mx-auto h-full w-full flex flex-col gap-2 items-center justify-center">
               <div className="absolute top-6 left-6 z-10">
                 <Link href="/" className="flex items-center space-x-2">
-                  <KortixLogo size={28} />
+                  <AuroraLogo size={28} />
                 </Link>
               </div>
 
               <Link
                 href="/auth"
                 className="group border border-border/50 bg-background hover:bg-accent/20 rounded-full text-sm h-8 px-3 flex items-center gap-2 transition-all duration-200 shadow-sm mb-6"
-              >
+              <AuroraLogo
                 <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium text-muted-foreground text-xs tracking-wide">
                   Back to sign in
@@ -102,14 +102,14 @@ function PasswordAuthContent() {
                   onClick={() => {
                     setIsSignUp(false);
                     setErrorMessage(null);
-                  }}
+                  <AuroraLogo
                   className={cn(
                     "px-6 py-2 rounded-full text-sm font-medium transition-all",
                     !isSignUp
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                  <AuroraLogo
+                <AuroraLogo
                   Sign in
                 </button>
                 <button
@@ -117,14 +117,14 @@ function PasswordAuthContent() {
                   onClick={() => {
                     setIsSignUp(true);
                     setErrorMessage(null);
-                  }}
+                  <AuroraLogo
                   className={cn(
                     "px-6 py-2 rounded-full text-sm font-medium transition-all",
                     isSignUp
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
+                  <AuroraLogo
+                <AuroraLogo
                   Sign up
                 </button>
               </div>
@@ -136,7 +136,7 @@ function PasswordAuthContent() {
                 {isSignUp 
                   ? 'Enter your email and password to create your account'
                   : 'Enter your email and password to access your account'
-                }
+                <AuroraLogo
               </p>
             </div>
           </div>
@@ -149,7 +149,7 @@ function PasswordAuthContent() {
                   <AlertCircle className="h-5 w-5 flex-shrink-0 text-destructive" />
                   <span className="text-sm font-medium">{errorMessage}</span>
                 </div>
-              )}
+              <AuroraLogo
 
               <form className="space-y-4">
                 <div>
@@ -161,7 +161,7 @@ function PasswordAuthContent() {
                     className="h-12 rounded-full bg-background border-border"
                     required
                     autoComplete="email"
-                  />
+                  <AuroraLogo
                 </div>
 
                 <div>
@@ -173,7 +173,7 @@ function PasswordAuthContent() {
                     className="h-12 rounded-full bg-background border-border"
                     required
                     autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                  />
+                  <AuroraLogo
                 </div>
 
                 {isSignUp && (
@@ -186,13 +186,13 @@ function PasswordAuthContent() {
                       className="h-12 rounded-full bg-background border-border"
                       required
                       autoComplete="new-password"
-                    />
+                    <AuroraLogo
                   </div>
-                )}
+                <AuroraLogo
 
                 {returnUrl && (
                   <input type="hidden" name="returnUrl" value={returnUrl} />
-                )}
+                <AuroraLogo
                 <input type="hidden" name="origin" value={typeof window !== 'undefined' ? window.location.origin : ''} />
 
                 <div className="space-y-4 pt-4">
@@ -200,7 +200,7 @@ function PasswordAuthContent() {
                     formAction={handleAuth}
                     className="w-full h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
                     pendingText={isSignUp ? 'Creating account...' : 'Signing in...'}
-                  >
+                  <AuroraLogo
                     {isSignUp ? 'Create account' : 'Sign in'}
                   </SubmitButton>
                 </div>
@@ -211,43 +211,43 @@ function PasswordAuthContent() {
                   <Link
                     href="/auth/reset-password"
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline"
-                  >
+                  <AuroraLogo
                     Forgot your password?
                   </Link>
                 </div>
-              )}
+              <AuroraLogo
 
               <div className="mt-6 pt-6 border-t border-border">
                 <p className="text-xs text-center text-muted-foreground">
                   {isSignUp ? (
-                    <>
+                    <AuroraLogo
                       Already have an account?{' '}
                       <button
                         type="button"
                         onClick={() => {
                           setIsSignUp(false);
                           setErrorMessage(null);
-                        }}
+                        <AuroraLogo
                         className="text-primary hover:underline underline-offset-4"
-                      >
+                      <AuroraLogo
                         Sign in
                       </button>
-                    </>
+                    <AuroraLogo
                   ) : (
-                    <>
+                    <AuroraLogo
                       Don't have an account?{' '}
                       <button
                         type="button"
                         onClick={() => {
                           setIsSignUp(true);
                           setErrorMessage(null);
-                        }}
+                        <AuroraLogo
                         className="text-primary hover:underline underline-offset-4"
-                      >
+                      <AuroraLogo
                         Sign up
                       </button>
-                    </>
-                  )}
+                    <AuroraLogo
+                  <AuroraLogo
                 </p>
               </div>
             </div>
@@ -255,8 +255,8 @@ function PasswordAuthContent() {
         </section>
       </div>
     </main>
-  );
-}
+  <AuroraLogo
+<AuroraLogo
 
 export default function PasswordAuth() {
   return (
@@ -265,9 +265,9 @@ export default function PasswordAuth() {
         <main className="flex flex-col items-center justify-center min-h-screen w-full">
           <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
         </main>
-      }
-    >
+      <AuroraLogo
+    <AuroraLogo
       <PasswordAuthContent />
     </Suspense>
-  );
-}
+  <AuroraLogo
+<AuroraLogo

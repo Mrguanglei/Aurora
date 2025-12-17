@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Search, Check, ChevronDown, Plus, Loader2, Plug, Brain, LibraryBig, Zap, Lock, Sparkles, ChevronLeft } from 'lucide-react';
 import { useAgents } from '@/hooks/agents/use-agents';
-import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import type { ModelOption } from '@/hooks/agents';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
@@ -45,7 +45,7 @@ const ModelLabel = ({ label, className }: { label: string; className?: string })
             <span className={cn("flex items-center gap-2 flex-wrap", className)}>
                 <span className="font-medium">Kortix</span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 dark:bg-primary/15 rounded-full flex-shrink-0">
-                    <KortixLogo size={12} variant="symbol" />
+                    <AuroraLogo size={12} variant="symbol" />
                     <span className="text-[11px] font-semibold tracking-wide uppercase text-primary whitespace-nowrap">
                         Advanced
                     </span>
@@ -433,7 +433,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                 : "text-muted-foreground/50"
                     )}
                 >
-                    <KortixLogo size={compact ? 10 : 12} variant="symbol" />
+                    <AuroraLogo size={compact ? 10 : 12} variant="symbol" />
                     <span className={cn(
                         "font-medium",
                         compact ? "text-xs" : "text-sm",
@@ -607,7 +607,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 </div>
             ) : (
                 <div className="flex items-center gap-1.5">
-                    <KortixLogo size={20} />
+                    <AuroraLogo size={20} />
                     <ChevronDown size={12} className="opacity-60" />
                 </div>
             )}
@@ -768,7 +768,7 @@ const GuestMenu: React.FC<UnifiedConfigMenuProps> = memo(function GuestMenu() {
                     >
                         <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                             <div className="flex-shrink-0">
-                                <KortixLogo size={20} />
+                                <AuroraLogo size={20} />
                             </div>
                             <span className="truncate text-sm font-medium">Kortix</span>
                             <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
