@@ -267,8 +267,8 @@ class AgentService:
         
         if version_data:
             self.loader._apply_version_config(agent, version_data)
-        elif agent.is_suna_default:
-            await self.loader._load_suna_config(agent, agent.account_id)
+        elif agent.is_aurora_default:
+            await self.loader._load_aurora_config(agent, agent.account_id)
         else:
             # No config available, use empty defaults for filtering
             agent.configured_mcps = []

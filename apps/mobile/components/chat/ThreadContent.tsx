@@ -41,7 +41,7 @@ import { StreamingToolCard } from './StreamingToolCard';
 import { TaskCompletedFeedback } from './tool-views/complete-tool/TaskCompletedFeedback';
 import { renderAssistantMessage } from './assistant-message-renderer';
 import { PromptExamples } from '@/components/shared';
-import { useKortixComputerStore } from '@/stores/kortix-computer-store';
+import { useAuroraComputerStore } from '@/stores/aurora-computer-store';
 
 export interface ToolMessagePair {
   assistantMessage: UnifiedMessage | null;
@@ -846,7 +846,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = React.memo(
       return maps;
     }, [groupedMessages]);
 
-    const { navigateToToolCall } = useKortixComputerStore();
+    const { navigateToToolCall } = useAuroraComputerStore();
 
     const handleToolPressInternal = useCallback(
       (clickedToolMsg: UnifiedMessage) => {

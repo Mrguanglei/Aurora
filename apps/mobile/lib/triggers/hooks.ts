@@ -18,7 +18,7 @@ import type {
   TriggerAppsResponse,
 } from '@/api/types';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000/v1';
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8011/v1';
 
 // ===== QUERY FUNCTIONS =====
 

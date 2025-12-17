@@ -87,7 +87,7 @@ class ScheduleProvider(TriggerProvider):
     
     async def setup_trigger(self, trigger: Trigger) -> bool:
         try:
-            base_url = app_config.WEBHOOK_BASE_URL or 'http://localhost:8000'
+            base_url = app_config.WEBHOOK_BASE_URL or 'http://localhost:8011'
             webhook_url = f"{base_url}/v1/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             user_timezone = trigger.config.get('timezone', 'UTC')

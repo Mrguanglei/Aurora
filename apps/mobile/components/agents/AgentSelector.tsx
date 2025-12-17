@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { AgentAvatar } from './AgentAvatar';
 import { useAgent } from '@/contexts/AgentContext';
-import { KortixLogo } from '@/components/ui/KortixLogo';
+import { AuroraLogo } from '@/components/ui/AuroraLogo';
 import { useColorScheme } from 'nativewind';
 
 // NOTE: AnimatedPressable blocks touches on Android - use TouchableOpacity instead

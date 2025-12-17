@@ -25,25 +25,25 @@ def extract_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict
 def _extract_suna_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Extract config for Suna agents - always use central config with user customizations.
     
-    Uses cached static config from runtime_cache instead of reading SUNA_CONFIG directly.
-    Always overrides name from SUNA_CONFIG regardless of what's in the database.
+    Uses cached static config from runtime_cache instead of reading AURORA_CONFIG directly.
+    Always overrides name from AURORA_CONFIG regardless of what's in the database.
     """
-    from core.runtime_cache import get_static_suna_config, load_static_suna_config
-    from core.suna_config import SUNA_CONFIG
+    from core.runtime_cache import get_static_aurora_config, load_static_aurora_config
+    from core.aurora_config import AURORA_CONFIG
     
     agent_id = agent_data.get('agent_id', 'Unknown')
     logger.debug(f"Using Suna central config for agent {agent_id}")
     
     # Get cached static config (or load it if not cached)
-    static_config = get_static_suna_config()
+    static_config = get_static_aurora_config()
     if not static_config:
-        static_config = load_static_suna_config()
+        static_config = load_static_aurora_config()
     
-    # Start with cached static config, but always override name from SUNA_CONFIG
+    # Start with cached static config, but always override name from AURORA_CONFIG
     config = {
         'agent_id': agent_data['agent_id'],
-        'name': SUNA_CONFIG['name'],  # Always override name from SUNA_CONFIG
-        'description': SUNA_CONFIG['description'],
+        'name': AURORA_CONFIG['name'],  # Always override name from AURORA_CONFIG
+        'description': AURORA_CONFIG['description'],
         'system_prompt': static_config['system_prompt'],  # From cached config
         'model': static_config['model'],  # From cached config
         'agentpress_tools': static_config['agentpress_tools'],  # From cached config

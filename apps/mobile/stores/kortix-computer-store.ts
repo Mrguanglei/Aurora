@@ -25,7 +25,7 @@ function normalizeWorkspacePath(path: string): string {
   return `/workspace/${path.replace(/^\//, '')}`;
 }
 
-interface KortixComputerState {
+interface AuroraComputerState {
   // Main view state
   activeView: ViewType;
   
@@ -73,7 +73,7 @@ interface KortixComputerState {
   // Navigate to a specific tool call (clicking tool in ThreadContent)
   navigateToToolCall: (toolIndex: number) => void;
   
-  // Clear pending tool nav after KortixComputer processes it
+  // Clear pending tool nav after AuroraComputer processes it
   clearPendingToolNav: () => void;
   
   // Panel control
@@ -108,7 +108,7 @@ const initialState = {
   unsavedFileState: {} as Record<string, boolean>,
 };
 
-export const useKortixComputerStore = create<KortixComputerState>((set, get) => ({
+export const useAuroraComputerStore = create<AuroraComputerState>((set, get) => ({
   ...initialState,
   
   setActiveView: (view: ViewType) => {
@@ -302,8 +302,8 @@ export const useKortixComputerStore = create<KortixComputerState>((set, get) => 
 }));
 
 // Selector hooks for common use cases
-export const useKortixComputerActiveView = () => 
-  useKortixComputerStore((state) => state.activeView);
+export const useAuroraComputerActiveView = () => 
+  useAuroraComputerStore((state) => state.activeView);
 
 export const useKortixComputerIsOpen = () =>
   useKortixComputerStore((state) => state.isOpen);

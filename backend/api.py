@@ -75,9 +75,9 @@ async def lifespan(app: FastAPI):
         from core.utils.tool_discovery import warm_up_tools_cache
         warm_up_tools_cache()
         
-        # Pre-load static Suna config for fast path in API requests
-        from core.runtime_cache import load_static_suna_config
-        load_static_suna_config()
+        # Pre-load static Aurora config for fast path in API requests
+        from core.runtime_cache import load_static_aurora_config
+        load_static_aurora_config()
         
         core_api.initialize(
             db,
@@ -250,7 +250,7 @@ if config.ENV_MODE == EnvMode.LOCAL:
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.suna.so")
+    allowed_origins.append("https://staging.aurora.so")
     allowed_origins.append("http://localhost:3000")
     # Allow Vercel preview deployments
     allow_origin_regex = r"https://kortix-.*-prjcts\.vercel\.app"
@@ -422,11 +422,11 @@ if __name__ == "__main__":
     workers = 1 if is_dev_env else 4
     reload = is_dev_env
     
-    logger.debug(f"Starting server on 0.0.0.0:8000 with {workers} workers (reload={reload})")
+    logger.debug(f"Starting server on 0.0.0.0:8011 with {workers} workers (reload={reload})")
     uvicorn.run(
         "api:app", 
         host="0.0.0.0", 
-        port=8000,
+        port=8011,
         workers=workers,
         loop="asyncio",
         reload=True if is_dev_env else False

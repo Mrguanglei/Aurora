@@ -10,7 +10,7 @@ interface KortixLogoProps {
   className?: string;
 }
 
-export function KortixLogo({ size = 24, variant = 'symbol', className }: KortixLogoProps) {
+export function AuroraLogo({ size = 24, variant = 'symbol', className }: KortixLogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 

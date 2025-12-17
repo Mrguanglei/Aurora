@@ -50,7 +50,7 @@ class AgentData:
     version_created_by: Optional[str] = None
     
     # Metadata flags
-    is_suna_default: bool = False
+    is_aurora_default: bool = False
     centrally_managed: bool = False
     config_loaded: bool = False
     restrictions: Optional[Dict[str, Any]] = None
@@ -130,7 +130,7 @@ class AgentData:
                 "agentpress_tools": self.agentpress_tools,
                 "triggers": self.triggers,
                 "version_name": self.version_name,
-                "is_suna_default": self.is_suna_default,
+                "is_aurora_default": self.is_aurora_default,
                 "centrally_managed": self.centrally_managed,
                 "restrictions": self.restrictions,
             })
@@ -230,7 +230,7 @@ class AgentLoader:
                 agent_id,
                 agent_data.to_dict(),
                 version_id=agent_row.get('current_version_id'),
-                is_suna_default=agent_data.is_suna_default
+                is_aurora_default=agent_data.is_aurora_default
             )
         
         logger.debug(f"⏱️ load_agent completed in {(time.time() - t_start)*1000:.1f}ms")
@@ -320,7 +320,7 @@ class AgentLoader:
             agentpress_tools=template_row.get('agentpress_tools', {}),
             triggers=[],
             version_name='template',
-            is_suna_default=False,
+            is_aurora_default=False,
             centrally_managed=False,
             config_loaded=True,  # Templates have config built-in
             restrictions={}
@@ -359,7 +359,7 @@ class AgentLoader:
             version_created_at=current_version.get('created_at'),
             version_updated_at=current_version.get('updated_at'),
             version_created_by=current_version.get('created_by'),
-            is_suna_default=data.get('is_suna_default', False),
+            is_aurora_default=data.get('is_aurora_default', False),
             centrally_managed=data.get('centrally_managed', False),
             config_loaded=True,  # Cached data always has config
             restrictions=data.get('restrictions', {})
@@ -368,17 +368,17 @@ class AgentLoader:
     def _row_to_agent_data(self, row: Dict[str, Any]) -> AgentData:
         """Convert database row to AgentData.
         
-        For Suna agents, always overrides name and description from SUNA_CONFIG
+        For Aurora agents, always overrides name and description from AURORA_CONFIG
         regardless of what's stored in the database.
         """
         metadata = row.get('metadata', {}) or {}
-        is_suna_default = metadata.get('is_suna_default', False)
+        is_aurora_default = metadata.get('is_aurora_default', False)
         
-        # For Suna agents, always use name from SUNA_CONFIG (never DB value)
-        if is_suna_default:
-            from core.suna_config import SUNA_CONFIG
-            name = SUNA_CONFIG['name']
-            description = SUNA_CONFIG.get('description')
+        # For Aurora agents, always use name from AURORA_CONFIG (never DB value)
+        if is_aurora_default:
+            from core.aurora_config import AURORA_CONFIG
+            name = AURORA_CONFIG['name']
+            description = AURORA_CONFIG.get('description')
         else:
             name = row['name']
             description = row.get('description')
@@ -399,41 +399,41 @@ class AgentLoader:
             current_version_id=row.get('current_version_id'),
             version_count=row.get('version_count', 1),
             metadata=metadata,
-            is_suna_default=is_suna_default,
+            is_aurora_default=is_aurora_default,
             config_loaded=False
         )
     
     async def _load_agent_config(self, agent: AgentData, user_id: str):
         """Load full configuration for a single agent."""
-        if agent.is_suna_default:
-            await self._load_suna_config(agent, user_id)
+        if agent.is_aurora_default:
+            await self._load_aurora_config(agent, user_id)
         else:
             await self._load_custom_config(agent, user_id)
         
         agent.config_loaded = True
     
-    async def _load_suna_config(self, agent: AgentData, user_id: Optional[str] = None):
+    async def _load_aurora_config(self, agent: AgentData, user_id: Optional[str] = None):
         """
-        Load Suna config using static in-memory config + cached user MCPs.
+        Load Aurora config using static in-memory config + cached user MCPs.
         
         Static parts (prompt, model, tools) = instant from memory
         User MCPs = check cache first, then DB if miss
-        Always overrides name from SUNA_CONFIG regardless of DB value.
+        Always overrides name from AURORA_CONFIG regardless of DB value.
         """
         import time
         t_start = time.time()
         
         # 1. Load static config from memory (instant, no DB)
-        from core.runtime_cache import get_static_suna_config, load_static_suna_config
+        from core.runtime_cache import get_static_aurora_config, load_static_aurora_config
         from core.suna_config import SUNA_CONFIG
         
-        static_config = get_static_suna_config()
+        static_config = get_static_aurora_config()
         if not static_config:
-            static_config = load_static_suna_config()
+            static_config = load_static_aurora_config()
         
-        # Always override name from SUNA_CONFIG (never use DB value)
-        agent.name = SUNA_CONFIG['name']
-        agent.description = SUNA_CONFIG.get('description')
+        # Always override name from AURORA_CONFIG (never use DB value)
+        agent.name = AURORA_CONFIG['name']
+        agent.description = AURORA_CONFIG.get('description')
         agent.system_prompt = static_config['system_prompt']
         agent.model = static_config['model']
         agent.agentpress_tools = static_config['agentpress_tools']
@@ -450,7 +450,7 @@ class AgentLoader:
                 agent.configured_mcps = cached_mcps.get('configured_mcps', [])
                 agent.custom_mcps = cached_mcps.get('custom_mcps', [])
                 agent.triggers = cached_mcps.get('triggers', [])
-                logger.debug(f"⚡ Suna config loaded in {(time.time() - t_start)*1000:.1f}ms (MCPs from cache)")
+                logger.debug(f"⚡ Aurora config loaded in {(time.time() - t_start)*1000:.1f}ms (MCPs from cache)")
                 return
             
             # Cache miss - fetch from DB
@@ -485,9 +485,9 @@ class AgentLoader:
                     agent.triggers
                 )
                 
-                logger.debug(f"Suna config loaded in {(time.time() - t_start)*1000:.1f}ms (MCPs from DB, now cached)")
+                logger.debug(f"Aurora config loaded in {(time.time() - t_start)*1000:.1f}ms (MCPs from DB, now cached)")
             except Exception as e:
-                logger.warning(f"Failed to load MCPs for Suna agent {agent.agent_id}: {e}")
+                logger.warning(f"Failed to load MCPs for Aurora agent {agent.agent_id}: {e}")
                 agent.configured_mcps = []
                 agent.custom_mcps = []
                 agent.triggers = []
@@ -495,7 +495,7 @@ class AgentLoader:
             agent.configured_mcps = []
             agent.custom_mcps = []
             agent.triggers = []
-            logger.debug(f"⚡ Suna config loaded in {(time.time() - t_start)*1000:.1f}ms (no MCPs)")
+            logger.debug(f"⚡ Aurora config loaded in {(time.time() - t_start)*1000:.1f}ms (no MCPs)")
     
     async def _load_custom_config(self, agent: AgentData, user_id: str):
         """Load custom agent configuration from version."""
@@ -570,14 +570,14 @@ class AgentLoader:
     async def _batch_load_configs(self, agents: list[AgentData]):
         """Batch load configurations for multiple agents."""
         
-        # Get all version IDs for non-Suna agents
-        version_ids = [a.current_version_id for a in agents if a.current_version_id and not a.is_suna_default]
+        # Get all version IDs for non-Aurora agents
+        version_ids = [a.current_version_id for a in agents if a.current_version_id and not a.is_aurora_default]
         
         if not version_ids:
-            # Only Suna agents, load their configs
+            # Only Aurora agents, load their configs
             for agent in agents:
-                if agent.is_suna_default:
-                    await self._load_suna_config(agent, agent.account_id)
+                if agent.is_aurora_default:
+                    await self._load_aurora_config(agent, agent.account_id)
                     agent.config_loaded = True
             return
         
@@ -589,7 +589,7 @@ class AgentLoader:
             # Create version map using versioning service
             version_map = {}
             for agent in agents:
-                if agent.current_version_id and not agent.is_suna_default:
+                if agent.current_version_id and not agent.is_aurora_default:
                     try:
                         version = await version_service.get_version(
                             agent_id=agent.agent_id,
@@ -604,8 +604,8 @@ class AgentLoader:
             
             # Apply configs
             for agent in agents:
-                if agent.is_suna_default:
-                    await self._load_suna_config(agent, agent.account_id)
+                if agent.is_aurora_default:
+                    await self._load_aurora_config(agent, agent.account_id)
                     agent.config_loaded = True
                 elif agent.agent_id in version_map:
                     self._apply_version_config(agent, version_map[agent.agent_id])
@@ -614,10 +614,10 @@ class AgentLoader:
                 
         except Exception as e:
             logger.warning(f"Failed to batch load agent configs: {e}")
-            # Fallback: load Suna configs only
+            # Fallback: load Aurora configs only
             for agent in agents:
-                if agent.is_suna_default:
-                    await self._load_suna_config(agent, agent.account_id)
+                if agent.is_aurora_default:
+                    await self._load_aurora_config(agent, agent.account_id)
                     agent.config_loaded = True
     
     def _apply_version_config(self, agent: AgentData, version_row: Dict[str, Any]):

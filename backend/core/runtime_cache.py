@@ -21,11 +21,11 @@ from core.utils.logger import logger
 _SUNA_STATIC_CONFIG: Optional[Dict[str, Any]] = None
 _SUNA_STATIC_LOADED = False
 
-def get_static_suna_config() -> Optional[Dict[str, Any]]:
+def get_static_aurora_config() -> Optional[Dict[str, Any]]:
     """Get the static Suna config (loaded once at startup)."""
     return _SUNA_STATIC_CONFIG
 
-def load_static_suna_config() -> Dict[str, Any]:
+def load_static_aurora_config() -> Dict[str, Any]:
     """
     Load Suna's static config into memory ONCE.
     This includes: system_prompt, model, agentpress_tools, restrictions.
@@ -37,7 +37,7 @@ def load_static_suna_config() -> Dict[str, Any]:
     if _SUNA_STATIC_LOADED:
         return _SUNA_STATIC_CONFIG
     
-    from core.suna_config import SUNA_CONFIG
+    from core.aurora_config import AURORA_CONFIG
     from core.config_helper import _extract_agentpress_tools_for_run
     
     _SUNA_STATIC_CONFIG = {

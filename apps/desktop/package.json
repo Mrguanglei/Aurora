@@ -1,11 +1,11 @@
 {
   "name": "kortix-desktop",
   "version": "1.0.0",
-  "description": "Kortix Desktop",
+  "description": "Aurora Desktop",
   "author": {
-    "name": "Kortix",
-    "email": "support@kortix.com",
-    "url": "https://kortix.com"
+    "name": "Aurora",
+    "email": "support@aurora.com",
+    "url": "https://aurora.com"
   },
   "main": "main.js",
   "scripts": {
@@ -25,9 +25,9 @@
   },
   "build": {
     "appId": "com.kortix.desktop",
-    "productName": "Kortix",
+    "productName": "Aurora",
     "protocols": {
-      "name": "Kortix",
+      "name": "Aurora",
       "schemes": ["kortix"]
     },
     "mac": {

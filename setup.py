@@ -1452,7 +1452,7 @@ class SetupWizard:
             print_info(
                 "This must be a publicly accessible URL where Kortix Super Worker API can receive webhooks from Supabase Cron.")
             print_info(
-                "For local development, you can use services like ngrok or localtunnel to expose http://localhost:8000 to the internet.")
+                "For local development, you can use services like ngrok or localtunnel to expose http://localhost:8011 to the internet.")
 
         self.env_vars["webhook"]["WEBHOOK_BASE_URL"] = self._get_input(
             "Enter your webhook base URL (e.g., https://your-domain.ngrok.io): ",
@@ -1543,7 +1543,7 @@ class SetupWizard:
         # --- Frontend .env.local ---
         # Always use localhost for base .env files - Docker override handled separately
         frontend_supabase_url = self.env_vars["supabase"]["NEXT_PUBLIC_SUPABASE_URL"]
-        backend_url = "http://localhost:8000/v1"
+        backend_url = "http://localhost:8011/v1"
         
         frontend_env = {
             "NEXT_PUBLIC_ENV_MODE": "local",  # production, staging, or local
@@ -1570,7 +1570,7 @@ class SetupWizard:
             "EXPO_PUBLIC_ENV_MODE": "local",  # production, staging, or local
             "EXPO_PUBLIC_SUPABASE_URL": self.env_vars["supabase"]["EXPO_PUBLIC_SUPABASE_URL"],
             "EXPO_PUBLIC_SUPABASE_ANON_KEY": self.env_vars["supabase"]["SUPABASE_ANON_KEY"],
-            "EXPO_PUBLIC_BACKEND_URL": "http://localhost:8000/v1",
+            "EXPO_PUBLIC_BACKEND_URL": "http://localhost:8011/v1",
             "EXPO_PUBLIC_URL": "http://localhost:3000",
         }
 

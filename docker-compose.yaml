@@ -21,7 +21,7 @@
 #
 # Access:
 #   - Kortix Super Worker Frontend:     http://localhost:3000
-#   - Kortix Super Worker Backend API:  http://localhost:8000
+#   - Kortix Super Worker Backend API:  http://localhost:8011
 # ============================================================================
 
 services:
@@ -40,13 +40,13 @@ services:
       retries: 3
 
   backend:
-    image: ghcr.io/suna-ai/suna-backend:latest
+    image: ghcr.io/aurora-ai/aurora-backend:latest
     platform: linux/amd64
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8011:8011"
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
@@ -61,7 +61,7 @@ services:
         condition: service_started
 
   worker:
-    image: ghcr.io/suna-ai/suna-backend:latest
+    image: ghcr.io/aurora-ai/aurora-backend:latest
     platform: linux/amd64
     build:
       context: ./backend

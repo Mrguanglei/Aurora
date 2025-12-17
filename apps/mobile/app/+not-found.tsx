@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import { KortixLoader } from '@/components/ui';
+import { AuroraLoader } from '@/components/ui';
 
 export default function NotFoundScreen() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 items-center justify-center bg-background">
-        <KortixLoader size="xlarge" />
+        <AuroraLoader size="xlarge" />
       </View>
     </>
   );
