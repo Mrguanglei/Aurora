@@ -46,15 +46,15 @@ async def generate_agent_name_and_prompt(description: str) -> dict:
     try:
         model_name = "openai/gpt-5-nano-2025-08-07"
         
-        system_prompt = """You are an AI worker configuration expert. Generate a name and system prompt for an AI worker.
+        system_prompt = """你是一个AI工作者配置专家。为AI工作者生成名称和系统提示。
 
-Respond with JSON:
-{"name": "Worker Name (2-4 words)", "system_prompt": "Detailed instructions for the worker's role and behavior"}
+以JSON响应：
+{"name": "工作者名称（2-4个词）", "system_prompt": "工作者角色和行为的详细说明"}
 
-Example:
-{"name": "Research Assistant", "system_prompt": "Act as an expert research assistant. Help users find and analyze information. Always verify facts and cite sources clearly."}"""
+示例：
+{"name": "研究助手", "system_prompt": "作为专业的研究助手。帮助用户查找和分析信息。始终验证事实并清楚地引用来源。"}"""
 
-        user_message = f"Generate name and system prompt for:\n\n{description}"
+        user_message = f"为以下内容生成名称和系统提示：\n\n{description}"
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
 
         logger.debug(f"Calling LLM for name/prompt generation")

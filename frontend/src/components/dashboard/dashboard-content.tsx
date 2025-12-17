@@ -128,7 +128,7 @@ export function DashboardContent() {
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
   const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default === true);
-  const displayName = selectedAgent?.name || 'Kortix';
+  const displayName = selectedAgent?.name || 'Aurora';
   const agentAvatar = undefined;
   // Show Kortix modes while loading (assume Kortix is default) or when Kortix agent is selected
   const isSunaAgent = isLoadingAgents 
