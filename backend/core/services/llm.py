@@ -54,6 +54,19 @@ def setup_api_keys() -> None:
         "MORPH",
         "GEMINI",
         "OPENAI_COMPATIBLE",
+        "QWEN",
+        "YI",
+        "DEEPSEEK",
+        "MOONSHOT",
+        "BAICHUAN",
+        "ZHIPU",
+        "SILICON_FLOW",
+        "SUNOAI",
+        "JINA_AI",
+        "MINIMAX",
+        "ERNIE",
+        "SPARK",
+        "TONGYI",
     ]
     
     for provider in providers:
@@ -96,6 +109,112 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
                 "model": "openai/*",
                 "api_key": openai_compatible_api_key or config_openai_key,
                 "api_base": openai_compatible_api_base or config_openai_base,
+            },
+        },
+        # Chinese LLM Providers (国产模型)
+        {
+            "model_name": "qwen/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'QWEN_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'QWEN_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "yi/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'YI_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'YI_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "deepseek/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'DEEPSEEK_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'DEEPSEEK_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "moonshot/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'MOONSHOT_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'MOONSHOT_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "baichuan/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'BAICHUAN_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'BAICHUAN_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "zhipu/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'ZHIPU_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'ZHIPU_API_BASE', None) if config else None,
+            },
+        },
+        # Additional Chinese LLM Providers
+        {
+            "model_name": "siliconflow/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'SILICON_FLOW_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'SILICON_FLOW_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "sunoai/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'SUNOAI_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'SUNOAI_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "jinaai/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'JINA_AI_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'JINA_AI_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "minimax/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'MINIMAX_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'MINIMAX_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "ernie/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'ERNIE_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'ERNIE_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "spark/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'SPARK_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'SPARK_API_BASE', None) if config else None,
+            },
+        },
+        {
+            "model_name": "tongyi/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'TONGYI_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'TONGYI_API_BASE', None) if config else None,
             },
         },
         {
