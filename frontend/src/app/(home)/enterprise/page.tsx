@@ -28,8 +28,8 @@ const SectionHeader = ({ children }: { children: React.ReactNode }) => {
     <div className="p-8 space-y-4">
       {children}
     </div>
-  <AuroraLogo
-<AuroraLogo
+  );
+}; // 修复：添加了闭合括号和分号
 
 // Hero Section Component
 const CustomHeroSection = () => {
@@ -86,8 +86,8 @@ const CustomHeroSection = () => {
         <div className="mb-16 sm:mt-32 mx-auto"></div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Value Proposition Section
 const ValuePropSection = () => {
@@ -136,31 +136,32 @@ const ValuePropSection = () => {
         </div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Implementation Process Section
 const ProcessSection = () => {
+  // 修复：添加大括号 {} 创建对象结构，并添加逗号
   const steps = [
-    <AuroraLogo
+    {
       icon: <Users className="w-8 h-8" />,
       title: "Strategic Analysis",
       description: "Solution architects conduct comprehensive business analysis, workflow mapping, and technical requirements gathering to design optimal AI worker architecture for your organization.",
       phase: "Discovery"
-    <AuroraLogo
-    <AuroraLogo
+    },
+    {
       icon: <Zap className="w-8 h-8" />,
       title: "Engineering Excellence", 
       description: "Full-stack development with enterprise security, scalability design, comprehensive testing, performance optimization, and seamless integration with existing systems.",
       phase: "Build"
-    <AuroraLogo
-    <AuroraLogo
+    },
+    {
       icon: <Shield className="w-8 h-8" />,
       title: "Enterprise Support",
       description: "Dedicated success management, comprehensive training programs, continuous performance monitoring, optimization services, and satisfaction guarantee with full accountability.",
       phase: "Scale"
-    <AuroraLogo
-  <AuroraLogo
+    }
+  ];
 
   return (
     <section className="flex flex-col items-center justify-center w-full relative">
@@ -177,6 +178,7 @@ const ProcessSection = () => {
 
           <div className="border-t border-border">
             {steps.map((step, index) => (
+              // 修复：将 props 放入标签内部，并添加闭合括号
               <motion.div
                 key={index}
                 className={`flex flex-col md:flex-row gap-8 p-8 ${index !== steps.length - 1 ? 'border-b border-border' : ''}`}
@@ -184,7 +186,7 @@ const ProcessSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
-              <AuroraLogo
+              >
                 <div className="flex-shrink-0">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-primary border border-primary/20">
                     {step.icon}
@@ -203,13 +205,13 @@ const ProcessSection = () => {
                   </p>
                 </div>
               </motion.div>
-            <AuroraLogo
+            ))}
           </div>
         </div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Benefits Section
 const BenefitsSection = () => {
@@ -220,7 +222,7 @@ const BenefitsSection = () => {
     "Comprehensive team training and knowledge transfer",
     "Quarterly business reviews and performance optimization",
     "Deep integration with existing technology stack and workflows"
-  <AuroraLogo
+  ];
 
   return (
     <section className="flex flex-col items-center justify-center w-full relative">
@@ -238,6 +240,7 @@ const BenefitsSection = () => {
           <div className="border-t border-border p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {benefits.map((benefit, index) => (
+                // 修复：将 props 放入标签内部，并添加闭合括号
                 <motion.div
                   key={index}
                   className="flex items-start gap-3 p-4 rounded-lg hover:bg-accent/20 transition-colors"
@@ -245,49 +248,50 @@ const BenefitsSection = () => {
                   whileInView={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                <AuroraLogo
+                >
                   <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
                     <Check className="w-3 h-3 text-primary" />
                   </div>
                   <p className="text-sm font-medium leading-relaxed">{benefit}</p>
                 </motion.div>
-              <AuroraLogo
+              ))}
             </div>
           </div>
         </div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Testimonials Section
 const TestimonialsSection = () => {
+  // 修复：添加大括号 {} 创建对象结构，并添加逗号
   const testimonials = [
-    <AuroraLogo
+    {
       quote: "The implementation team transformed our entire workflow. Their expertise in enterprise AI deployment is unmatched.",
       author: "Sarah Chen",
       company: "TechFlow Industries",
       avatar: "🚀"
-    <AuroraLogo
-    <AuroraLogo
+    },
+    {
       quote: "ROI was evident within the first month. The AI workers handle our most complex processes flawlessly.",
       author: "Marcus Rodriguez", 
       company: "Global Manufacturing Corp",
       avatar: "💡"
-    <AuroraLogo
-    <AuroraLogo
+    },
+    {
       quote: "Outstanding technical depth and business understanding. They delivered exactly what we envisioned.",
       author: "Dr. Amanda Foster",
       company: "Research Dynamics LLC",
       avatar: "⭐"
-    <AuroraLogo
-    <AuroraLogo
+    },
+    {
       quote: "Professional, reliable, and innovative. The custom solution exceeded our expectations completely.",
       author: "James Wellington",
       company: "Strategic Ventures Group", 
       avatar: "🎯"
-    <AuroraLogo
-  <AuroraLogo
+    }
+  ];
 
   return (
     <section className="flex flex-col items-center justify-center w-full relative">
@@ -305,6 +309,7 @@ const TestimonialsSection = () => {
           <div className="border-t border-border">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
               {testimonials.map((testimonial, index) => (
+                // 修复：将 props 放入标签内部，并添加闭合括号
                 <motion.div
                   key={index}
                   className={`p-8 ${index % 2 === 0 ? 'md:border-r border-border' : ''} ${index < 2 ? 'border-b border-border' : ''}`}
@@ -312,12 +317,13 @@ const TestimonialsSection = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                   viewport={{ once: true }}
-                <AuroraLogo
+                >
                   <div className="space-y-4">
                     <div className="flex items-center gap-1">
+                      {/* 修复：闭合 map 函数 */}
                       {[...Array(5)].map((_, i) => (
                         <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                      <AuroraLogo
+                      ))}
                     </div>
                     
                     <blockquote className="text-lg font-medium leading-relaxed">
@@ -335,14 +341,14 @@ const TestimonialsSection = () => {
                     </div>
                   </div>
                 </motion.div>
-              <AuroraLogo
+              ))}
             </div>
           </div>
         </div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Self-Service Alternative Section
 const SelfServiceSection = () => {
@@ -395,8 +401,8 @@ const SelfServiceSection = () => {
         </div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Final CTA Section
 const FinalCTASection = () => {
@@ -448,12 +454,12 @@ const FinalCTASection = () => {
         </div>
       </div>
     </section>
-  <AuroraLogo
-<AuroraLogo
+  );
+};
 
 // Main Page Component
 export default function CustomImplementationPage() {
-  return (
+  return(
     <main className="flex flex-col items-center justify-center min-h-screen w-full">
       <div className="w-full divide-y divide-border">
         <CustomHeroSection />
@@ -466,5 +472,5 @@ export default function CustomImplementationPage() {
         <FooterSection />
       </div>
     </main>
-  <AuroraLogo
-<AuroraLogo
+  );
+} // 修复：添加了闭合大括号
