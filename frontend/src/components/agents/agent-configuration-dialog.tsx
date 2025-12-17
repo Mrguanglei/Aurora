@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AuroraLogo } from '@/components/sidebar/aurora-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAccountState } from '@/hooks/billing';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
@@ -73,7 +73,7 @@ interface AgentConfigurationDialogProps {
   agentId: string;
   initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
   onAgentChange?: (agentId: string) => void;
-<AuroraLogo
+}
 
 export function AgentConfigurationDialog({
   open,
@@ -91,7 +91,7 @@ export function AgentConfigurationDialog({
     enabled: !!onAgentChange,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always'
-  <AuroraLogo
+  });
   const agents = agentsResponse?.agents || [];
 
   const updateAgentMutation = useUpdateAgent();
@@ -120,7 +120,7 @@ export function AgentConfigurationDialog({
   useEffect(() => {
     if (open && initialTab) {
       setActiveTab(initialTab);
-    <AuroraLogo
+    }
   }, [open, initialTab]);
 
   const [formData, setFormData] = useState({
@@ -134,7 +134,7 @@ export function AgentConfigurationDialog({
     icon_name: null as string | null,
     icon_color: '#000000',
     icon_background: '#e5e5e5',
-  <AuroraLogo
+  });
 
 
   const [originalFormData, setOriginalFormData] = useState(formData);
@@ -151,8 +151,8 @@ export function AgentConfigurationDialog({
         icon_name: versionData.icon_name || agent.icon_name,
         icon_color: versionData.icon_color || agent.icon_color,
         icon_background: versionData.icon_background || agent.icon_background,
-      <AuroraLogo
-    <AuroraLogo
+      };
+    }
 
     const newFormData = {
       name: configSource.name || '',
@@ -165,7 +165,7 @@ export function AgentConfigurationDialog({
       icon_name: configSource.icon_name || null,
       icon_color: configSource.icon_color || '#000000',
       icon_background: configSource.icon_background || '#e5e5e5',
-    <AuroraLogo
+    };
 
     setFormData(newFormData);
     setOriginalFormData(newFormData);
@@ -192,7 +192,7 @@ export function AgentConfigurationDialog({
         name: formData.name,
         system_prompt: formData.system_prompt,
         agentpress_tools: formData.agentpress_tools,
-      <AuroraLogo
+      };
 
       if (formData.model !== undefined && formData.model !== null) updateData.model = formData.model;
       if (formData.icon_name !== undefined) updateData.icon_name = formData.icon_name;
@@ -212,8 +212,8 @@ export function AgentConfigurationDialog({
           configured_mcps: formData.configured_mcps,
           custom_mcps: formData.custom_mcps,
           replace_mcps: true
-        <AuroraLogo
-      <AuroraLogo
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ['versions', 'list', agentId] });
       queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
@@ -223,7 +223,7 @@ export function AgentConfigurationDialog({
         params.delete('version');
         const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
         router.push(newUrl);
-      <AuroraLogo
+      }
 
       setOriginalFormData(formData);
       toast.success('Worker configuration saved successfully');
@@ -232,60 +232,60 @@ export function AgentConfigurationDialog({
       toast.error('Failed to save changes');
     } finally {
       setIsSaving(false);
-    <AuroraLogo
-  <AuroraLogo
+    }
+  };
 
   const handleNameSave = () => {
     if (!editName.trim()) {
       setEditName(formData.name);
       setIsEditingName(false);
       return;
-    <AuroraLogo
+    }
 
     if (!isNameEditable) {
       if (isSunaAgent) {
         toast.error("Name cannot be edited", {
           description: "Kortix's name is managed centrally and cannot be changed.",
-        <AuroraLogo
-      <AuroraLogo
+        });
+      }
       setEditName(formData.name);
       setIsEditingName(false);
       return;
-    <AuroraLogo
+    }
 
     setFormData(prev => ({ ...prev, name: editName }));
     setIsEditingName(false);
-  <AuroraLogo
+  };
 
   const handleSystemPromptChange = (value: string) => {
     if (!isSystemPromptEditable) {
       if (isSunaAgent) {
         toast.error("System prompt cannot be edited", {
           description: "Kortix's system prompt is managed centrally.",
-        <AuroraLogo
-      <AuroraLogo
+        });
+      }
       return;
-    <AuroraLogo
+    }
 
     setFormData(prev => ({ ...prev, system_prompt: value }));
-  <AuroraLogo
+  };
 
   const handleModelChange = (model: string) => {
     setFormData(prev => ({ ...prev, model: model || undefined }));
-  <AuroraLogo
+  };
 
   const handleToolsChange = (tools: Record<string, boolean | { enabled: boolean; description: string }>) => {
     if (!areToolsEditable) {
       if (isSunaAgent) {
         toast.error("Tools cannot be edited", {
           description: "Kortix's tools are managed centrally.",
-        <AuroraLogo
-      <AuroraLogo
+        });
+      }
       return;
-    <AuroraLogo
+    }
 
     setFormData(prev => ({ ...prev, agentpress_tools: tools }));
-  <AuroraLogo
+  };
 
   const handleMCPChange = async (updates: { configured_mcps: any[]; custom_mcps: any[] }) => {
     // Update local state immediately
@@ -302,7 +302,7 @@ export function AgentConfigurationDialog({
         configured_mcps: updates.configured_mcps || [],
         custom_mcps: updates.custom_mcps || [],
         replace_mcps: true
-      <AuroraLogo
+      });
 
       // Update original form data to reflect the save
       setOriginalFormData(prev => ({
@@ -315,8 +315,8 @@ export function AgentConfigurationDialog({
     } catch (error) {
       console.error('Failed to save MCP changes:', error);
       toast.error('Failed to save integration changes');
-    <AuroraLogo
-  <AuroraLogo
+    }
+  };
 
 
   const handleIconChange = async (iconName: string | null, iconColor: string, iconBackground: string) => {
@@ -335,7 +335,7 @@ export function AgentConfigurationDialog({
         icon_name: iconName,
         icon_color: iconColor,
         icon_background: iconBackground,
-      <AuroraLogo
+      };
 
       await updateAgentMutation.mutateAsync(updateData);
       
@@ -363,24 +363,24 @@ export function AgentConfigurationDialog({
         icon_color: originalFormData.icon_color,
         icon_background: originalFormData.icon_background,
       }));
-    <AuroraLogo
-  <AuroraLogo
+    }
+  };
 
   const handleExport = () => {
     exportMutation.mutate(agentId);
-  <AuroraLogo
+  };
 
   const handleClose = (open: boolean) => {
     if (!open && hasChanges) {
       setFormData(originalFormData);
       setEditName(originalFormData.name);
-    <AuroraLogo
+    }
     onOpenChange(open);
-  <AuroraLogo
+  };
 
   if (error) {
     return null;
-  <AuroraLogo
+  }
 
   const tabItems = [
     // { id: 'general', label: 'General', icon: Settings, disabled: false },
@@ -389,10 +389,10 @@ export function AgentConfigurationDialog({
     { id: 'integrations', label: 'Integrations', icon: Server, disabled: false },
     { id: 'knowledge', label: 'Knowledge', icon: BookOpen, disabled: false },
     { id: 'triggers', label: 'Triggers', icon: Zap, disabled: false },
-  <AuroraLogo
+  ];
 
   return (
-    <AuroraLogo
+    <>
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-5xl h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
@@ -400,14 +400,14 @@ export function AgentConfigurationDialog({
               <div className="flex items-center gap-3">
                 <div
                   className="flex-shrink-0"
-                <AuroraLogo
+                >
                   {isSunaAgent ? (
                     <AgentAvatar
                       isSunaDefault={true}
                       agentName={formData.name}
                       size={40}
                       className="ring-1 ring-border"
-                    <AuroraLogo
+                    />
                   ) : (
                     <button
                       onClick={(e) => {
@@ -418,13 +418,13 @@ export function AgentConfigurationDialog({
                           icon_name: formData.icon_name, 
                           icon_color: formData.icon_color, 
                           icon_background: formData.icon_background 
-                        <AuroraLogo
+                        });
                         setIsIconEditorOpen(true);
-                      <AuroraLogo
+                      }}
                       className="cursor-pointer transition-all hover:scale-105 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
                       type="button"
                       title="Click to customize agent icon"
-                    <AuroraLogo
+                    >
                       <AgentAvatar
                         iconName={formData.icon_name}
                         iconColor={formData.icon_color}
@@ -432,9 +432,9 @@ export function AgentConfigurationDialog({
                         agentName={formData.name}
                         size={40}
                         className="ring-1 ring-border hover:ring-foreground/20 transition-all"
-                      <AuroraLogo
+                      />
                     </button>
-                  <AuroraLogo
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -452,17 +452,17 @@ export function AgentConfigurationDialog({
                             } else if (e.key === 'Escape') {
                               setEditName(formData.name);
                               setIsEditingName(false);
-                            <AuroraLogo
-                          <AuroraLogo
+                            }
+                          }}
                           className="h-8 w-64"
                           maxLength={50}
-                        <AuroraLogo
+                        />
                         <Button
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8"
                           onClick={handleNameSave}
-                        <AuroraLogo
+                        >
                           <Check className="h-4 w-4" />
                         </Button>
                         <Button
@@ -472,8 +472,8 @@ export function AgentConfigurationDialog({
                           onClick={() => {
                             setEditName(formData.name);
                             setIsEditingName(false);
-                          <AuroraLogo
-                        <AuroraLogo
+                          }}
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
@@ -493,7 +493,7 @@ export function AgentConfigurationDialog({
                             className="w-80 p-0" 
                             align="start"
                             sideOffset={4}
-                          <AuroraLogo
+                          >
                             <div className="p-3 border-b">
                               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                 <Search className="h-4 w-4" />
@@ -506,7 +506,7 @@ export function AgentConfigurationDialog({
                                   key={agent.agent_id}
                                   onClick={() => onAgentChange(agent.agent_id)}
                                   className="p-3 flex items-center gap-3 cursor-pointer"
-                                <AuroraLogo
+                                >
                                   <AgentAvatar
                                     iconName={agent.icon_name}
                                     iconColor={agent.icon_color}
@@ -515,20 +515,20 @@ export function AgentConfigurationDialog({
                                     isSunaDefault={agent.metadata?.is_suna_default}
                                     size={24}
                                     className="flex-shrink-0"
-                                  <AuroraLogo
+                                  />
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium truncate">{agent.name}</div>
                                     {agent.description && (
                                       <div className="text-xs text-muted-foreground truncate">
                                         {agent.description}
                                       </div>
-                                    <AuroraLogo
+                                    )}
                                   </div>
                                   {agent.agent_id === agentId && (
                                     <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                                  <AuroraLogo
+                                  )}
                                 </DropdownMenuItem>
-                              <AuroraLogo
+                              ))}
                             </div>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -544,11 +544,11 @@ export function AgentConfigurationDialog({
                                 nameInputRef.current?.focus();
                                 nameInputRef.current?.select();
                               }, 0);
-                            <AuroraLogo
-                          <AuroraLogo
+                            }}
+                          >
                             <Edit3 className="h-3 w-3" />
                           </Button>
-                        <AuroraLogo
+                        )}
                       </div>
                     ) : (
                       // Static title mode (no agent switching available)
@@ -567,13 +567,13 @@ export function AgentConfigurationDialog({
                                 nameInputRef.current?.focus();
                                 nameInputRef.current?.select();
                               }, 0);
-                            <AuroraLogo
-                          <AuroraLogo
+                            }}
+                          >
                             <Edit3 className="h-3 w-3" />
                           </Button>
-                        <AuroraLogo
+                        )}
                       </div>
-                    <AuroraLogo
+                    )}
                   </div>
                 </div>
               </div>
@@ -587,19 +587,19 @@ export function AgentConfigurationDialog({
                     configured_mcps: formData.configured_mcps,
                     custom_mcps: formData.custom_mcps,
                     agentpress_tools: formData.agentpress_tools,
-                  <AuroraLogo
-                <AuroraLogo
+                  }}
+                />
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleExport}
                   disabled={exportMutation.isPending}
-                <AuroraLogo
+                >
                   {exportMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4" />
-                  <AuroraLogo
+                  )}
                 </Button>
               </div>
             </div>
@@ -621,13 +621,13 @@ export function AgentConfigurationDialog({
                         disabled={tab.disabled}
                         className={cn(
                           tab.disabled && "opacity-50 cursor-not-allowed"
-                        <AuroraLogo
-                      <AuroraLogo
+                        )}
+                      >
                         <Icon className="h-4 w-4" />
                         {tab.label}
                       </TabsTrigger>
-                    <AuroraLogo
-                  <AuroraLogo
+                    );
+                  })}
                 </TabsList>
               </div>
               <div className="flex-1 overflow-auto">
@@ -640,7 +640,7 @@ export function AgentConfigurationDialog({
                         onChange={handleModelChange}
                         disabled={isViewingOldVersion}
                         variant="default"
-                      <AuroraLogo
+                      />
                     </div>
 
                   </div>
@@ -655,7 +655,7 @@ export function AgentConfigurationDialog({
                           You can't edit the main Kortix, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
-                    <AuroraLogo
+                    )}
                     <Label className="text-base font-semibold mb-3 block flex-shrink-0">System Prompt</Label>
                     <ExpandableMarkdownEditor
                       value={formData.system_prompt}
@@ -663,7 +663,7 @@ export function AgentConfigurationDialog({
                       disabled={!isSystemPromptEditable}
                       placeholder="Define how your Worker should behave..."
                       className="flex-1 h-[90%]"
-                    <AuroraLogo
+                    />
                   </div>
                 </TabsContent>
 
@@ -676,14 +676,14 @@ export function AgentConfigurationDialog({
                           You can't edit the main Kortix, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
-                    <AuroraLogo
+                    )}
                     <GranularToolConfiguration
                       tools={formData.agentpress_tools}
                       onToolsChange={handleToolsChange}
                       disabled={!areToolsEditable}
                       isSunaAgent={isSunaAgent}
                       isLoading={isLoading}
-                    <AuroraLogo
+                    />
                   </div>
                 </TabsContent>
                 <TabsContent value="integrations" className="p-6 mt-0 flex flex-col h-full">
@@ -698,10 +698,10 @@ export function AgentConfigurationDialog({
                         custom_mcps: formData.custom_mcps,
                         system_prompt: formData.system_prompt,
                         agentpress_tools: formData.agentpress_tools
-                      <AuroraLogo
+                      }}
                       saveMode="callback"
                       isLoading={updateAgentMCPsMutation.isPending}
-                    <AuroraLogo
+                    />
                     {isFreeTier && (
                       <div className="absolute inset-0 z-10">
                         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
@@ -709,7 +709,7 @@ export function AgentConfigurationDialog({
                           <div 
                             className="max-w-md w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-8 cursor-pointer hover:border-primary/50 transition-all group shadow-lg"
                             onClick={() => openPricingModal()}
-                          <AuroraLogo
+                          >
                             <div className="flex flex-col items-center text-center gap-4">
                               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 group-hover:bg-primary/20 transition-colors">
                                 <Server className="h-7 w-7 text-primary" />
@@ -724,7 +724,7 @@ export function AgentConfigurationDialog({
                                 variant="default"
                                 className="mt-2 gap-2"
                                 onClick={(e) => { e.stopPropagation(); openPricingModal(); }}
-                              <AuroraLogo
+                              >
                                 <Sparkles className="h-4 w-4" />
                                 Upgrade to Unlock
                               </Button>
@@ -732,7 +732,7 @@ export function AgentConfigurationDialog({
                           </div>
                         </div>
                       </div>
-                    <AuroraLogo
+                    )}
                   </div>
                 </TabsContent>
 
@@ -746,7 +746,7 @@ export function AgentConfigurationDialog({
                           <div 
                             className="max-w-md w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-8 cursor-pointer hover:border-primary/50 transition-all group shadow-lg"
                             onClick={() => openPricingModal()}
-                          <AuroraLogo
+                          >
                             <div className="flex flex-col items-center text-center gap-4">
                               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 group-hover:bg-primary/20 transition-colors">
                                 <Brain className="h-7 w-7 text-primary" />
@@ -761,7 +761,7 @@ export function AgentConfigurationDialog({
                                 variant="default"
                                 className="mt-2 gap-2"
                                 onClick={(e) => { e.stopPropagation(); openPricingModal(); }}
-                              <AuroraLogo
+                              >
                                 <Sparkles className="h-4 w-4" />
                                 Upgrade to Unlock
                               </Button>
@@ -769,7 +769,7 @@ export function AgentConfigurationDialog({
                           </div>
                         </div>
                       </div>
-                    <AuroraLogo
+                    )}
                   </div>
                 </TabsContent>
 
@@ -783,7 +783,7 @@ export function AgentConfigurationDialog({
                           <div 
                             className="max-w-md w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-8 cursor-pointer hover:border-primary/50 transition-all group shadow-lg"
                             onClick={() => openPricingModal()}
-                          <AuroraLogo
+                          >
                             <div className="flex flex-col items-center text-center gap-4">
                               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 group-hover:bg-primary/20 transition-colors">
                                 <Zap className="h-7 w-7 text-primary" />
@@ -798,7 +798,7 @@ export function AgentConfigurationDialog({
                                 variant="default"
                                 className="mt-2 gap-2"
                                 onClick={(e) => { e.stopPropagation(); openPricingModal(); }}
-                              <AuroraLogo
+                              >
                                 <Sparkles className="h-4 w-4" />
                                 Upgrade to Unlock
                               </Button>
@@ -806,36 +806,36 @@ export function AgentConfigurationDialog({
                           </div>
                         </div>
                       </div>
-                    <AuroraLogo
+                    )}
                   </div>
                 </TabsContent>
               </div>
             </Tabs>
-          <AuroraLogo
+          )}
 
           <DialogFooter className="px-6 py-4 border-t bg-background flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => handleClose(false)}
               disabled={isSaving}
-            <AuroraLogo
+            >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAll}
               disabled={!hasChanges || isSaving}
-            <AuroraLogo
+            >
               {isSaving ? (
-                <AuroraLogo
+                <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Saving...
-                <AuroraLogo
+                </>
               ) : (
-                <AuroraLogo
+                <>
                   <Save className="h-4 w-4" />
                   Save Changes
-                <AuroraLogo
-              <AuroraLogo
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -846,14 +846,14 @@ export function AgentConfigurationDialog({
         onClose={() => {
           console.log('Icon editor dialog closing');
           setIsIconEditorOpen(false);
-        <AuroraLogo
+        }}
         currentIconName={formData.icon_name}
         currentIconColor={formData.icon_color}
         currentBackgroundColor={formData.icon_background}
         agentName={formData.name}
         agentDescription={agent?.description}
         onIconUpdate={handleIconChange}
-      <AuroraLogo
-    <AuroraLogo
-  <AuroraLogo
-<AuroraLogo
+      />
+    </>
+  );
+}

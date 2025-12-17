@@ -5,7 +5,7 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AnimatedBg } from '@/components/ui/animated-bg';
-import { AuroraLogo } from '@/components/sidebar/aurora-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 
 export default function NotFound() {
   return (
@@ -16,7 +16,7 @@ export default function NotFound() {
 
         <div className="relative z-10 w-full max-w-[456px] flex flex-col items-center gap-8">
           {/* Logo - 32px height */}
-          <AuroraLogo size={32} />
+          <KortixLogo size={32} />
 
           {/* Title - 43px */}
           <h1 className="text-[43px] font-normal tracking-tight text-foreground leading-none text-center">
@@ -52,7 +52,7 @@ export default function NotFound() {
             asChild
             size="lg"
             className="w-full h-12 rounded-lg font-medium"
-          <AuroraLogo
+          >
             <Link href="/" className="flex items-center justify-center gap-2">
               <ArrowLeft className="h-4 w-4" />
               <span>Return Home</span>
@@ -61,5 +61,5 @@ export default function NotFound() {
         </div>
       </div>
     </div>
-  <AuroraLogo
-<AuroraLogo
+  );
+}

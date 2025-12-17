@@ -16,7 +16,7 @@ import type { BaseAgentData } from '@/components/ui/unified-agent-card';
 import type { MarketplaceTemplate } from './installation/types';
 import { MarketplaceAgentPreviewDialog } from './marketplace-agent-preview-dialog';
 import { useRouter } from 'next/navigation';
-import { AuroraLogo } from '@/components/sidebar/aurora-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -24,28 +24,28 @@ interface AgentCreationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (agentId: string) => void;
-<AuroraLogo
+}
 
 const creationOptions = [
-  {<AuroraLogo
+  { 
     id: 'scratch' as const, 
     icon: Wrench, 
     label: 'Configure Manually',
     description: 'Full control over every setting'
-  <AuroraLogo
-  {<AuroraLogo
+  },
+  { 
     id: 'chat' as const, 
     icon: MessageSquare, 
     label: 'Configure by Chat',
     description: 'Let AI set it up for you'
-  <AuroraLogo
-  {<AuroraLogo
+  },
+  { 
     id: 'template' as const, 
     icon: Globe, 
     label: 'Explore Templates',
     description: 'Start from a pre-built worker'
-  <AuroraLogo
-<AuroraLogo
+  }
+];
 
 export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreationModalProps) {
   const router = useRouter();
@@ -62,7 +62,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
   const handleExploreTemplates = () => {
     onOpenChange(false);
     router.push('/dashboard?tab=worker-templates');
-  <AuroraLogo
+  };
 
   const handleCardClick = (template: any) => {
     const marketplaceTemplate: MarketplaceTemplate = {
@@ -86,12 +86,12 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
       marketplace_published_at: template.marketplace_published_at,
       usage_examples: template.usage_examples,
       config: template.config,
-    <AuroraLogo
+    };
 
     setSelectedTemplate(marketplaceTemplate);
     onOpenChange(false);
     setIsPreviewOpen(true);
-  <AuroraLogo
+  };
 
   const convertTemplateToAgentData = (template: any): BaseAgentData => ({
     id: template.template_id,
@@ -109,11 +109,11 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
     marketplace_published_at: template.marketplace_published_at,
     mcp_requirements: template.mcp_requirements || [],
     agentpress_tools: template.agentpress_tools || {},
-  <AuroraLogo
+  });
 
   const handlePreviewInstall = () => {
     onOpenChange(false);
-  <AuroraLogo
+  };
 
   const handleOptionClick = (option: 'scratch' | 'chat' | 'template') => {
     setSelectedOption(option);
@@ -125,29 +125,29 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
         onSuccess: (newAgent) => {
           onOpenChange(false);
           router.push(`/agents/config/${newAgent.agent_id}`);
-        <AuroraLogo
+        },
         onError: (error) => {
           if (error instanceof AgentCountLimitError) {
             onOpenChange(false);
           } else {
             toast.error(error instanceof Error ? error.message : 'Failed to create Worker');
-          <AuroraLogo
-        <AuroraLogo
-      <AuroraLogo
+          }
+        }
+      });
     } else if (option === 'chat') {
       // Show chat configuration step
       setShowChatStep(true);
     } else if (option === 'template') {
       // Open templates tab
       handleExploreTemplates();
-    <AuroraLogo
-  <AuroraLogo
+    }
+  };
 
   const handleChatContinue = async () => {
     if (!chatDescription.trim()) {
       toast.error('Please describe what your Worker should be able to do');
       return;
-    <AuroraLogo
+    }
 
     try {
       const { setupAgentFromChat } = await import('@/lib/api/agents');
@@ -156,7 +156,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
 
       const result = await setupAgentFromChat({
         description: chatDescription
-      <AuroraLogo
+      });
 
       toast.success(`Created "${result.name}"!`, { id: 'agent-setup' });
       onOpenChange(false);
@@ -168,15 +168,15 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
         onOpenChange(false);
       } else {
         console.error('Error creating agent from chat:', error);
-      <AuroraLogo
-    <AuroraLogo
-  <AuroraLogo
+      }
+    }
+  };
 
   const handleBack = () => {
     setShowChatStep(false);
     setSelectedOption(null);
     setChatDescription('');
-  <AuroraLogo
+  };
 
   const handleModalClose = (isOpen: boolean) => {
     if (!isOpen) {
@@ -184,12 +184,12 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
       setShowChatStep(false);
       setSelectedOption(null);
       setChatDescription('');
-    <AuroraLogo
+    }
     onOpenChange(isOpen);
-  <AuroraLogo
+  };
 
   return (
-    <AuroraLogo
+    <>
       <Dialog open={open} onOpenChange={handleModalClose}>
         <DialogContent className="sm:max-w-xl p-0 gap-0 overflow-hidden max-h-[90vh] sm:max-h-[85vh]" hideCloseButton>
           {!showChatStep ? (
@@ -197,8 +197,8 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
               {/* Logo & Header */}
               <div className="flex flex-col items-center text-center mb-6 sm:mb-8">
                 <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-muted/50">
-                  <AuroraLogo size={28} variant="symbol" className="sm:hidden" />
-                  <AuroraLogo size={36} variant="symbol" className="hidden sm:block" />
+                  <KortixLogo size={28} variant="symbol" className="sm:hidden" />
+                  <KortixLogo size={36} variant="symbol" className="hidden sm:block" />
                 </div>
                 <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground">
                   Create a new Worker
@@ -227,12 +227,12 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                           ? "border-primary bg-primary/5"
                           : "border-border bg-card hover:border-muted-foreground/30 hover:bg-muted/30",
                         "disabled:opacity-50 disabled:cursor-not-allowed"
-                      <AuroraLogo
-                    <AuroraLogo
+                      )}
+                    >
                       <div className={cn(
                         "flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex-shrink-0",
                         isSelected ? "bg-primary/10" : "bg-muted/60"
-                      <AuroraLogo
+                      )}>
                         <Icon className={cn(
                           "h-5 w-5 sm:h-6 sm:w-6",
                           isSelected ? "text-primary" : "text-muted-foreground"
@@ -243,20 +243,20 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                           <span className={cn(
                             "text-sm sm:text-base font-medium",
                             isSelected ? "text-primary" : "text-foreground"
-                          <AuroraLogo
+                          )}>
                             {option.label}
                           </span>
                           {isLoading && (
                             <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          <AuroraLogo
+                          )}
                         </div>
                         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                           {option.description}
                         </p>
                       </div>
                     </button>
-                  <AuroraLogo
-                <AuroraLogo
+                  );
+                })}
               </div>
 
               {/* Cancel button */}
@@ -265,7 +265,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                   variant="ghost" 
                   onClick={() => handleModalClose(false)} 
                   className="w-full h-9 sm:h-10 text-sm text-muted-foreground"
-                <AuroraLogo
+                >
                   Cancel
                 </Button>
               </div>
@@ -275,8 +275,8 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
               {/* Logo & Header */}
               <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
                 <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-muted/50">
-                  <AuroraLogo size={28} variant="symbol" className="sm:hidden" />
-                  <AuroraLogo size={36} variant="symbol" className="hidden sm:block" />
+                  <KortixLogo size={28} variant="symbol" className="sm:hidden" />
+                  <KortixLogo size={36} variant="symbol" className="hidden sm:block" />
                 </div>
                 <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground">
                   Describe your Worker
@@ -294,7 +294,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                   placeholder="e.g., A worker that monitors competitor prices and sends me daily reports..."
                   className="min-h-[120px] sm:min-h-[160px] resize-none text-sm sm:text-base"
                   autoFocus
-                <AuroraLogo
+                />
               </div>
 
               {/* Actions */}
@@ -303,7 +303,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                   onClick={handleChatContinue}
                   disabled={!chatDescription.trim() || createNewAgentMutation.isPending}
                   className="w-full h-9 sm:h-10 text-sm"
-                <AuroraLogo
+                >
                   {createNewAgentMutation.isPending ? 'Creating...' : 'Create Worker'}
                 </Button>
                 <Button 
@@ -311,13 +311,13 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                   onClick={handleBack} 
                   disabled={createNewAgentMutation.isPending}
                   className="w-full h-9 sm:h-10 text-sm text-muted-foreground"
-                <AuroraLogo
+                >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
               </div>
             </div>
-          <AuroraLogo
+          )}
         </DialogContent>
       </Dialog>
 
@@ -327,11 +327,11 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
         onClose={() => {
           setIsPreviewOpen(false);
           setSelectedTemplate(null);
-        <AuroraLogo
+        }}
         onInstall={handlePreviewInstall}
         isInstalling={false}
-      <AuroraLogo
-    <AuroraLogo
-  <AuroraLogo
-<AuroraLogo
+      />
+    </>
+  );
+}
 

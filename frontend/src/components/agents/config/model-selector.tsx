@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Check, Search, AlertTriangle, Crown, Cpu, Plus, Edit, Trash, KeyRound, Lock } from 'lucide-react';
-import { AuroraLogo } from '@/components/sidebar/aurora-logo';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,19 +27,19 @@ import Link from 'next/link';
 
 // Helper to render model labels with special styling for Kortix modes
 const ModelLabel = ({ label, className }: { label: string; className?: string }) => {
-    if (label === 'Kortix Advanced Mode') {
+    if (label === 'Kortix POWER Mode') {
         return (
             <span className={cn("flex items-center gap-2", className)}>
                 <span className="font-medium">Kortix</span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 dark:bg-primary/15 rounded-full">
-                    <AuroraLogo size={12} variant="symbol" />
+                    <KortixLogo size={12} variant="symbol" />
                     <span className="text-[11px] font-semibold tracking-wide uppercase text-primary">
-                        Advanced
+                        Power
                     </span>
                 </span>
             </span>
-        <AuroraLogo
-    <AuroraLogo
+        );
+    }
     if (label === 'Kortix Basic') {
         return (
             <span className={cn("flex items-center gap-2", className)}>
@@ -48,15 +48,15 @@ const ModelLabel = ({ label, className }: { label: string; className?: string })
                     Basic
                 </span>
             </span>
-        <AuroraLogo
-    <AuroraLogo
+        );
+    }
     return <span className={cn("font-medium", className)}>{label}</span>;
-<AuroraLogo
+};
 
 interface CustomModel {
   id: string;
   label: string;
-<AuroraLogo
+}
 
 interface AgentModelSelectorProps {
   value?: string;
@@ -64,7 +64,7 @@ interface AgentModelSelectorProps {
   disabled?: boolean;
   variant?: 'default' | 'menu-item';
   className?: string;
-<AuroraLogo
+}
 
 export function AgentModelSelector({
   value,
@@ -73,9 +73,9 @@ export function AgentModelSelector({
   variant = 'default',
   className,
 }: AgentModelSelectorProps) {
-  const {
-    allModels,
-    canAccessModel,
+  const { 
+    allModels, 
+    canAccessModel, 
     subscriptionStatus,
     selectedModel: storeSelectedModel,
     handleModelChange: storeHandleModelChange,
@@ -89,17 +89,17 @@ export function AgentModelSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
+  
   const openPricingModal = usePricingModalStore((state) => state.openPricingModal);
   const isFreeTier = subscriptionStatus !== 'active';
-
+  
   const [isCustomModelDialogOpen, setIsCustomModelDialogOpen] = useState(false);
   const [dialogInitialData, setDialogInitialData] = useState<CustomModelFormData>({ id: '', label: '' });
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
 
   const customModels = storeCustomModels;
-
+  
   // Use the prop value if provided, otherwise fall back to store value
   const selectedModel = value || storeSelectedModel;
 
@@ -109,7 +109,7 @@ export function AgentModelSelector({
     if (modelsData?.models) {
       modelsData.models.forEach(model => {
         const displayName = model.name || model.id;
-
+        
         modelMap.set(model.id, {
           id: model.id, // Use the actual model ID
           label: displayName,
@@ -120,8 +120,8 @@ export function AgentModelSelector({
           capabilities: model.capabilities || [],
           contextWindow: model.context_window || 128000,
           isCustom: false
-        <AuroraLogo
-      <AuroraLogo
+        });
+      });
     } else {
       // Fallback to allModels if API data not available
       allModels.forEach(model => {
@@ -129,9 +129,9 @@ export function AgentModelSelector({
           ...model,
           recommended: false, // Remove recommended badges
           isCustom: false
-        <AuroraLogo
-      <AuroraLogo
-    <AuroraLogo
+        });
+      });
+    }
 
     if (isLocalMode()) {
       customModels.forEach(model => {
@@ -142,20 +142,20 @@ export function AgentModelSelector({
             requiresSubscription: false,
             top: false,
             isCustom: true
-          <AuroraLogo
+          });
         } else {
           const existingModel = modelMap.get(model.id);
           modelMap.set(model.id, {
             ...existingModel,
             isCustom: true
-          <AuroraLogo
-        <AuroraLogo
-      <AuroraLogo
-    <AuroraLogo
+          });
+        }
+      });
+    }
 
     return Array.from(modelMap.values());
   }, [modelsData?.models, allModels, customModels]);
-
+  
   const selectedModelDisplay = useMemo(() => {
     const model = enhancedModelOptions.find(m => m.id === selectedModel);
     return model?.label || selectedModel;
@@ -165,16 +165,16 @@ export function AgentModelSelector({
     return enhancedModelOptions.filter((opt) =>
       opt.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
       opt.id.toLowerCase().includes(searchQuery.toLowerCase())
-    <AuroraLogo
+    );
   }, [enhancedModelOptions, searchQuery]);
 
   const sortedModels = useMemo(() => {
     return [...filteredOptions].sort((a, b) => {
       if (a.requiresSubscription !== b.requiresSubscription) {
         return a.requiresSubscription ? 1 : -1;
-      <AuroraLogo
+      }
       return (b.priority ?? 0) - (a.priority ?? 0);
-    <AuroraLogo
+    });
   }, [filteredOptions]);
 
   const freeModels = sortedModels.filter(m => !m.requiresSubscription);
@@ -190,18 +190,18 @@ export function AgentModelSelector({
     } else {
       setSearchQuery('');
       setHighlightedIndex(-1);
-    <AuroraLogo
+    }
   }, [isOpen]);
 
   const handleSelect = (modelId: string) => {
     const isCustomModel = customModels.some(model => model.id === modelId);
-
+    
     if (isCustomModel && isLocalMode()) {
       onChange(modelId);
       setIsOpen(false);
       return;
-    <AuroraLogo
-
+    }
+    
     const hasAccess = isLocalMode() || canAccessModel(modelId);
     if (hasAccess) {
       onChange(modelId);
@@ -213,10 +213,10 @@ export function AgentModelSelector({
       const isPowerModel = modelId === 'kortix/power';
       openPricingModal({
         isAlert: true,
-        alertTitle: isPowerModel ? 'Upgrade to access Kortix Advanced mode' : 'Upgrade to access this model',
-      <AuroraLogo
-    <AuroraLogo
-  <AuroraLogo
+        alertTitle: isPowerModel ? 'Upgrade to access Kortix Power mode' : 'Upgrade to access this model',
+      });
+    }
+  };
 
   const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -224,20 +224,20 @@ export function AgentModelSelector({
       e.preventDefault();
       setHighlightedIndex((prev) =>
         prev < filteredOptions.length - 1 ? prev + 1 : 0
-      <AuroraLogo
+      );
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setHighlightedIndex((prev) =>
         prev > 0 ? prev - 1 : filteredOptions.length - 1
-      <AuroraLogo
+      );
     } else if (e.key === 'Enter' && highlightedIndex >= 0) {
       e.preventDefault();
       const selectedOption = filteredOptions[highlightedIndex];
       if (selectedOption) {
         handleSelect(selectedOption.id);
-      <AuroraLogo
-    <AuroraLogo
-  <AuroraLogo
+      }
+    }
+  };
 
   const openAddCustomModelDialog = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -245,7 +245,7 @@ export function AgentModelSelector({
     setDialogMode('add');
     setIsCustomModelDialogOpen(true);
     setIsOpen(false);
-  <AuroraLogo
+  };
 
   const openEditCustomModelDialog = (model: CustomModel, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -254,19 +254,19 @@ export function AgentModelSelector({
     setDialogMode('edit');
     setIsCustomModelDialogOpen(true);
     setIsOpen(false);
-  <AuroraLogo
+  };
 
   const handleSaveCustomModel = (formData: CustomModelFormData) => {
     const modelId = formData.id.trim();
     const modelLabel = formData.label.trim() || formatModelName(modelId);
 
     if (!modelId) return;
-
+    
     if (customModels.some(model =>
       model.id === modelId && (dialogMode === 'add' || model.id !== editingModelId))) {
       console.error('A model with this ID already exists');
       return;
-    <AuroraLogo
+    }
 
     closeCustomModelDialog();
     const newModel = { id: modelId, label: modelLabel };
@@ -278,35 +278,35 @@ export function AgentModelSelector({
       storeUpdateCustomModel(editingModelId!, newModel);
       if (selectedModel === editingModelId) {
         onChange(modelId);
-      <AuroraLogo
-    <AuroraLogo
-
+      }
+    }
+    
     setIsOpen(false);
-  <AuroraLogo
+  };
 
   const closeCustomModelDialog = () => {
     setIsCustomModelDialogOpen(false);
     setDialogInitialData({ id: '', label: '' });
     setEditingModelId(null);
-  <AuroraLogo
+  };
 
   const handleDeleteCustomModel = (modelId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     e?.preventDefault();
 
     storeRemoveCustomModel(modelId);
-
+    
     if (selectedModel === modelId) {
       // When deleting the currently selected custom model, let the hook determine the new default
       const firstAvailableModel = allModels.find(m => canAccessModel(m.id));
       if (firstAvailableModel) {
         onChange(firstAvailableModel.id);
-      <AuroraLogo
-    <AuroraLogo
-  <AuroraLogo
+      }
+    }
+  };
 
   const renderModelOption = (model: any, index: number) => {
-    const isCustom = Boolean(model.isCustom) ||
+    const isCustom = Boolean(model.isCustom) || 
       (isLocalMode() && customModels.some(m => m.id === model.id));
     const accessible = isCustom ? true : (isLocalMode() || canAccessModel(model.id));
     const isHighlighted = index === highlightedIndex;
@@ -319,7 +319,7 @@ export function AgentModelSelector({
     const formatCost = (cost: number | null | undefined) => {
       if (cost === null || cost === undefined) return null;
       return `$${cost.toFixed(2)}`;
-    <AuroraLogo
+    };
 
     const inputCost = formatCost(model.inputCostPerMillionTokens);
     const outputCost = formatCost(model.outputCostPerMillionTokens);
@@ -335,10 +335,10 @@ export function AgentModelSelector({
                   isHighlighted && accessible && "bg-accent",
                   selectedModel === model.id && accessible && "bg-muted border border-border",
                   !accessible && !disabled && "opacity-60 hover:opacity-70"
-                <AuroraLogo
+                )}
                 onClick={() => !disabled && handleSelect(model.id)}
                 onMouseEnter={() => setHighlightedIndex(index)}
-              <AuroraLogo
+              >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className={cn("relative", !accessible && "opacity-60")}>
                   <ModelProviderIcon modelId={model.id} size={24} />
@@ -356,39 +356,39 @@ export function AgentModelSelector({
                 <div className="w-8 flex items-center justify-center">
                   {isLowQuality && (
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                  <AuroraLogo
+                  )}
                   {!accessible && !isLocalMode() && (
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <AuroraLogo
+                  )}
                   {isLocalMode() && isCustom && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           openEditCustomModelDialog(model, e);
-                        <AuroraLogo
+                        }}
                         className="text-muted-foreground hover:text-foreground"
-                      <AuroraLogo
+                      >
                         <Edit className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteCustomModel(model.id, e);
-                        <AuroraLogo
+                        }}
                         className="text-muted-foreground hover:text-red-500"
-                      <AuroraLogo
+                      >
                         <Trash className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  <AuroraLogo
+                  )}
                 </div>
               </DropdownMenuItem>
             </div>
           </TooltipTrigger>
           {!accessible && !isLocalMode() ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>{isPowerModel ? 'Upgrade to access Kortix Advanced mode' : 'Upgrade to access this model'}</p>
+              <p>{isPowerModel ? 'Upgrade to access Kortix Power mode' : 'Upgrade to access this model'}</p>
             </TooltipContent>
           ) : isLowQuality ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
@@ -400,8 +400,8 @@ export function AgentModelSelector({
             </TooltipContent>
           ) : null}
         </Tooltip>
-    <AuroraLogo
-  <AuroraLogo
+    );
+  };
 
   return (
     <div className="relative">
@@ -415,13 +415,13 @@ export function AgentModelSelector({
                       "flex items-center justify-between cursor-pointer rounded-lg px-3 py-2 mx-0 my-0.5 text-sm hover:bg-accent",
                       disabled && "opacity-50 cursor-not-allowed",
                       className
-                    <AuroraLogo
-                  <AuroraLogo
+                    )}
+                  >
                     <div className="flex items-center gap-3 min-w-0">
-                      <ModelProviderIcon
-                        modelId={selectedModel}
+                      <ModelProviderIcon 
+                        modelId={selectedModel} 
                         size={24}
-                      <AuroraLogo
+                      />
                       <span className="truncate"><ModelLabel label={selectedModelDisplay} /></span>
                     </div>
                   </div>
@@ -433,12 +433,12 @@ export function AgentModelSelector({
                       "h-8 px-4 py-2",
                       disabled && "opacity-50 cursor-not-allowed",
                       className
-                    <AuroraLogo
-                  <AuroraLogo
+                    )}
+                  >
                     <ModelProviderIcon modelId={selectedModel} size={24} />
                     <span className="text-sm"><ModelLabel label={selectedModelDisplay} /></span>
                   </Button>
-                <AuroraLogo
+                )}
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent side={variant === 'menu-item' ? 'left' : 'top'} className="text-xs">
@@ -449,7 +449,7 @@ export function AgentModelSelector({
           align={variant === 'menu-item' ? 'end' : 'start'}
           className="w-80 p-0 overflow-hidden"
           sideOffset={variant === 'menu-item' ? 8 : 4}
-        <AuroraLogo
+        >
           <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full">
             <div>
               <div className="flex justify-between items-center">
@@ -461,7 +461,7 @@ export function AgentModelSelector({
                           <Link
                             href="/settings/env-manager"
                             className="h-6 w-6 p-0 flex items-center justify-center"
-                          <AuroraLogo
+                          >
                             <KeyRound className="h-3.5 w-3.5" />
                           </Link>
                         </TooltipTrigger>
@@ -478,8 +478,8 @@ export function AgentModelSelector({
                             onClick={(e) => {
                               e.stopPropagation();
                               openAddCustomModelDialog(e);
-                            <AuroraLogo
-                          <AuroraLogo
+                            }}
+                          >
                             <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
@@ -488,7 +488,7 @@ export function AgentModelSelector({
                         </TooltipContent>
                     </Tooltip>
                   </div>
-                <AuroraLogo
+                )}
               </div>
               <div className="px-1 py-1">
                 <div className="relative px-1 flex items-center">
@@ -501,10 +501,10 @@ export function AgentModelSelector({
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleSearchInputKeyDown}
                     className="w-full h-8 px-8 py-1 rounded-lg text-sm focus:outline-none bg-muted"
-                  <AuroraLogo
+                  />
                 </div>
               </div>
-
+              
               {/* Pricing Header */}
               <div className="px-2 py-2">
                 <div className="flex items-center gap-0 text-xs text-muted-foreground">
@@ -514,16 +514,16 @@ export function AgentModelSelector({
                   <div className="w-8"></div>
                 </div>
               </div>
-
+              
               {shouldDisplayAll ? (
                 <div>
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
                     Available Models
                   </div>
                   {freeModels.map((model, index) => renderModelOption(model, index))}
-
+                  
                   {premiumModels.length > 0 && (
-                    <AuroraLogo
+                    <>
                       <div className="mt-4 border-t border-border pt-2">
                         <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center">
                           <Crown className="h-3.5 w-3.5 mr-1.5" />
@@ -542,16 +542,16 @@ export function AgentModelSelector({
                           {(subscriptionStatus === 'active' ? premiumModels : premiumModels.slice(0, 3)).map((model, index) => {
                             const canAccess = isLocalMode() || canAccessModel(model.id);
                             const isRecommended = false; // Remove recommended badges
-
+                            
                             // Format cost display
                             const formatCost = (cost: number | null | undefined) => {
                               if (cost === null || cost === undefined) return null;
                               return `$${cost.toFixed(2)}`;
-                            <AuroraLogo
+                            };
 
                             const inputCost = formatCost(model.inputCostPerMillionTokens);
                             const outputCost = formatCost(model.outputCostPerMillionTokens);
-
+                            
                             return (
                               <Tooltip key={`premium-${model.id}-${index}`}>
                                 <TooltipTrigger asChild>
@@ -561,9 +561,9 @@ export function AgentModelSelector({
                                           "text-sm px-2 py-2 mx-2 my-0.5 flex items-center gap-0 cursor-pointer rounded-lg transition-all duration-200",
                                           selectedModel === model.id && "bg-muted border border-border",
                                           !canAccess && "opacity-70"
-                                        <AuroraLogo
+                                        )}
                                         onClick={() => handleSelect(model.id)}
-                                      <AuroraLogo
+                                      >
                                         <div className="flex items-center gap-3 min-w-0 flex-1 pl-2">
                                           <ModelProviderIcon modelId={model.id} size={24} />
                                           <ModelLabel label={model.label} />
@@ -582,15 +582,15 @@ export function AgentModelSelector({
                                   </TooltipTrigger>
                                   <TooltipContent side="left" className="text-xs max-w-xs">
                                     <p>
-                                      {canAccess
-                                        ? 'Premium model'
+                                      {canAccess 
+                                        ? 'Premium model' 
                                         : 'Requires subscription to access premium model'
-                                      <AuroraLogo
+                                      }
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
-                            <AuroraLogo
-                          <AuroraLogo
+                            );
+                          })}
                           {isFreeTier && premiumModels.length > 0 && (
                             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent flex items-end justify-center pointer-events-none">
                               <div className="w-full p-3 pointer-events-auto">
@@ -610,20 +610,20 @@ export function AgentModelSelector({
                                         openPricingModal({
                                           isAlert: true,
                                           alertTitle: 'Upgrade to access premium models',
-                                        <AuroraLogo
-                                      <AuroraLogo
-                                    <AuroraLogo
+                                        });
+                                      }}
+                                    >
                                       Upgrade now
                                     </Button>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          <AuroraLogo
+                          )}
                         </div>
                       </div>
-                    <AuroraLogo
-                  <AuroraLogo
+                    </>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -633,11 +633,11 @@ export function AgentModelSelector({
                     <div className="text-sm text-center py-4 text-muted-foreground">
                       No models match your search
                     </div>
-                  <AuroraLogo
+                  )}
                 </div>
-              <AuroraLogo
+              )}
             </div>
-
+            
             {/* Pricing Info Footer */}
             <div className="px-4 py-2 border-t border-border bg-muted/30">
               <div className="text-[10px] text-muted-foreground text-center">
@@ -654,8 +654,8 @@ export function AgentModelSelector({
           onSave={handleSaveCustomModel}
           initialData={dialogInitialData}
           mode={dialogMode}
-        <AuroraLogo
-      <AuroraLogo
+        />
+      )}
     </div>
-  <AuroraLogo
-<AuroraLogo
+  );
+}
