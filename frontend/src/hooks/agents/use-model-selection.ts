@@ -18,8 +18,8 @@ export interface ModelOption {
 
 const getDefaultModel = (accessibleModels: ModelOption[]): string => {
   // Pick the first accessible model (sorted by priority)
-  // kortix/basic should be first for free users since power is not accessible
-  const basicModel = accessibleModels.find(m => m.id === 'kortix/basic');
+  // Aurora/basic should be first for free users since power is not accessible
+  const basicModel = accessibleModels.find(m => m.id === 'Aurora/basic');
   if (basicModel) return basicModel.id;
 
   const powerModel = accessibleModels.find(m => m.id === 'kortix/power');
@@ -40,7 +40,7 @@ export const useModelSelection = () => {
   const availableModels = useMemo<ModelOption[]>(() => {
     // Default models - billing removed
     return [
-      { id: 'kortix/basic', label: 'Kortix Basic', requiresSubscription: false, priority: 1, recommended: true },
+      { id: 'Aurora/basic', label: 'Kortix Basic', requiresSubscription: false, priority: 1, recommended: true },
       { id: 'kortix/power', label: 'Kortix Advanced Mode', requiresSubscription: false, priority: 2, recommended: true },
     ];
   }, []);

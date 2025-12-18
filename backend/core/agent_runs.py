@@ -74,7 +74,7 @@ async def _find_shared_suna_agent(client):
     admin_user_id = config.SYSTEM_ADMIN_USER_ID
     
     if admin_user_id:
-        admin_suna = await client.table('agents').select('agent_id').eq('account_id', admin_user_id).eq('metadata->>is_suna_default', 'true').maybe_single().execute()
+        admin_suna = await client.table('agents').select('agent_id').eq('account_id', admin_user_id).eq('is_default', True).maybe_single().execute()
         
         if admin_suna and admin_suna.data:
             loader = await get_agent_loader()
@@ -85,7 +85,7 @@ async def _find_shared_suna_agent(client):
             logger.warning(f"⚠️ SYSTEM_ADMIN_USER_ID configured but no Aurora agent found for user {admin_user_id}")
     
     # Fallback: search for any Aurora agent
-    any_suna = await client.table('agents').select('agent_id, account_id').eq('metadata->>is_suna_default', 'true').limit(1).maybe_single().execute()
+    any_suna = await client.table('agents').select('agent_id, account_id').eq('is_default', True).limit(1).maybe_single().execute()
     
     if any_suna and any_suna.data:
         loader = await get_agent_loader()
@@ -123,7 +123,7 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
             from core.agent_loader import AgentData
             agent_data = AgentData(
                 agent_id=agent_id,
-                name="Kortix",
+                name="Aurora",
                 description=None,
                 account_id=account_id,
                 is_default=True,
@@ -158,11 +158,11 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
     else:
         logger.debug(f"[AGENT LOAD] Loading default agent")
         
-        if is_new_thread:
-            from core.utils.ensure_suna import ensure_suna_installed
-            await ensure_suna_installed(account_id)
+        # Always ensure Suna agent exists before trying to use it
+        from core.utils.ensure_suna import ensure_suna_installed
+        await ensure_suna_installed(account_id)
         
-        default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_suna_default', 'true').maybe_single().execute()
+        default_agent = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('is_default', True).maybe_single().execute()
         
         if default_agent and default_agent.data:
             agent_data = await loader.load_agent(default_agent.data['agent_id'], user_id, load_config=True)
@@ -211,7 +211,8 @@ async def _check_billing_and_limits(client, account_id: str, model_name: Optiona
     
     async def check_billing():
         # Billing removed - always allow access
-        return {'can_start': True, 'message': 'Billing removed'}
+        # 返回三个值：can_proceed, error_message, context
+        return True, '', {}
     
     async def check_agent_runs():
         if config.ENV_MODE == EnvMode.LOCAL:

@@ -28,7 +28,7 @@ class SunaDefaultAgentService:
             all_account_ids = {row['id'] for row in accounts_result.data} if accounts_result.data else set()
             
             # Get existing Suna agents
-            existing_result = await client.table('agents').select('account_id').eq('metadata->>is_suna_default', 'true').execute()
+            existing_result = await client.table('agents').select('account_id').eq('is_default', True).execute()
             existing_account_ids = {row['account_id'] for row in existing_result.data} if existing_result.data else set()
             
             # Find accounts without Suna
@@ -81,7 +81,7 @@ class SunaDefaultAgentService:
             client = await self._db.client
             
             # Check for existing Suna agent
-            existing_result = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('metadata->>is_suna_default', 'true').execute()
+            existing_result = await client.table('agents').select('agent_id').eq('account_id', account_id).eq('is_default', True).execute()
             
             if existing_result.data:
                 existing_agent_id = existing_result.data[0]['agent_id']
@@ -109,13 +109,13 @@ class SunaDefaultAgentService:
             client = await self._db.client
             
             # Get total count
-            total_result = await client.table('agents').select('agent_id', count='exact').eq('metadata->>is_suna_default', 'true').execute()
+            total_result = await client.table('agents').select('agent_id', count='exact').eq('is_default', True).execute()
             total_count = total_result.count or 0
             
             # Get creation dates for last 30 days
             from datetime import timedelta
             thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-            recent_result = await client.table('agents').select('created_at').eq('metadata->>is_suna_default', 'true').gte('created_at', thirty_days_ago).execute()
+            recent_result = await client.table('agents').select('created_at').eq('is_default', True).gte('created_at', thirty_days_ago).execute()
             recent_count = len(recent_result.data) if recent_result.data else 0
             
             return {

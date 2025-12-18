@@ -12,7 +12,7 @@ _BASIC_MODEL_ID = "anthropic/claude-haiku-4-5-20251001" if SHOULD_USE_ANTHROPIC 
 _POWER_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
 
 # Default model IDs (these are aliases that resolve to actual IDs)
-FREE_MODEL_ID = "kortix/basic"
+FREE_MODEL_ID = "Aurora/basic"
 PREMIUM_MODEL_ID = "kortix/power"
 
 
@@ -30,7 +30,7 @@ class ModelRegistry:
     def _initialize_models(self):
         # Kortix Basic - uses HAIKU 4.5 under the hood
         self.register(Model(
-            id="kortix/basic",
+            id="Aurora/basic",
             name="Kortix Basic",
             provider=ModelProvider.ANTHROPIC,
             aliases=["kortix-basic", "Kortix Basic"],
@@ -393,10 +393,10 @@ class ModelRegistry:
     def get_litellm_model_id(self, model_id: str) -> str:
         """Get the actual model ID to pass to LiteLLM.
         
-        Resolves kortix/basic and kortix/power to actual provider model IDs.
+        Resolves Aurora/basic and kortix/power to actual provider model IDs.
         """
         # Map kortix model IDs to actual LiteLLM model IDs
-        if model_id == "kortix/basic":
+        if model_id == "Aurora/basic":
             return _BASIC_MODEL_ID  # Uses HAIKU 4.5
         elif model_id == "kortix/power":
             return _POWER_MODEL_ID  # Uses Sonnet 4.5
@@ -405,7 +405,7 @@ class ModelRegistry:
         model = self.get(model_id)
         if model:
             # Check if this model's ID needs resolution
-            if model.id == "kortix/basic":
+            if model.id == "Aurora/basic":
                 return _BASIC_MODEL_ID
             elif model.id == "kortix/power":
                 return _POWER_MODEL_ID
@@ -423,11 +423,11 @@ class ModelRegistry:
             litellm_model_id: The actual model ID used by LiteLLM (e.g. Bedrock ARN)
             
         Returns:
-            The registry model ID (e.g. 'kortix/basic') or the input if not found
+            The registry model ID (e.g. 'Aurora/basic') or the input if not found
         """
         # Check if this matches _BASIC_MODEL_ID (HAIKU) or _POWER_MODEL_ID (Sonnet)
         if litellm_model_id == _BASIC_MODEL_ID:
-            return "kortix/basic"
+            return "Aurora/basic"
         if litellm_model_id == _POWER_MODEL_ID:
             return "kortix/power"
         
@@ -453,9 +453,9 @@ class ModelRegistry:
                 power_model_normalized = power_model_normalized[len(prefix):]
                 break
         
-        # If the normalized ID matches the basic model ARN, return kortix/basic
+        # If the normalized ID matches the basic model ARN, return Aurora/basic
         if normalized_id == basic_model_normalized:
-            return "kortix/basic"
+            return "Aurora/basic"
         
         # If the normalized ID matches the power model ARN, return kortix/power
         if normalized_id == power_model_normalized:
@@ -493,7 +493,7 @@ class ModelRegistry:
     def get_pricing(self, model_id: str) -> Optional[ModelPricing]:
         """Get pricing for a model, with reverse lookup for LiteLLM model IDs.
         
-        Handles both registry model IDs (kortix/basic) and LiteLLM model IDs (Bedrock ARNs).
+        Handles both registry model IDs (Aurora/basic) and LiteLLM model IDs (Bedrock ARNs).
         """
         # First try direct lookup
         model = self.get(model_id)

@@ -16,7 +16,8 @@ async def check_agent_run_limit(client, account_id: str) -> Dict[str, Any]:
         'can_start': True,
         'running_count': 0,
         'running_thread_ids': [],
-        'limit': DEFAULT_UNLIMITED
+        'limit': DEFAULT_UNLIMITED,
+        'tier_name': 'local'
     }
 
 
@@ -29,6 +30,7 @@ async def check_agent_count_limit(client, account_id: str) -> Dict[str, Any]:
         'limit': DEFAULT_UNLIMITED,
         'tier_name': 'local'
     }
+
 
 
 async def check_project_count_limit(client, account_id: str) -> Dict[str, Any]:
@@ -46,10 +48,10 @@ async def check_trigger_limit(client, account_id: str, agent_id: str = None, tri
     """检查触发器限制 - 本地部署无限制"""
     logger.debug(f"Checking trigger limit for account {account_id} - local deployment, no limits")
     if agent_id is None or trigger_type is None:
-        return {
-            'scheduled': {'current_count': 0, 'limit': DEFAULT_UNLIMITED},
-            'app': {'current_count': 0, 'limit': DEFAULT_UNLIMITED},
-            'tier_name': 'local'
+            return {
+        'scheduled': {'current_count': 0, 'limit': DEFAULT_UNLIMITED},
+        'app': {'current_count': 0, 'limit': DEFAULT_UNLIMITED},
+        'tier_name': 'local'
         }
     return {
         'can_create': True,
@@ -77,5 +79,5 @@ async def check_thread_limit(client, account_id: str) -> Dict[str, Any]:
         'can_create': True,
         'current_count': 0,
         'limit': DEFAULT_UNLIMITED,
-        'tier_name': 'local'
+         'tier_name': 'local'
     }

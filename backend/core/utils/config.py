@@ -60,7 +60,9 @@ class Configuration:
     # =========================================
     
     # ===== PRESENCE CONFIGURATION =====
-    DISABLE_PRESENCE: bool = False  # Disable presence tracking entirely
+    # For local/self-hosted deployments we disable presence tracking by default
+    # to avoid unnecessary DB load and schema dependencies.
+    DISABLE_PRESENCE: bool = True  # Disable presence tracking entirely
     # ==================================
     
     SYSTEM_ADMIN_USER_ID: Optional[str] = None  # User ID that owns shared/fallback agents
@@ -290,7 +292,7 @@ class Configuration:
     
     MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openai"
     MEMORY_EMBEDDING_MODEL: Optional[str] = "text-embedding-3-small"
-    MEMORY_EXTRACTION_MODEL: Optional[str] = "kortix/basic"
+    MEMORY_EXTRACTION_MODEL: Optional[str] = "Aurora/basic"
     VOYAGE_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
     OPENROUTER_API_KEY: Optional[str] = None

@@ -491,9 +491,26 @@ async def get_agents(
             filters=filters
         )
         
+        # Helper to convert UUID/datetime to string
+        def normalize_value(value):
+            from datetime import datetime
+            from uuid import UUID
+            if value is None:
+                return None
+            if isinstance(value, (UUID, datetime)):
+                if isinstance(value, datetime):
+                    return value.isoformat()
+                return str(value)
+            return value
+        
         agent_responses = []
         for agent_data in paginated_result.data:
-            agent_response = AgentResponse(**agent_data)
+            # Convert UUID and datetime fields to strings
+            normalized_data = {
+                key: normalize_value(value) if key in ['agent_id', 'account_id', 'created_at', 'updated_at', 'current_version_id'] else value
+                for key, value in agent_data.items()
+            }
+            agent_response = AgentResponse(**normalized_data)
             agent_responses.append(agent_response)
         
         return AgentsResponse(

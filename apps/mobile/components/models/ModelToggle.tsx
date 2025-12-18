@@ -60,7 +60,7 @@ export function ModelToggle({
   // Find Basic and Advanced models
   const basicModel = useMemo(() => {
     return models.find(m =>
-      m.id === 'kortix/basic' ||
+      m.id === 'Aurora/basic' ||
       m.id === 'kortix-basic' ||
       m.id.includes('claude-haiku-4-5')
     );

@@ -347,7 +347,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     ), []);
 
     const ModeToggle = useCallback(({ compact = false }: { compact?: boolean }) => {
-        const basicModel = modelOptions.find(m => m.id === 'kortix/basic' || m.label === 'Kortix Basic');
+        const basicModel = modelOptions.find(m => m.id === 'Aurora/basic' || m.label === 'Kortix Basic');
         const powerModel = modelOptions.find(m => m.id === 'kortix/power' || m.label === 'Kortix Advanced Mode');
 
         // Billing removed - all models accessible

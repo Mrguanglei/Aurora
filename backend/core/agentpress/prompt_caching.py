@@ -124,7 +124,7 @@ def is_anthropic_model(model_name: str) -> bool:
     if keyword_match:
         return True
     
-    # Check 2: Model's registered provider is ANTHROPIC (handles kortix/basic, kortix/power, etc.)
+    # Check 2: Model's registered provider is ANTHROPIC (handles Aurora/basic, kortix/power, etc.)
     try:
         from core.ai_models.registry import ModelRegistry, ModelProvider
         registry = ModelRegistry()

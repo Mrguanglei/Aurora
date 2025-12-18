@@ -497,15 +497,15 @@ export function AgentModelSelector({
               </div>
               
               {/* Billing removed - show all models together */}
-              <div>
-                {sortedModels.length > 0 ? (
-                  sortedModels.map((model, index) => renderModelOption(model, index))
-                ) : (
-                  <div className="text-sm text-center py-4 text-muted-foreground">
-                    No models match your search
-                  </div>
-                )}
-              </div>
+                <div>
+                  {sortedModels.length > 0 ? (
+                    sortedModels.map((model, index) => renderModelOption(model, index))
+                  ) : (
+                    <div className="text-sm text-center py-4 text-muted-foreground">
+                      No models match your search
+                    </div>
+                  )}
+                </div>
             </div>
             
             {/* Pricing Info Footer */}

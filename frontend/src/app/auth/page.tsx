@@ -415,10 +415,10 @@ function LoginContent() {
             </div>
             
             {/* 仅保留密码登录，移除邮箱选项 */}
-            <Suspense fallback={<div className="space-y-4"><div className="h-10 bg-muted rounded animate-pulse" /></div>}>
-              <PasswordSignIn 
-                isSignUp={isSignUp}
-                returnUrl={returnUrl || undefined}
+              <Suspense fallback={<div className="space-y-4"><div className="h-10 bg-muted rounded animate-pulse" /></div>}>
+                <PasswordSignIn 
+                  isSignUp={isSignUp}
+                  returnUrl={returnUrl || undefined}
                 onSwitchMode={() => {
                   // 在登录/注册之间切换，修改 URL 的 mode 参数
                   const params = new URLSearchParams(window.location.search);
@@ -430,8 +430,8 @@ function LoginContent() {
                   const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
                   window.history.pushState({ path: newUrl }, '', newUrl);
                 }}
-              />
-            </Suspense>
+                />
+              </Suspense>
             
           </div>
         </div>

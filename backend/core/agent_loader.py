@@ -58,12 +58,21 @@ class AgentData:
     def to_pydantic_model(self):
         """Convert to AgentResponse Pydantic model."""
         from core.api_models.agents import AgentResponse, AgentVersionResponse
+        from datetime import datetime
+        
+        # Helper to convert UUID/datetime to string
+        def to_str(value):
+            if value is None:
+                return None
+            if isinstance(value, datetime):
+                return value.isoformat()
+            return str(value)
         
         current_version = None
         if self.config_loaded and self.version_number is not None:
             current_version = AgentVersionResponse(
-                version_id=self.current_version_id,
-                agent_id=self.agent_id,
+                version_id=to_str(self.current_version_id),
+                agent_id=to_str(self.agent_id),
                 version_number=self.version_number,
                 version_name=self.version_name or 'v1',
                 system_prompt=self.system_prompt or '',
@@ -72,32 +81,33 @@ class AgentData:
                 custom_mcps=self.custom_mcps or [],
                 agentpress_tools=self.agentpress_tools or {},
                 is_active=True,
-                created_at=self.version_created_at or self.created_at,
-                updated_at=self.version_updated_at or self.updated_at,
+                created_at=to_str(self.version_created_at or self.created_at),
+                updated_at=to_str(self.version_updated_at or self.updated_at),
                 created_by=self.version_created_by
             )
         
         return AgentResponse(
-            agent_id=self.agent_id,
+            agent_id=to_str(self.agent_id),
             name=self.name,
             description=self.description,
             system_prompt=self.system_prompt,
             model=self.model,
-            configured_mcps=self.configured_mcps,
-            custom_mcps=self.custom_mcps,
-            agentpress_tools=self.agentpress_tools,
+            configured_mcps=self.configured_mcps or [],
+            custom_mcps=self.custom_mcps or [],
+            agentpress_tools=self.agentpress_tools or {},
             is_default=self.is_default,
             is_public=self.is_public,
-            tags=self.tags,
+            tags=self.tags or [],
             icon_name=self.icon_name,
             icon_color=self.icon_color,
             icon_background=self.icon_background,
-            created_at=self.created_at,
-            updated_at=self.updated_at,
-            current_version_id=self.current_version_id,
+            created_at=to_str(self.created_at),
+            updated_at=to_str(self.updated_at),
+            current_version_id=to_str(self.current_version_id),
             version_count=self.version_count,
             current_version=current_version,
-            metadata=self.metadata
+            metadata=self.metadata,
+            account_id=to_str(self.account_id)
         )
     
     def to_dict(self) -> Dict[str, Any]:
@@ -213,8 +223,25 @@ class AgentLoader:
         
         agent_row = result.data[0]
         
-        # Check access
-        if agent_row['account_id'] != user_id and not agent_row.get('is_public', False):
+        # Check access - allow Suna default agents for all users
+        import json
+        metadata_raw = agent_row.get('metadata', {})
+        if isinstance(metadata_raw, str):
+            try:
+                metadata = json.loads(metadata_raw)
+            except (json.JSONDecodeError, TypeError):
+                metadata = {}
+        else:
+            metadata = metadata_raw or {}
+        
+        is_suna_default = metadata.get('is_suna_default', False)
+        is_aurora_default = metadata.get('is_aurora_default', False)
+        
+        # Allow access if: owned by user, is public, or is Suna/Aurora default
+        if (agent_row['account_id'] != user_id and 
+            not agent_row.get('is_public', False) and 
+            not is_suna_default and 
+            not is_aurora_default):
             raise ValueError(f"Access denied to agent {agent_id}")
         
         # Create base AgentData
@@ -371,7 +398,16 @@ class AgentLoader:
         For Aurora agents, always overrides name and description from SUNA_CONFIG
         regardless of what's stored in the database.
         """
-        metadata = row.get('metadata', {}) or {}
+        import json
+        metadata_raw = row.get('metadata', {})
+        # Handle both string (serialized JSON) and dict metadata
+        if isinstance(metadata_raw, str):
+            try:
+                metadata = json.loads(metadata_raw)
+            except (json.JSONDecodeError, TypeError):
+                metadata = {}
+        else:
+            metadata = metadata_raw or {}
         is_aurora_default = metadata.get('is_aurora_default', False)
         
         # For Aurora agents, always use name from SUNA_CONFIG (never DB value)

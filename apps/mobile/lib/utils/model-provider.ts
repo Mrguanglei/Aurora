@@ -28,7 +28,7 @@ export type ModelProvider =
  */
 export function isAuroraMode(modelId: string): boolean {
   // New Aurora registry IDs
-  if (modelId === 'kortix/basic' || modelId === 'kortix/power' ||
+  if (modelId === 'Aurora/basic' || modelId === 'kortix/power' ||
       modelId === 'kortix-basic' || modelId === 'kortix-power') {
     return true;
   }

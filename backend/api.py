@@ -160,9 +160,6 @@ async def lifespan(app: FastAPI):
 
         logger.debug("Disconnecting from database")
         await db.disconnect()
-        
-        # 关闭 PostgreSQL 连接
-        postgres_db.close()
     except Exception as e:
         logger.error(f"Error during application startup: {e}")
         raise

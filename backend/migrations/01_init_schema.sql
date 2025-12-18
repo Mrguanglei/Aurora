@@ -24,6 +24,25 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
 
 -- ============================================================================
+-- 项目相关表
+-- ============================================================================
+
+-- 项目表
+CREATE TABLE IF NOT EXISTS projects (
+    project_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    is_public BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_account_id ON projects(account_id);
+
+-- 为本地部署增加管理员标记字段
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+
+-- ============================================================================
 -- Agent 相关表
 -- ============================================================================
 
@@ -39,6 +58,8 @@ CREATE TABLE IF NOT EXISTS agents (
     icon_color VARCHAR(255),
     icon_background VARCHAR(255),
     metadata JSONB DEFAULT '{}',
+    is_default BOOLEAN DEFAULT false,
+    version_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT true
@@ -46,6 +67,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
 CREATE INDEX IF NOT EXISTS idx_agents_account_id ON agents(account_id);
 CREATE INDEX IF NOT EXISTS idx_agents_created_at ON agents(created_at);
+CREATE INDEX IF NOT EXISTS idx_agents_is_default ON agents(account_id, is_default) WHERE is_default = true;
 
 -- ============================================================================
 -- Thread/Conversation 相关表
@@ -57,6 +79,10 @@ CREATE TABLE IF NOT EXISTS threads (
     account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     agent_id UUID REFERENCES agents(agent_id) ON DELETE SET NULL,
     title VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'pending',
+    initialization_started_at TIMESTAMP WITHOUT TIME ZONE,
+    initialization_error TEXT,
+    initialization_completed_at TIMESTAMP WITHOUT TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     archived_at TIMESTAMP WITH TIME ZONE
@@ -172,3 +198,13 @@ CREATE TRIGGER update_presence_updated_at BEFORE UPDATE ON user_presence_session
 -- 密码: admin123 (需要在实际使用时更改！)
 -- INSERT INTO users (email, username, password_hash, is_active) 
 -- VALUES ('admin@aurora.local', 'admin', '$2b$12$...', true);
+
+-- ============================================================================
+-- 用户角色表
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role)
+);

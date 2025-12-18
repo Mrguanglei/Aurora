@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(storedAuth);
       setUser(storedAuth.user);
     }
-    setIsLoading(false);
+        setIsLoading(false);
   }, []);
 
   // Listen for storage changes (e.g., login in another tab)

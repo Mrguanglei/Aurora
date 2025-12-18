@@ -21,9 +21,9 @@ async def ensure_suna_installed(account_id: str) -> None:
         await db.initialize()
         client = await db.client
         
-        existing = await client.from_('agents').select('agent_id').eq(
+        existing = await client.table('agents').select('agent_id').eq(
             'account_id', account_id
-        ).eq('metadata->>is_suna_default', 'true').limit(1).execute()
+        ).eq('is_default', True).limit(1).execute()
         
         if existing.data:
             _installation_cache.add(account_id)
