@@ -405,7 +405,7 @@ ${content}
 /**
  * Export document to various formats
  */
-export async function exportDocument({ content, fileName, format }: DocumentExportOptions): Promise<void> {
+export async function exportDocument({ content, fileName, format, token }: DocumentExportOptions & { token?: string | null }): Promise<void> {
   const htmlContent = normalizeHtmlContent(content);
   const safeFileName = sanitizeFileName(fileName);
 
@@ -427,11 +427,7 @@ export async function exportDocument({ content, fileName, format }: DocumentExpo
             throw new Error('Backend API URL not configured');
           }
 
-          // Get authentication token
-          const supabase = createClient();
-          const { data: { session } } = await supabase.auth.getSession();
-
-          if (!session?.access_token) {
+          if (!token) {
             throw new Error('Authentication required');
           }
 
@@ -439,7 +435,7 @@ export async function exportDocument({ content, fileName, format }: DocumentExpo
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
+              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({ content: htmlContent, fileName: safeFileName }),
           });
@@ -482,11 +478,7 @@ export async function exportDocument({ content, fileName, format }: DocumentExpo
             throw new Error('Backend API URL not configured');
           }
 
-          // Get authentication token
-          const supabase = createClient();
-          const { data: { session } } = await supabase.auth.getSession();
-
-          if (!session?.access_token) {
+          if (!token) {
             throw new Error('Authentication required');
           }
 
@@ -494,7 +486,7 @@ export async function exportDocument({ content, fileName, format }: DocumentExpo
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
+              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({ content: htmlContent, fileName: safeFileName }),
           });
@@ -566,7 +558,11 @@ export async function exportDocument({ content, fileName, format }: DocumentExpo
             const langMatch = (codeEl.getAttribute('class') || '').match(/language-(\w+)/);
             const lang = langMatch ? langMatch[1] : '';
             const code = codeEl.textContent || '';
-            return `\n\`\`\`${lang}\n${code}\n\`\`\`\n`;
+            return `
+\`\`\`${lang}
+${code}
+\`\`\`
+`;
           },
         });
         

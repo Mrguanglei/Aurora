@@ -8,8 +8,7 @@ import { cn } from '@/lib/utils';
 import { getToolTitle } from '../utils';
 import { useVapiCallRealtime } from '@/hooks/integrations';
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useAuth } from '@/components/AuthProvider';
 
 interface MonitorCallData {
   call_id: string;
@@ -75,6 +74,7 @@ export function MonitorCallToolView({
   isStreaming = false,
 }: ToolViewProps) {
   // All hooks must be called unconditionally at the top
+  const { token } = useAuth();
   const [liveTranscript, setLiveTranscript] = useState<any[]>([]);
   const [liveStatus, setLiveStatus] = useState('unknown');
   const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -99,26 +99,22 @@ export function MonitorCallToolView({
     }
   }, [initialData]);
 
-  // Set up direct Supabase real-time subscription - hook must be unconditional
+  // Fetch call data using backend API
   useEffect(() => {
-    if (!initialData?.call_id) return;
+    if (!initialData?.call_id || !token) return;
 
-    console.log('[MonitorCallToolView] Setting up real-time subscription for:', initialData.call_id);
-    const supabase = createClient();
-    let channel: RealtimeChannel;
+    console.log('[MonitorCallToolView] Fetching initial call data for:', initialData.call_id);
 
-    const setupSubscription = async () => {
-      // First, do an initial fetch to get current data via backend API
+    const fetchInitialData = async () => {
       try {
         const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const { data: { session } } = await supabase.auth.getSession();
         
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
         
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
 
         const response = await fetch(`${API_URL}/vapi/calls/${initialData.call_id}`, {
@@ -129,7 +125,7 @@ export function MonitorCallToolView({
           const currentData = await response.json();
 
           if (currentData) {
-            console.log('[MonitorCallToolView] Initial data from DB:', {
+            console.log('[MonitorCallToolView] Initial data from backend:', {
               status: currentData.status,
               transcriptLength: Array.isArray(currentData.transcript) ? currentData.transcript.length : 0
             });
@@ -145,68 +141,26 @@ export function MonitorCallToolView({
       } catch (error) {
         console.error('[MonitorCallToolView] Error fetching initial call data:', error);
       }
-
-      // Set up real-time subscription
-      channel = supabase
-        .channel(`call-monitor-${initialData.call_id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'vapi_calls',
-            filter: `call_id=eq.${initialData.call_id}`
-          },
-          (payload) => {
-            console.log('[MonitorCallToolView] Real-time update received:', payload);
-
-            if (payload.new) {
-              const newData = payload.new as any;
-              setLiveStatus(newData.status);
-
-              if (newData.transcript) {
-                const transcript = typeof newData.transcript === 'string'
-                  ? JSON.parse(newData.transcript)
-                  : newData.transcript;
-                const transcriptArray = Array.isArray(transcript) ? transcript : [];
-                console.log('[MonitorCallToolView] Updating transcript via real-time:', transcriptArray.length, 'messages');
-                setLiveTranscript(transcriptArray);
-              }
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log('[MonitorCallToolView] Subscription status:', status);
-        });
     };
 
-    setupSubscription();
+    fetchInitialData();
+  }, [initialData?.call_id, token]);
 
-    return () => {
-      console.log('[MonitorCallToolView] Cleaning up subscription');
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [initialData?.call_id]);
-
-  // useQuery hook must be called unconditionally
+  // useQuery hook for polling call updates
   const { data: realtimeData, refetch } = useQuery({
     queryKey: ['vapi-call', initialData?.call_id],
     queryFn: async () => {
-      if (!initialData?.call_id) return null;
+      if (!initialData?.call_id || !token) return null;
       
       try {
         const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
         
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
         
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
 
         const response = await fetch(`${API_URL}/vapi/calls/${initialData.call_id}`, {

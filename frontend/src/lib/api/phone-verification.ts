@@ -1,4 +1,5 @@
-import { supabaseMFAService } from '@/lib/supabase/mfa';
+// Note: Phone verification has been removed as part of Supabase migration to private deployment
+// This service is kept for API compatibility but returns mock responses
 
 
 
@@ -81,55 +82,63 @@ export const phoneVerificationService = {
    * Enroll phone number for SMS-based 2FA
    */
   async enrollPhoneNumber(data: PhoneVerificationEnroll): Promise<EnrollFactorResponse> {
-    return await supabaseMFAService.enrollPhoneNumber(data);
+    throw new Error('Phone verification not available in private deployment');
   },
 
   /**
    * Create a challenge for an enrolled phone factor (sends SMS)
    */
   async createChallenge(data: PhoneVerificationChallenge): Promise<ChallengeResponse> {
-    return await supabaseMFAService.createChallenge(data);
+    throw new Error('Phone verification not available in private deployment');
   },
 
   /**
    * Verify SMS code for phone verification
    */
   async verifyChallenge(data: PhoneVerificationVerify): Promise<PhoneVerificationResponse> {
-    return await supabaseMFAService.verifyChallenge(data);
+    throw new Error('Phone verification not available in private deployment');
   },
 
   /**
    * Create challenge and verify in one step
    */
   async challengeAndVerify(data: PhoneVerificationChallengeAndVerify): Promise<PhoneVerificationResponse> {
-    return await supabaseMFAService.challengeAndVerify(data);
+    throw new Error('Phone verification not available in private deployment');
   },
 
   /**
    * Resend SMS code (create new challenge for existing factor)
    */
   async resendSMS(factorId: string): Promise<ChallengeResponse> {
-    return await supabaseMFAService.resendSMS(factorId);
+    throw new Error('Phone verification not available in private deployment');
   },
 
   /**
    * List all enrolled MFA factors
    */
   async listFactors(): Promise<ListFactorsResponse> {
-    return await supabaseMFAService.listFactors();
+    return { factors: [] };
   },
 
   /**
    * Remove phone verification from account
    */
   async unenrollFactor(factorId: string): Promise<PhoneVerificationResponse> {
-    return await supabaseMFAService.unenrollFactor(factorId);
+    throw new Error('Phone verification not available in private deployment');
   },
 
   /**
    * Get Authenticator Assurance Level
    */
   async getAAL(): Promise<AALResponse> {
-    return await supabaseMFAService.getAAL();
+    return {
+      current_level: 'aal1',
+      next_level: 'aal1',
+      current_authentication_methods: ['password'],
+      phone_verification_required: false,
+      verification_required: false,
+      is_verified: true,
+      factors: []
+    };
   }
 };

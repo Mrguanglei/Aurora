@@ -126,7 +126,8 @@ export function DashboardContent() {
     if (agents.length > 0) {
       initializeFromAgents(agents, undefined, setSelectedAgent);
     }
-  }, [agents, initializeFromAgents, setSelectedAgent]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents]);
 
   React.useEffect(() => {
     const tab = searchParams.get('tab');
@@ -386,7 +387,7 @@ export function DashboardContent() {
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [autoSubmit, inputValue, isSubmitting, isRedirecting, handleSubmit]);
+  }, [autoSubmit, inputValue, isSubmitting, isRedirecting]);
 
   React.useEffect(() => {
     if (inputValue.trim() && !isSubmitting && !isRedirecting) {
@@ -419,7 +420,7 @@ export function DashboardContent() {
         <div className="absolute flex items-center gap-2 top-4 right-4">
         <NotificationDropdown />
           <a
-            href="mailto:support@kortix.com"
+            href="mailto:support@botsmart.cn"
             className="flex items-center justify-center h-[41px] w-[41px] border-[1.5px] border-border/60 dark:border-border rounded-full bg-background dark:bg-background hover:bg-accent/30 dark:hover:bg-accent/20 hover:border-border dark:hover:border-border/80 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             title="Contact Support"
           >

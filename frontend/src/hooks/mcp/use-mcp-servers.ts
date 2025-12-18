@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -28,19 +28,18 @@ interface MCPServerDetailResponse {
 }
 
 export const useMCPServerDetails = (qualifiedName: string, enabled: boolean = true) => {
-  const supabase = createClient();
+  const { token } = useAuth();
 
   return useQuery({
     queryKey: ['mcp-server-details', qualifiedName],
     queryFn: async (): Promise<MCPServerDetailResponse> => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No session');
+      if (!token) throw new Error('No session');
 
       const response = await fetch(
         `${API_URL}/mcp/servers/${qualifiedName}`,
         {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${token}`,
           },
         }
       );
@@ -51,7 +50,7 @@ export const useMCPServerDetails = (qualifiedName: string, enabled: boolean = tr
 
       return response.json();
     },
-    enabled: enabled && !!qualifiedName,
+    enabled: enabled && !!qualifiedName && !!token,
     staleTime: 10 * 60 * 1000,
   });
 };

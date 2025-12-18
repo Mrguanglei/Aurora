@@ -1,5 +1,4 @@
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 import { backendApi } from '../api-client';
 
 export enum DownloadFormat {
@@ -72,16 +71,13 @@ export const handleGoogleDocsAuth = async (docPath: string, sandboxUrl: string) 
   }
 };
 
-export const handleGoogleDocsUpload = async (sandboxUrl: string, docPath: string) => {
+export const handleGoogleDocsUpload = async (sandboxUrl: string, docPath: string, token: string | null) => {
   if (!sandboxUrl || !docPath) {
     throw new Error('Missing required parameters');
   }
   
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) {
+    if (!token) {
       throw new Error('User not authenticated');
     }
 
@@ -90,7 +86,7 @@ export const handleGoogleDocsUpload = async (sandboxUrl: string, docPath: string
       sandbox_url: sandboxUrl,
     }, {
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       timeout: 180000,
     });

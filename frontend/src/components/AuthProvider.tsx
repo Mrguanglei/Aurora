@@ -26,6 +26,7 @@ type LocalSession = {
 type AuthContextType = {
   session: LocalSession | null;
   user: LocalUser | null;
+  token: string | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
 };
@@ -111,6 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     session,
     user,
+    token: session?.access_token ?? null,
     isLoading,
     signOut,
   };

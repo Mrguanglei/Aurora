@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -18,12 +18,8 @@ interface AgentToolsResponse {
   mcp_tools: AgentTool[];
 }
 
-const fetchAgentTools = async (agentId: string): Promise<AgentToolsResponse> => {
-
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+const fetchAgentTools = async (agentId: string, token: string | null): Promise<AgentToolsResponse> => {
+  if (!token) {
     throw new Error('You must be logged in to get agent tools');
   }
 
@@ -31,7 +27,7 @@ const fetchAgentTools = async (agentId: string): Promise<AgentToolsResponse> => 
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
 
@@ -45,10 +41,12 @@ const fetchAgentTools = async (agentId: string): Promise<AgentToolsResponse> => 
 };
 
 export const useAgentTools = (agentId: string) => {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['agent-tools', agentId],
-    queryFn: () => fetchAgentTools(agentId),
+    queryFn: () => fetchAgentTools(agentId, token),
     staleTime: 5 * 60 * 1000,
-    enabled: !!agentId,
+    enabled: !!agentId && !!token,
   });
 }; 

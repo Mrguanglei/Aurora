@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/AuthProvider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,6 +103,7 @@ export function MarkdownToolbar({
   hasChanges = false,
   sandboxId,
 }: MarkdownToolbarProps) {
+  const { token } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
@@ -346,10 +347,7 @@ export function MarkdownToolbar({
     const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
     
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      if (!token) {
         toast.error('Authentication required for upload');
         return null;
       }
@@ -363,7 +361,7 @@ export function MarkdownToolbar({
       const uploadResponse = await fetch(`${API_URL}/sandboxes/${sandboxId}/files`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
@@ -379,7 +377,7 @@ export function MarkdownToolbar({
       const contentUrl = `${API_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(actualPath)}`;
       const contentResponse = await fetch(contentUrl, {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 

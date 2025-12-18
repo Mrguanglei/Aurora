@@ -38,7 +38,7 @@ import {
     Folder,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { useNameValidation } from '@/lib/validation';
 import { cn } from '@/lib/utils';
 import { type Folder as FolderType } from '@/hooks/knowledge-base/use-folders';
@@ -65,6 +65,7 @@ export function UnifiedKbEntryModal({
     trigger,
     defaultTab = 'upload'
 }: UnifiedKbEntryModalProps) {
+    const { token } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(defaultTab);
     const [selectedFolder, setSelectedFolder] = useState<string>('');
@@ -116,17 +117,14 @@ export function UnifiedKbEntryModal({
 
         setIsCreatingFolder(true);
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token available');
             }
 
             const response = await fetch(`${API_URL}/knowledge-base/folders`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ name: newFolderName.trim() })
@@ -225,11 +223,8 @@ export function UnifiedKbEntryModal({
         setIsUploading(true);
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token available');
             }
 
             let completedFiles = 0;

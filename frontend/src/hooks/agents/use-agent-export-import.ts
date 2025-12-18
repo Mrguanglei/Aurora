@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from '@/components/AuthProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -33,12 +33,11 @@ export interface AgentImportRequest {
 
 // Export agent hook
 export const useExportAgent = () => {
+  const { token } = useAuth();
+  
   return useMutation({
     mutationFn: async (agentId: string): Promise<AgentExportData> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to export agents');
       }
 
@@ -46,7 +45,7 @@ export const useExportAgent = () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -84,13 +83,11 @@ export const useExportAgent = () => {
 // Import agent hook
 export const useImportAgent = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
     mutationFn: async (importRequest: AgentImportRequest) => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to import agents');
       }
 
@@ -98,7 +95,7 @@ export const useImportAgent = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(importRequest),
       });

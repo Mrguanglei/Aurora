@@ -2,7 +2,6 @@
 
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
 import { useCallback, useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { detectBestLocale } from '@/lib/utils/geo-detection';
 
 /**
@@ -16,19 +15,10 @@ import { detectBestLocale } from '@/lib/utils/geo-detection';
 async function getStoredLocale(): Promise<Locale> {
   if (typeof window === 'undefined') return defaultLocale;
 
-  try {
-    // Priority 1: Check user profile preference (if authenticated)
-    // This ALWAYS takes precedence - user explicitly set it in settings
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.user_metadata?.locale && locales.includes(user.user_metadata.locale as Locale)) {
-      return user.user_metadata.locale as Locale;
-    }
-  } catch (error) {
-    // Silently fail - user might not be authenticated
-  }
+  // Note: User profile preference check has been removed as part of Supabase migration.
+  // The system now uses cookie → localStorage → geo-detection priority.
   
-  // Priority 2: Check cookie (explicit user preference)
+  // Priority 1: Check cookie (explicit user preference)
   const cookies = document.cookie.split(';');
   const localeCookie = cookies.find(c => c.trim().startsWith('locale='));
   if (localeCookie) {
@@ -38,13 +28,13 @@ async function getStoredLocale(): Promise<Locale> {
     }
   }
   
-  // Priority 3: Check localStorage (explicit user preference)
+  // Priority 2: Check localStorage (explicit user preference)
   const stored = localStorage.getItem('locale');
   if (stored && locales.includes(stored as Locale)) {
     return stored as Locale;
   }
   
-  // Priority 4: Geo-detection (default when nothing is explicitly set)
+  // Priority 3: Geo-detection (default when nothing is explicitly set)
   const geoDetected = detectBestLocale();
   return geoDetected;
 }
@@ -95,34 +85,14 @@ export function useLanguage() {
     
     setIsChanging(true);
     
-    try {
-      // Priority 1: Save to user profile if authenticated (highest priority)
-      // This is the explicit user preference from settings
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        try {
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: { locale: newLocale }
-          });
-          
-          if (updateError) {
-            console.warn('Failed to save locale to user profile:', updateError);
-          }
-        } catch (error) {
-          console.warn('Error saving locale to user profile:', error);
-        }
-      }
-    } catch (error) {
-      // User might not be authenticated, continue with cookie/localStorage
-    }
+    // Note: User profile locale saving has been removed as part of Supabase migration.
+    // The system now uses cookie and localStorage for preference persistence.
     
-    // Priority 2: Store preference in cookie (explicit user preference)
+    // Priority 1: Store preference in cookie (explicit user preference)
     const cookieValue = `locale=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
     document.cookie = cookieValue;
     
-    // Priority 3: Store in localStorage as backup (explicit user preference)
+    // Priority 2: Store in localStorage as backup (explicit user preference)
     if (typeof window !== 'undefined') {
       localStorage.setItem('locale', newLocale);
     }

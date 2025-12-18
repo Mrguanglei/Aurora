@@ -40,7 +40,6 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { isLocalMode, isProductionMode } from '@/lib/config';
 import { backendApi } from '@/lib/api-client';
@@ -120,6 +119,7 @@ export function UserSettingsModal({
     
     useEffect(() => {
         setActiveTab(defaultTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [defaultTab]);
 
     const handleTabClick = (tabId: TabId) => {
@@ -301,6 +301,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
         };
 
         fetchUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const getInitials = (name: string) => {

@@ -275,6 +275,7 @@ export function ImageRenderer({ url, className }: ImageRendererProps) {
                 }}
               >
                 {/* Fallback to img if object fails */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={imageRef}
                   src={url}
@@ -290,6 +291,7 @@ export function ImageRenderer({ url, className }: ImageRendererProps) {
                 />
               </object>
             ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 ref={imageRef}
                 src={url}

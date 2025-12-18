@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/client";
 import { backendApi } from "@/lib/api-client";
 import { getProject, updateProject, type Project } from "@/lib/api/threads";
 
@@ -22,17 +21,14 @@ export type Thread = {
   };
   
 
-  export const getThread = async (threadId: string): Promise<Thread> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
+  export const getThread = async (threadId: string, token?: string | null): Promise<Thread> => {
     // Build headers with optional auth token
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     // Use backend API endpoint with auth handling
@@ -53,11 +49,9 @@ export type Thread = {
 export const updateThread = async (
     threadId: string,
     data: Partial<Thread>,
+    token?: string | null,
   ): Promise<Thread> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
+    if (!token) {
       throw new Error('You must be logged in to update a thread');
     }
 
@@ -66,7 +60,7 @@ export const updateThread = async (
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
       cache: 'no-store',
@@ -85,29 +79,23 @@ export const updateThread = async (
 export const toggleThreadPublicStatus = async (
     threadId: string,
     isPublic: boolean,
+    token?: string | null,
   ): Promise<Thread> => {
-    return updateThread(threadId, { is_public: isPublic });
+    return updateThread(threadId, { is_public: isPublic }, token);
 };
 
 /**
  * Delete a thread using the backend API endpoint.
  * The backend handles deleting all associated data (messages, agent runs, project, sandbox).
  */
-export const deleteThread = async (threadId: string, sandboxId?: string): Promise<void> => {
+export const deleteThread = async (threadId: string, sandboxId?: string, token?: string | null): Promise<void> => {
     try {
-      const supabase = createClient();
-      
-      // Get auth session for the API request
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
       // Use the backend DELETE endpoint which handles everything

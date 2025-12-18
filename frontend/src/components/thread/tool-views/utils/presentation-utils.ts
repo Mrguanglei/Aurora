@@ -1,5 +1,4 @@
 import { backendApi } from "@/lib/api-client";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 export enum DownloadFormat {
@@ -167,14 +166,15 @@ export const handleGoogleAuth = async (presentationPath: string, sandboxUrl: str
 };
 
 
-export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationPath: string) => {
+export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationPath: string, token: string) => {
   if (!sandboxUrl || !presentationPath) {
     throw new Error('Missing required parameters');
   }
   
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
     
     // Use proper backend API client with authentication and extended timeout for PPTX generation
     const response = await backendApi.post('/presentation-tools/convert-and-upload-to-slides', {
@@ -182,7 +182,7 @@ export const handleGoogleSlidesUpload = async (sandboxUrl: string, presentationP
       sandbox_url: sandboxUrl,
     }, {
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       timeout: 180000, // 3 minutes timeout for PPTX generation (longer than backend's 2 minute timeout)
     });

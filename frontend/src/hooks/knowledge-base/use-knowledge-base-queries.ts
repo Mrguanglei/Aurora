@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { knowledgeBaseKeys } from './keys';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
@@ -26,31 +26,22 @@ export interface UpdateKnowledgeBaseEntryRequest {
   is_active?: boolean;
 }
 
-const useAuthHeaders = () => {
-  const getHeaders = async () => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) {
-      throw new Error('No access token available');
-    }
-    return {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    };  
-  };
-  
-  return { getHeaders };
-};
-
 
 export function useKnowledgeBaseEntry(entryId: string) {
-  const { getHeaders } = useAuthHeaders();
+  const { token } = useAuth();
   
   return useQuery({
     queryKey: knowledgeBaseKeys.entry(entryId),
     queryFn: async (): Promise<KnowledgeBaseEntry> => {
-      const headers = await getHeaders();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+      
       const response = await fetch(`${API_URL}/knowledge-base/${entryId}`, { headers });
       
       if (!response.ok) {
@@ -66,17 +57,22 @@ export function useKnowledgeBaseEntry(entryId: string) {
 
 export function useUpdateKnowledgeBaseEntry() {
   const queryClient = useQueryClient();
-  const { getHeaders } = useAuthHeaders();
+  const { token } = useAuth();
   
   return useMutation({
     mutationFn: async ({ entryId, data }: { entryId: string; data: UpdateKnowledgeBaseEntryRequest }) => {
-      const headers = await getHeaders();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+      
       const response = await fetch(`${API_URL}/knowledge-base/${entryId}`, {
         method: 'PUT',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(data),
       });
       
@@ -99,11 +95,19 @@ export function useUpdateKnowledgeBaseEntry() {
 
 export function useDeleteKnowledgeBaseEntry() {
   const queryClient = useQueryClient();
-  const { getHeaders } = useAuthHeaders();
+  const { token } = useAuth();
   
   return useMutation({
     mutationFn: async (entryId: string) => {
-      const headers = await getHeaders();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+      
       const response = await fetch(`${API_URL}/knowledge-base/${entryId}`, {
         method: 'DELETE',
         headers,
@@ -128,12 +132,20 @@ export function useDeleteKnowledgeBaseEntry() {
 
 
 export function useAgentKnowledgeBaseContext(agentId: string, maxTokens = 4000) {
-  const { getHeaders } = useAuthHeaders();
+  const { token } = useAuth();
   
   return useQuery({
     queryKey: knowledgeBaseKeys.agentContext(agentId),
     queryFn: async () => {
-      const headers = await getHeaders();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+      
       const url = new URL(`${API_URL}/knowledge-base/agents/${agentId}/context`);
       url.searchParams.set('max_tokens', maxTokens.toString());
       

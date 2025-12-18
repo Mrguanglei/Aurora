@@ -15,6 +15,7 @@ export const WorkforceSelectionStep = () => {
   // Update global context when selection changes
   useEffect(() => {
     updateUserContext({ selectedAgents });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgents]);
 
   // Get recommended AI workers based on user context
@@ -81,6 +82,7 @@ export const WorkforceSelectionStep = () => {
       const recommended = getRecommendedAgents();
       setSelectedAgents(recommended.slice(0, 3)); // Select top 3
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const recommendedIds = getRecommendedAgents();

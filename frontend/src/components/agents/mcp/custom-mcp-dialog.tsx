@@ -7,7 +7,7 @@ import { Loader2, AlertCircle, CheckCircle2, Zap, ChevronRight, Sparkles, Server
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { Input } from '@/components/ui/input';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
@@ -37,6 +37,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
   onOpenChange,
   onSave
 }) => {
+  const { token } = useAuth();
   const [step, setStep] = useState<'setup' | 'tools'>('setup');
   const [serverType, setServerType] = useState<'http'>('http');
   const [configText, setConfigText] = useState('');
@@ -70,10 +71,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         setServerName(manualServerName.trim());
       }
 
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to discover tools');
       }
 
@@ -81,7 +79,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           type: serverType,

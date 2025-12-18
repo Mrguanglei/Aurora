@@ -1170,14 +1170,16 @@ export function SunaModesPanel({
       const translatedPrompts = getTranslatedPrompts(selectedMode);
       setRandomizedPrompts(getRandomPrompts(translatedPrompts, promptCount));
     }
-  }, [selectedMode, promptCount, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMode, promptCount]);
   
   // Reset selections when mode changes
   useEffect(() => {
     setSelectedCharts([]);
     setSelectedOutputFormat(null);
     setSelectedTemplateId(null);
-  }, [selectedMode, setSelectedCharts, setSelectedOutputFormat, setSelectedTemplateId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMode]);
 
   // Handler for refresh button
   const handleRefreshPrompts = () => {

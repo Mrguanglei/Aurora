@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS agents (
     metadata JSONB DEFAULT '{}',
     is_default BOOLEAN DEFAULT false,
     version_count INTEGER DEFAULT 0,
+    current_version_id UUID,
+    config JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT true
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE INDEX IF NOT EXISTS idx_agents_account_id ON agents(account_id);
 CREATE INDEX IF NOT EXISTS idx_agents_created_at ON agents(created_at);
 CREATE INDEX IF NOT EXISTS idx_agents_is_default ON agents(account_id, is_default) WHERE is_default = true;
+CREATE INDEX IF NOT EXISTS idx_agents_current_version ON agents(current_version_id);
 
 -- ============================================================================
 -- Thread/Conversation 相关表
@@ -192,6 +195,44 @@ DROP TRIGGER IF EXISTS update_presence_updated_at ON user_presence_sessions;
 CREATE TRIGGER update_presence_updated_at BEFORE UPDATE ON user_presence_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_agent_versions_updated_at ON agent_versions;
+CREATE TRIGGER update_agent_versions_updated_at BEFORE UPDATE ON agent_versions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_memories_updated_at ON user_memories;
+CREATE TRIGGER update_user_memories_updated_at BEFORE UPDATE ON user_memories
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_kb_folders_updated_at ON knowledge_base_folders;
+CREATE TRIGGER update_kb_folders_updated_at BEFORE UPDATE ON knowledge_base_folders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_kb_entries_updated_at ON knowledge_base_entries;
+CREATE TRIGGER update_kb_entries_updated_at BEFORE UPDATE ON knowledge_base_entries
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_credential_profiles_updated_at ON user_mcp_credential_profiles;
+CREATE TRIGGER update_credential_profiles_updated_at BEFORE UPDATE ON user_mcp_credential_profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- 添加外键约束（需要在相关表创建后）
+-- ============================================================================
+
+-- 为agents.current_version_id添加外键
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_agents_current_version'
+    ) THEN
+        ALTER TABLE agents 
+        ADD CONSTRAINT fk_agents_current_version 
+        FOREIGN KEY (current_version_id) 
+        REFERENCES agent_versions(version_id);
+    END IF;
+END $$;
+
 -- ============================================================================
 -- 创建初始管理员用户（可选）
 -- ============================================================================
@@ -208,3 +249,246 @@ CREATE TABLE IF NOT EXISTS user_roles (
     role VARCHAR(50) NOT NULL,
     PRIMARY KEY (user_id, role)
 );
+
+-- ============================================================================
+-- Agent版本管理表
+-- ============================================================================
+
+-- Agent版本表
+CREATE TABLE IF NOT EXISTS agent_versions (
+    version_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    version_name VARCHAR(50) NOT NULL,
+    system_prompt TEXT NOT NULL,
+    model VARCHAR(255),
+    configured_mcps JSONB DEFAULT '[]'::jsonb,
+    custom_mcps JSONB DEFAULT '[]'::jsonb,
+    agentpress_tools JSONB DEFAULT '{}'::jsonb,
+    config JSONB DEFAULT '{}'::jsonb,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    
+    UNIQUE(agent_id, version_number),
+    UNIQUE(agent_id, version_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_versions_agent_id ON agent_versions(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_versions_is_active ON agent_versions(is_active);
+
+-- Agent版本历史记录表
+CREATE TABLE IF NOT EXISTS agent_version_history (
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
+    version_id UUID NOT NULL REFERENCES agent_versions(version_id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL,
+    performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    change_description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_version_history_agent_id ON agent_version_history(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_version_history_version_id ON agent_version_history(version_id);
+
+-- ============================================================================
+-- 用户记忆系统表
+-- ============================================================================
+
+-- 创建枚举类型
+DO $$ BEGIN
+    CREATE TYPE memory_type AS ENUM ('fact', 'preference', 'context', 'conversation_summary');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE memory_extraction_status AS ENUM ('pending', 'processing', 'completed', 'failed');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- 用户记忆表
+CREATE TABLE IF NOT EXISTS user_memories (
+    memory_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    memory_type memory_type NOT NULL DEFAULT 'fact',
+    source_thread_id UUID REFERENCES threads(thread_id) ON DELETE SET NULL,
+    confidence_score FLOAT DEFAULT 0.8,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_memories_account_id ON user_memories(account_id);
+CREATE INDEX IF NOT EXISTS idx_user_memories_source_thread ON user_memories(source_thread_id);
+
+-- 记忆提取队列表
+CREATE TABLE IF NOT EXISTS memory_extraction_queue (
+    queue_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    thread_id UUID NOT NULL REFERENCES threads(thread_id) ON DELETE CASCADE,
+    message_ids JSONB NOT NULL DEFAULT '[]',
+    status memory_extraction_status NOT NULL DEFAULT 'pending',
+    priority INTEGER DEFAULT 5,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    processed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_queue_account_id ON memory_extraction_queue(account_id);
+CREATE INDEX IF NOT EXISTS idx_memory_queue_thread_id ON memory_extraction_queue(thread_id);
+CREATE INDEX IF NOT EXISTS idx_memory_queue_status ON memory_extraction_queue(status);
+
+-- ============================================================================
+-- 知识库系统表
+-- ============================================================================
+
+-- 知识库文件夹表
+CREATE TABLE IF NOT EXISTS knowledge_base_folders (
+    folder_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    CONSTRAINT kb_folders_name_not_empty CHECK (LENGTH(TRIM(name)) > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kb_folders_account_id ON knowledge_base_folders(account_id);
+
+-- 知识库条目表
+CREATE TABLE IF NOT EXISTS knowledge_base_entries (
+    entry_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    folder_id UUID NOT NULL REFERENCES knowledge_base_folders(folder_id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    filename VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type VARCHAR(255),
+    
+    summary TEXT NOT NULL,
+    usage_context VARCHAR(100) DEFAULT 'always' CHECK (usage_context IN ('always', 'on_request', 'contextual')),
+    
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kb_entries_folder_id ON knowledge_base_entries(folder_id);
+CREATE INDEX IF NOT EXISTS idx_kb_entries_account_id ON knowledge_base_entries(account_id);
+
+-- Agent知识库分配表
+CREATE TABLE IF NOT EXISTS agent_knowledge_entry_assignments (
+    assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
+    entry_id UUID NOT NULL REFERENCES knowledge_base_entries(entry_id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    enabled BOOLEAN DEFAULT TRUE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(agent_id, entry_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kb_entry_assignments_agent_id ON agent_knowledge_entry_assignments(agent_id);
+CREATE INDEX IF NOT EXISTS idx_kb_entry_assignments_entry_id ON agent_knowledge_entry_assignments(entry_id);
+
+-- ============================================================================
+-- MCP凭证配置表
+-- ============================================================================
+
+-- 用户MCP凭证配置表
+CREATE TABLE IF NOT EXISTS user_mcp_credential_profiles (
+    profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    mcp_qualified_name TEXT NOT NULL,
+    profile_name TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    encrypted_config TEXT NOT NULL,
+    config_hash TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    is_default BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    
+    UNIQUE(account_id, mcp_qualified_name, profile_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_credential_profiles_account_mcp 
+    ON user_mcp_credential_profiles(account_id, mcp_qualified_name);
+
+CREATE INDEX IF NOT EXISTS idx_credential_profiles_account_active 
+    ON user_mcp_credential_profiles(account_id, is_active) 
+    WHERE is_active = true;
+
+-- ============================================================================
+-- 辅助函数
+-- ============================================================================
+
+-- 获取用户记忆统计函数
+CREATE OR REPLACE FUNCTION get_memory_stats(p_account_id UUID)
+RETURNS TABLE(
+    total_memories INTEGER,
+    fact_count INTEGER,
+    preference_count INTEGER,
+    context_count INTEGER,
+    summary_count INTEGER
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        COUNT(*)::INTEGER as total_memories,
+        COUNT(*) FILTER (WHERE memory_type = 'fact')::INTEGER as fact_count,
+        COUNT(*) FILTER (WHERE memory_type = 'preference')::INTEGER as preference_count,
+        COUNT(*) FILTER (WHERE memory_type = 'context')::INTEGER as context_count,
+        COUNT(*) FILTER (WHERE memory_type = 'conversation_summary')::INTEGER as summary_count
+    FROM user_memories
+    WHERE account_id = p_account_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 获取Agent知识库上下文函数
+CREATE OR REPLACE FUNCTION get_agent_knowledge_base_context(
+    p_agent_id UUID,
+    p_max_tokens INTEGER DEFAULT 10000
+)
+RETURNS TEXT AS $$
+DECLARE
+    context_text TEXT := '';
+    entry_record RECORD;
+    current_tokens INTEGER := 0;
+BEGIN
+    FOR entry_record IN
+        SELECT 
+            e.entry_id,
+            e.filename,
+            e.summary
+        FROM knowledge_base_entries e
+        INNER JOIN agent_knowledge_entry_assignments a 
+            ON e.entry_id = a.entry_id
+        WHERE a.agent_id = p_agent_id
+        AND a.enabled = TRUE
+        AND e.is_active = TRUE
+        AND e.usage_context IN ('always', 'contextual')
+        ORDER BY e.created_at DESC
+    LOOP
+        -- 简单估算: 1 token ≈ 4 characters
+        IF current_tokens + (LENGTH(entry_record.summary) / 4) > p_max_tokens THEN
+            EXIT;
+        END IF;
+        
+        context_text := context_text || E'\n\n## ' || entry_record.filename || E'\n';
+        context_text := context_text || entry_record.summary;
+        
+        current_tokens := current_tokens + (LENGTH(entry_record.summary) / 4);
+    END LOOP;
+    
+    RETURN context_text;
+END;
+$$ LANGUAGE plpgsql;

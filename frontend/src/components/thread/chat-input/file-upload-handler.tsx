@@ -4,7 +4,7 @@ import React, { forwardRef, useEffect, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Paperclip, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { useQueryClient } from '@tanstack/react-query';
 import { fileQueryKeys } from '@/hooks/files/use-file-queries';
 import {
@@ -60,9 +60,14 @@ const uploadFiles = async (
   messages: any[] = [], // Add messages parameter to check for existing files
   queryClient?: any, // Add queryClient parameter for cache invalidation
   setPendingFiles?: React.Dispatch<React.SetStateAction<File[]>>, // Add setPendingFiles to clear pending files after upload
+  token?: string, // Add token parameter
 ) => {
   try {
     setIsUploading(true);
+
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
 
     const newUploadedFiles: UploadedFile[] = [];
 
@@ -83,19 +88,10 @@ const uploadFiles = async (
       formData.append('file', file, normalizedName);
       formData.append('path', uploadPath);
 
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error('No access token available');
-      }
-
       const response = await fetch(`${API_URL}/sandboxes/${sandboxId}/files`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
@@ -174,9 +170,14 @@ const uploadFilesToProject = async (
   setUploadedFiles: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>,
   setPendingFiles?: React.Dispatch<React.SetStateAction<File[]>>,
+  token?: string, // Add token parameter
 ) => {
   try {
     setIsUploading(true);
+
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
 
     const newUploadedFiles: UploadedFile[] = [];
 
@@ -194,19 +195,10 @@ const uploadFilesToProject = async (
       formData.append('file', file, normalizedName);
       formData.append('path', uploadPath);
 
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error('No access token available');
-      }
-
       const response = await fetch(`${API_URL}/project/${projectId}/files`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });

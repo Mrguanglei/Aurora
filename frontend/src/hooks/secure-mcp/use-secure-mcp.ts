@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -127,19 +127,18 @@ export interface CreateTemplateRequest {
 }
 
 export function useUserCredentials() {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['secure-mcp', 'credentials'],
     queryFn: async (): Promise<MCPCredential[]> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to view credentials');
       }
 
       const response = await fetch(`${API_URL}/secure-mcp/credentials`, {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -155,13 +154,11 @@ export function useUserCredentials() {
 
 export function useStoreCredential() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async (request: StoreCredentialRequest): Promise<MCPCredential> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to store credentials');
       }
 
@@ -169,7 +166,7 @@ export function useStoreCredential() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
       });
@@ -189,20 +186,18 @@ export function useStoreCredential() {
 
 export function useDeleteCredential() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async (mcp_qualified_name: string): Promise<void> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to delete credentials');
       }
 
       const response = await fetch(`${API_URL}/secure-mcp/credentials/${encodeURIComponent(mcp_qualified_name)}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -241,13 +236,12 @@ export function useMarketplaceTemplates(params?: {
   sort_by?: string;
   sort_order?: string;
 }) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['secure-mcp', 'marketplace-templates', params],
     queryFn: async (): Promise<MarketplaceTemplatesResponse> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to view marketplace templates');
       }
 
@@ -263,7 +257,7 @@ export function useMarketplaceTemplates(params?: {
 
       const response = await fetch(`${API_URL}/templates/marketplace?${searchParams}`, {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -277,19 +271,18 @@ export function useMarketplaceTemplates(params?: {
 }
 
 export function useTemplateDetails(template_id: string) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['secure-mcp', 'template', template_id],
     queryFn: async (): Promise<AgentTemplate> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to view template details');
       }
 
       const response = await fetch(`${API_URL}/templates/${template_id}`, {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -306,13 +299,11 @@ export function useTemplateDetails(template_id: string) {
 
 export function useCreateTemplate() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async (request: CreateTemplateRequest): Promise<{ template_id: string; message: string }> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to create templates');
       }
 
@@ -320,7 +311,7 @@ export function useCreateTemplate() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
       });
@@ -346,13 +337,12 @@ export function useMyTemplates(params?: {
   sort_by?: string;
   sort_order?: string;
 }) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['secure-mcp', 'my-templates', params],
     queryFn: async (): Promise<MarketplaceTemplatesResponse> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to view your templates');
       }
 
@@ -365,7 +355,7 @@ export function useMyTemplates(params?: {
 
       const response = await fetch(`${API_URL}/templates/my?${searchParams}`, {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -381,6 +371,7 @@ export function useMyTemplates(params?: {
 
 export function usePublishTemplate() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async ({ 
@@ -392,10 +383,7 @@ export function usePublishTemplate() {
       tags?: string[];
       usage_examples?: UsageExampleMessage[];
     }): Promise<{ message: string }> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to publish templates');
       }
 
@@ -403,7 +391,7 @@ export function usePublishTemplate() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ tags, usage_examples }),
       });
@@ -424,13 +412,11 @@ export function usePublishTemplate() {
 
 export function useUnpublishTemplate() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async (template_id: string): Promise<{ message: string }> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to unpublish templates');
       }
 
@@ -438,7 +424,7 @@ export function useUnpublishTemplate() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -458,13 +444,11 @@ export function useUnpublishTemplate() {
 
 export function useDeleteTemplate() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async (template_id: string): Promise<{ message: string }> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to delete templates');
       }
 
@@ -472,7 +456,7 @@ export function useDeleteTemplate() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -491,19 +475,18 @@ export function useDeleteTemplate() {
 }
 
 export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['secure-mcp', 'kortix-templates-all'],
     queryFn: async (): Promise<MarketplaceTemplatesResponse> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to view Kortix templates');
       }
 
       const response = await fetch(`${API_URL}/templates/kortix-all`, {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -521,19 +504,19 @@ export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
 
 export function useInstallTemplate() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
     mutationFn: async (request: InstallTemplateRequest): Promise<InstallationResponse> => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (!token) {
         throw new Error('You must be logged in to install templates');
       }
+      
       const response = await fetch(`${API_URL}/templates/install`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
       });

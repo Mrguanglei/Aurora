@@ -61,8 +61,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { createClient } from '@/lib/supabase/client';
 import { useTheme } from 'next-themes';
+import { useAuth } from '@/components/AuthProvider';
 import { isLocalMode, isProductionMode } from '@/lib/config';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 import { UserSettingsModal } from '@/components/settings/user-settings-modal';
@@ -86,6 +86,7 @@ export function NavUserWithTeams({
   const router = useRouter();
   const { isMobile } = useSidebar();
   const { data: accounts } = useAccounts();
+  const { logout } = useAuth();
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [settingsTab, setSettingsTab] = React.useState<'general' | 'usage' | 'env-manager'>('general');
@@ -169,10 +170,7 @@ export function NavUserWithTeams({
   };
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    // Clear local storage after sign out
-    clearUserLocalStorage();
+    await logout();
     router.push('/auth');
   };
 

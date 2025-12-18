@@ -22,9 +22,9 @@ import {
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { ThreadSearchModal } from '@/components/sidebar/thread-search-modal';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/AuthProvider';
 import {
   Tooltip,
   TooltipContent,
@@ -88,6 +88,7 @@ export function SidebarLeft({
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const { user: authUser, logout } = useAuth();
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'starred'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
   const [user, setUser] = useState<{
@@ -117,8 +118,7 @@ export function SidebarLeft({
 
   // Logout handler
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await logout();
     router.push('/login');
   };
 
@@ -134,24 +134,15 @@ export function SidebarLeft({
   const isAdmin = adminRoleData?.isAdmin ?? false;
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const supabase = createClient();
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setUser({
-          name:
-            data.user.user_metadata?.name ||
-            data.user.email?.split('@')[0] ||
-            'User',
-          email: data.user.email || '',
-          avatar: data.user.user_metadata?.avatar_url || '', // User avatar (different from agent avatar)
-          isAdmin: isAdmin, // Use React Query cached value
-        });
-      }
-    };
-
-    fetchUserData();
-  }, [isAdmin]);
+    if (authUser) {
+      setUser({
+        name: authUser.name || authUser.email?.split('@')[0] || 'User',
+        email: authUser.email || '',
+        avatar: authUser.avatar_url || '',
+        isAdmin: isAdmin,
+      });
+    }
+  }, [isAdmin, authUser]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

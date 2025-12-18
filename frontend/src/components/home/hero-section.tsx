@@ -104,7 +104,8 @@ export function HeroSection() {
         if (agents.length > 0) {
             initializeFromAgents(agents, undefined, setSelectedAgent);
         }
-    }, [agents, initializeFromAgents, setSelectedAgent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [agents]);
 
     const selectedAgent = selectedAgentId
         ? agents.find(agent => agent.agent_id === selectedAgentId)

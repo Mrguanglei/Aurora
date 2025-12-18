@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 export interface CredentialProfile {
   profile_id: string;
@@ -25,17 +25,14 @@ export interface CreateCredentialProfileRequest {
 
 const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL}/secure-mcp`;
 
-async function fetchAllCredentialProfiles(): Promise<CredentialProfile[]> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+async function fetchAllCredentialProfiles(token: string | null): Promise<CredentialProfile[]> {
+  if (!token) {
     throw new Error('You must be logged in to view credential profiles');
   }
 
   const response = await fetch(`${API_BASE}/credential-profiles`, {
     headers: {
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
   
@@ -47,18 +44,15 @@ async function fetchAllCredentialProfiles(): Promise<CredentialProfile[]> {
   return response.json();
 }
 
-async function fetchCredentialProfilesForMcp(mcpQualifiedName: string): Promise<CredentialProfile[]> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+async function fetchCredentialProfilesForMcp(mcpQualifiedName: string, token: string | null): Promise<CredentialProfile[]> {
+  if (!token) {
     throw new Error('You must be logged in to view credential profiles');
   }
 
   const encodedName = encodeURIComponent(mcpQualifiedName);
   const response = await fetch(`${API_BASE}/credential-profiles/${encodedName}`, {
     headers: {
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
   
@@ -70,17 +64,14 @@ async function fetchCredentialProfilesForMcp(mcpQualifiedName: string): Promise<
   return response.json();
 }
 
-async function fetchCredentialProfileById(profileId: string): Promise<CredentialProfile> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+async function fetchCredentialProfileById(profileId: string, token: string | null): Promise<CredentialProfile> {
+  if (!token) {
     throw new Error('You must be logged in to view credential profile');
   }
 
   const response = await fetch(`${API_BASE}/credential-profiles/profile/${profileId}`, {
     headers: {
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
   
@@ -92,11 +83,8 @@ async function fetchCredentialProfileById(profileId: string): Promise<Credential
   return response.json();
 }
 
-async function createCredentialProfile(data: CreateCredentialProfileRequest): Promise<CredentialProfile> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+async function createCredentialProfile(data: CreateCredentialProfileRequest, token: string | null): Promise<CredentialProfile> {
+  if (!token) {
     throw new Error('You must be logged in to create credential profiles');
   }
 
@@ -104,7 +92,7 @@ async function createCredentialProfile(data: CreateCredentialProfileRequest): Pr
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(data),
   });
@@ -117,18 +105,15 @@ async function createCredentialProfile(data: CreateCredentialProfileRequest): Pr
   return response.json();
 }
 
-async function setDefaultProfile(profileId: string): Promise<void> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+async function setDefaultProfile(profileId: string, token: string | null): Promise<void> {
+  if (!token) {
     throw new Error('You must be logged in to set default profile');
   }
 
   const response = await fetch(`${API_BASE}/credential-profiles/${profileId}/set-default`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
   
@@ -138,18 +123,15 @@ async function setDefaultProfile(profileId: string): Promise<void> {
   }
 }
 
-async function deleteCredentialProfile(profileId: string): Promise<void> {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
+async function deleteCredentialProfile(profileId: string, token: string | null): Promise<void> {
+  if (!token) {
     throw new Error('You must be logged in to delete credential profiles');
   }
 
   const response = await fetch(`${API_BASE}/credential-profiles/${profileId}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
   
@@ -160,36 +142,44 @@ async function deleteCredentialProfile(profileId: string): Promise<void> {
 }
 
 export function useCredentialProfiles() {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['credential-profiles'],
-    queryFn: fetchAllCredentialProfiles,
+    queryFn: () => fetchAllCredentialProfiles(token),
+    enabled: !!token,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useCredentialProfilesForMcp(mcpQualifiedName: string | null) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['credential-profiles', mcpQualifiedName],
-    queryFn: () => mcpQualifiedName ? fetchCredentialProfilesForMcp(mcpQualifiedName) : Promise.resolve([]),
-    enabled: !!mcpQualifiedName,
+    queryFn: () => mcpQualifiedName && token ? fetchCredentialProfilesForMcp(mcpQualifiedName, token) : Promise.resolve([]),
+    enabled: !!mcpQualifiedName && !!token,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useCredentialProfile(profileId: string | null) {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['credential-profile', profileId],
-    queryFn: () => profileId ? fetchCredentialProfileById(profileId) : Promise.resolve(null),
-    enabled: !!profileId,
+    queryFn: () => profileId && token ? fetchCredentialProfileById(profileId, token) : Promise.resolve(null),
+    enabled: !!profileId && !!token,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useCreateCredentialProfile() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
-    mutationFn: createCredentialProfile,
+    mutationFn: (data: CreateCredentialProfileRequest) => createCredentialProfile(data, token),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['credential-profiles'] });
       queryClient.invalidateQueries({ 
@@ -205,9 +195,10 @@ export function useCreateCredentialProfile() {
 
 export function useSetDefaultProfile() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
-    mutationFn: setDefaultProfile,
+    mutationFn: (profileId: string) => setDefaultProfile(profileId, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credential-profiles'] });
       toast.success('Default profile updated successfully');
@@ -220,9 +211,10 @@ export function useSetDefaultProfile() {
 
 export function useDeleteCredentialProfile() {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
-    mutationFn: deleteCredentialProfile,
+    mutationFn: (profileId: string) => deleteCredentialProfile(profileId, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credential-profiles'] });
       toast.success('Credential profile deleted successfully');

@@ -37,7 +37,6 @@ import {
 } from '@/lib/api/sandbox';
 import { Project } from '@/lib/api/threads';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import {
   useDirectoryQuery,
@@ -404,13 +403,8 @@ export function FileBrowserView({
         formData.append('file', file, normalizedName);
         formData.append('path', uploadPath);
 
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error('No access token available');
+        if (!session) {
+          throw new Error('No authentication token available');
         }
 
         if (!sandboxId || sandboxId.trim() === '') {
@@ -424,7 +418,7 @@ export function FileBrowserView({
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${session.access_token}`,
+              Authorization: `Bearer ${session}`,
             },
             body: formData,
           },
@@ -486,8 +480,8 @@ export function FileBrowserView({
       // Fetch git log for entire workspace (no specific path)
       const url = `${API_URL}/sandboxes/${sandboxId}/files/history?path=/workspace&limit=100`;
       const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+      if (session) {
+        headers['Authorization'] = `Bearer ${session}`;
       }
 
       const response = await fetch(url, { headers });
@@ -512,7 +506,7 @@ export function FileBrowserView({
     } finally {
       setIsLoadingVersions(false);
     }
-  }, [sandboxId, session?.access_token, workspaceVersions.length, selectedVersion, selectedVersionDate, setSelectedVersion]);
+  }, [sandboxId, session, workspaceVersions.length, selectedVersion, selectedVersionDate, setSelectedVersion]);
 
   // Auto-load workspace history if we have a selected version but no date
   useEffect(() => {
@@ -540,8 +534,8 @@ export function FileBrowserView({
     try {
       const url = `${API_URL}/sandboxes/${sandboxId}/files/tree?path=${encodeURIComponent(currentPath)}&commit=${encodeURIComponent(commit)}`;
       const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
+      if (session) {
+        headers['Authorization'] = `Bearer ${session}`;
       }
 
       const response = await fetch(url, { headers });
@@ -562,7 +556,7 @@ export function FileBrowserView({
     } finally {
       setIsLoadingVersionFiles(false);
     }
-  }, [sandboxId, currentPath, session?.access_token, workspaceVersions, refetchFiles, setSelectedVersion, clearSelectedVersion]);
+  }, [sandboxId, currentPath, session, workspaceVersions, refetchFiles, setSelectedVersion, clearSelectedVersion]);
 
   // Reload version files when currentPath changes while viewing a version
   useEffect(() => {
@@ -579,7 +573,7 @@ export function FileBrowserView({
     setRevertCommitInfo(null);
     try {
       const url = `${API_URL}/sandboxes/${sandboxId}/files/commit-info?commit=${encodeURIComponent(commit)}`;
-      const res = await fetch(url, { headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {} });
+      const res = await fetch(url, { headers: session ? { Authorization: `Bearer ${session}` } : {} });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || 'Failed to fetch commit info');
@@ -593,7 +587,7 @@ export function FileBrowserView({
     } finally {
       setRevertLoadingInfo(false);
     }
-  }, [sandboxId, session?.access_token]);
+  }, [sandboxId, session]);
 
   // Perform revert (always entire commit for workspace history)
   const performRevert = useCallback(async () => {

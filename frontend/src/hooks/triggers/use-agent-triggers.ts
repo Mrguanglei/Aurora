@@ -1,18 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TriggerConfiguration } from '@/components/agents/triggers/types';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { TriggerLimitError } from '@/lib/api/errors';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const fetchAgentTriggers = async (agentId: string): Promise<TriggerConfiguration[]> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('You must be logged in to create a trigger');
-    }
-    const response = await fetch(`${API_URL}/triggers/agents/${agentId}/triggers`, {
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+const fetchAgentTriggers = async (agentId: string, token: string | null): Promise<TriggerConfiguration[]> => {
+  if (!token) {
+    throw new Error('You must be logged in to create a trigger');
+  }
+  
+  const response = await fetch(`${API_URL}/triggers/agents/${agentId}/triggers`, {
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
   });
   if (!response.ok) {
     throw new Error('Failed to fetch agent triggers');
@@ -26,15 +25,14 @@ const createTrigger = async (data: {
   name: string;
   description?: string;
   config: Record<string, any>;
-}): Promise<TriggerConfiguration> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('You must be logged in to create a trigger');
-    }
-    const response = await fetch(`${API_URL}/triggers/agents/${data.agentId}/triggers`, {
+}, token: string | null): Promise<TriggerConfiguration> => {
+  if (!token) {
+    throw new Error('You must be logged in to create a trigger');
+  }
+  
+  const response = await fetch(`${API_URL}/triggers/agents/${data.agentId}/triggers`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({
       provider_id: data.provider_id,
       name: data.name,
@@ -63,15 +61,14 @@ const updateTrigger = async (data: {
   description?: string;
   config?: Record<string, any>;
   is_active?: boolean;
-}): Promise<TriggerConfiguration> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('You must be logged in to create a trigger');
-    }
-    const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
+}, token: string | null): Promise<TriggerConfiguration> => {
+  if (!token) {
+    throw new Error('You must be logged in to create a trigger');
+  }
+  
+  const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify({
       name: data.name,
       description: data.description,
@@ -88,15 +85,14 @@ const updateTrigger = async (data: {
   return response.json();
 };
 
-const deleteTrigger = async (data: { triggerId: string; agentId: string }): Promise<void> => {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+const deleteTrigger = async (data: { triggerId: string; agentId: string }, token: string | null): Promise<void> => {
+  if (!token) {
     throw new Error('You must be logged in to create a trigger');
   }
+  
   const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
   });
   
   if (!response.ok) {
@@ -106,19 +102,22 @@ const deleteTrigger = async (data: { triggerId: string; agentId: string }): Prom
 };
 
 export const useAgentTriggers = (agentId: string) => {
+  const { token } = useAuth();
+  
   return useQuery({
     queryKey: ['agent-triggers', agentId],
-    queryFn: () => fetchAgentTriggers(agentId),
-    enabled: !!agentId,
+    queryFn: () => fetchAgentTriggers(agentId, token),
+    enabled: !!agentId && !!token,
     staleTime: 2 * 60 * 1000,
   });
 };
 
 export const useCreateTrigger = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
-    mutationFn: createTrigger,
+    mutationFn: (data: Parameters<typeof createTrigger>[0]) => createTrigger(data, token),
     onSuccess: (newTrigger) => {
       queryClient.invalidateQueries({ queryKey: ['agent-upcoming-runs', newTrigger.agent_id] });
       queryClient.invalidateQueries({ queryKey: ['all-triggers'] });
@@ -136,9 +135,10 @@ export const useCreateTrigger = () => {
 
 export const useUpdateTrigger = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
-    mutationFn: updateTrigger,
+    mutationFn: (data: Parameters<typeof updateTrigger>[0]) => updateTrigger(data, token),
     onSuccess: (updatedTrigger) => {
       queryClient.invalidateQueries({ queryKey: ['agent-upcoming-runs', updatedTrigger.agent_id] });
       queryClient.invalidateQueries({ queryKey: ['all-triggers'] });
@@ -157,9 +157,10 @@ export const useUpdateTrigger = () => {
 
 export const useDeleteTrigger = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
-    mutationFn: deleteTrigger,
+    mutationFn: (data: Parameters<typeof deleteTrigger>[0]) => deleteTrigger(data, token),
     onSuccess: (_, { triggerId, agentId }) => {
       queryClient.invalidateQueries({ queryKey: ['agent-upcoming-runs', agentId] });
       queryClient.invalidateQueries({ queryKey: ['agent-triggers'] });
@@ -170,13 +171,14 @@ export const useDeleteTrigger = () => {
 
 export const useToggleTrigger = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   return useMutation({
     mutationFn: async (data: { triggerId: string; isActive: boolean }) => {
       return updateTrigger({
         triggerId: data.triggerId,
         is_active: data.isActive,
-      });
+      }, token);
     },
     onSuccess: (updatedTrigger) => {
       queryClient.invalidateQueries({ queryKey: ['agent-upcoming-runs', updatedTrigger.agent_id] });
@@ -192,4 +194,4 @@ export const useToggleTrigger = () => {
       );
     },
   });
-}; 
+};

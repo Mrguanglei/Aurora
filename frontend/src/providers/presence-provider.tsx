@@ -2,8 +2,6 @@
 
 import { backendApi } from '@/lib/api-client';
 import { useAuth } from '@/components/AuthProvider';
-import { createClient } from '@/lib/supabase/client';
-import { RealtimeChannel } from '@supabase/supabase-js';
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 type PresenceStatus = 'online' | 'idle' | 'offline';
@@ -54,7 +52,6 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     return storedId;
   });
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const channelRef = useRef<RealtimeChannel | null>(null);
   const latestThreadRef = useRef<string | null>(null);
 
   const stopHeartbeat = useCallback(() => {
@@ -94,119 +91,6 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     }, HEARTBEAT_INTERVAL);
   }, [sendPresenceUpdate, stopHeartbeat, user]);
 
-  const disconnectChannel = useCallback(() => {
-    if (channelRef.current) {
-      const supabase = createClient();
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-  }, []);
-
-  const handlePresenceChange = useCallback((payload: any) => {
-    if (!payload.new) {
-      return;
-    }
-    
-    const record = payload.new as {
-      session_id: string;
-      account_id: string;
-      active_thread_id: string | null;
-      platform: string;
-      last_seen: string;
-      client_timestamp: string;
-    };
-
-    if (!record.account_id) {
-      return;
-    }
-
-    const presencePayload: PresenceEventPayload = {
-      type: payload.eventType === 'DELETE' ? 'presence_clear' : 'presence_update',
-      session_id: record.session_id,
-      account_id: record.account_id,
-      active_thread_id: record.active_thread_id,
-      platform: record.platform,
-      status: record.active_thread_id ? 'online' : 'idle',
-      last_seen: record.last_seen,
-      client_timestamp: record.client_timestamp,
-    };
-
-    setPresences((prev) => {
-      const key = `${record.account_id}:${record.session_id}`;
-      
-      if (payload.eventType === 'DELETE' || !record.active_thread_id) {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      }
-      
-      return {
-        ...prev,
-        [key]: presencePayload,
-      };
-    });
-  }, []);
-
-  const handlePresenceDelete = useCallback((payload: any) => {
-    if (!payload.old) {
-      return;
-    }
-
-    const record = payload.old as {
-      session_id: string;
-      account_id: string;
-    };
-
-    setPresences((prev) => {
-      const key = `${record.account_id}:${record.session_id}`;
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  }, []);
-
-  const connectChannel = useCallback(() => {
-    if (DISABLE_PRESENCE || !user) {
-      return;
-    }
-    
-    if (channelRef.current) {
-      return;
-    }
-
-    setConnectionState('connecting');
-
-    const supabase = createClient();
-    const channel = supabase
-      .channel('presence-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_presence_sessions',
-        },
-        (payload) => {
-          if (payload.eventType === 'DELETE') {
-            handlePresenceDelete(payload);
-          } else {
-            handlePresenceChange(payload);
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          setConnectionState('connected');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          setConnectionState('error');
-        } else if (status === 'CLOSED') {
-          setConnectionState('idle');
-        }
-      });
-
-    channelRef.current = channel;
-  }, [user, handlePresenceChange, handlePresenceDelete]);
-
   const sendBeaconClear = useCallback(() => {
     if (DISABLE_PRESENCE || typeof navigator === 'undefined' || !sessionId) {
       return;
@@ -225,7 +109,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('presence_session_id');
     }
-  }, [session?.access_token, sessionId]);
+  }, [session, sessionId]);
 
   const setActiveThreadId = useCallback((threadId: string | null) => {
     const normalized = threadId || null;
@@ -241,7 +125,6 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (DISABLE_PRESENCE || !user) {
       stopHeartbeat();
-      disconnectChannel();
       setConnectionState('idle');
       setPresences({});
       latestThreadRef.current = null;
@@ -251,13 +134,11 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     
     sendPresenceUpdate(latestThreadRef.current);
     startHeartbeat();
-    connectChannel();
     
     return () => {
       stopHeartbeat();
-      disconnectChannel();
     };
-  }, [connectChannel, disconnectChannel, sendPresenceUpdate, startHeartbeat, stopHeartbeat, user]);
+  }, [sendPresenceUpdate, startHeartbeat, stopHeartbeat, user]);
 
   useEffect(() => {
     if (DISABLE_PRESENCE || typeof document === 'undefined') {

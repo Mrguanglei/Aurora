@@ -44,7 +44,7 @@ import { KBDeleteConfirmDialog } from './kb-delete-confirm-dialog';
 import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/knowledge-base/use-folders';
 import { FileNameValidator } from '@/lib/validation';
 import { backendApi } from '@/lib/api-client';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -105,6 +105,7 @@ export function KnowledgeBaseManager({
     // Assignment state for agent mode
     const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
     const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+    const { token } = useAuth();
 
     // Modal states
     const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -184,6 +185,7 @@ export function KnowledgeBaseManager({
         };
 
         buildTree();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [folders, folderEntries, enableAssignments]);
 
     // Load assignments and auto-fetch all folder entries for assignment mode
@@ -202,6 +204,7 @@ export function KnowledgeBaseManager({
                 });
             }
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [enableAssignments, agentId, foldersLoading, folders]);
 
     const loadAssignments = async () => {
@@ -210,10 +213,7 @@ export function KnowledgeBaseManager({
         console.log('🔄 Starting to load assignments for agent:', agentId);
         setAssignmentsLoading(true);
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
+            if (!token) {
                 console.warn('❌ No access token available for assignments');
                 return;
             }
@@ -221,7 +221,7 @@ export function KnowledgeBaseManager({
             console.log('📡 Fetching assignments from API...');
             const response = await fetch(`${API_URL}/knowledge-base/agents/${agentId}/assignments`, {
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -271,16 +271,13 @@ export function KnowledgeBaseManager({
         setLoadingFolders(prev => ({ ...prev, [folderId]: true }));
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token available');
             }
 
             const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, {
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -370,15 +367,12 @@ export function KnowledgeBaseManager({
         if (!agentId) return;
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) return;
+            if (!token) return;
 
             const response = await fetch(`${API_URL}/knowledge-base/agents/${agentId}/assignments`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ entry_ids: Array.from(selectedSet) })
@@ -492,17 +486,14 @@ export function KnowledgeBaseManager({
 
     const handleSaveSummary = async (newSummary: string) => {
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token available');
             }
 
             const response = await fetch(`${API_URL}/knowledge-base/entries/${editSummaryModal.fileId}`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -547,11 +538,8 @@ export function KnowledgeBaseManager({
         setDeleteConfirm(prev => ({ ...prev, isDeleting: true }));
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token');
             }
 
             const endpoint = type === 'folder'
@@ -561,7 +549,7 @@ export function KnowledgeBaseManager({
             const response = await fetch(endpoint, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -600,17 +588,14 @@ export function KnowledgeBaseManager({
         setMovingFiles(prev => ({ ...prev, [fileId]: true }));
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token');
             }
 
             const response = await fetch(`${API_URL}/knowledge-base/entries/${fileId}/move`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -669,11 +654,8 @@ export function KnowledgeBaseManager({
     // Handle file drops
     const handleNativeFileDrop = async (files: FileList, folderId: string) => {
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token');
             }
 
             const fileArray = Array.from(files);
@@ -717,7 +699,7 @@ export function KnowledgeBaseManager({
                     const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/upload`, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${session.access_token}`,
+                            'Authorization': `Bearer ${token}`,
                         },
                         body: formData
                     });

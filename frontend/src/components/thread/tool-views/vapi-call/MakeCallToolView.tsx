@@ -8,8 +8,8 @@ import { extractMakeCallData, formatPhoneNumber, statusConfig } from './_utils';
 import { getToolTitle } from '../utils';
 import { useVapiCallRealtime } from '@/hooks/integrations';
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/components/AuthProvider';
 
 export function MakeCallToolView({
   toolCall,
@@ -22,6 +22,7 @@ export function MakeCallToolView({
   // All hooks must be called unconditionally at the top
   // We need to extract callData first to use it in hooks, but we'll handle undefined case
   const callData = toolCall ? extractMakeCallData(toolCall, toolResult) : null;
+  const { token } = useAuth();
   const [liveTranscript, setLiveTranscript] = useState<any[]>([]);
   const [liveStatus, setLiveStatus] = useState(callData?.status || 'queued');
   const [previousTranscriptLength, setPreviousTranscriptLength] = useState(0);
@@ -37,15 +38,13 @@ export function MakeCallToolView({
       
       try {
         const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
         
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
         
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
 
         const response = await fetch(`${API_URL}/vapi/calls/${callData.call_id}`, {

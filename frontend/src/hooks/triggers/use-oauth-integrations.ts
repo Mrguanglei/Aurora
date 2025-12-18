@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -30,22 +30,16 @@ interface OAuthInstallResponse {
   provider: string;
 }
 
-const getAccessToken = async () => {
-  const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+const initiateOAuthInstall = async (request: OAuthInstallRequest, token: string | null): Promise<OAuthInstallResponse> => {
+  if (!token) {
     throw new Error('You must be logged in to manage integrations');
   }
-  return session.access_token;
-};
-
-const initiateOAuthInstall = async (request: OAuthInstallRequest): Promise<OAuthInstallResponse> => {
-  const accessToken = await getAccessToken();
+  
   const response = await fetch(`${API_URL}/integrations/install`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(request),
   });
@@ -58,13 +52,16 @@ const initiateOAuthInstall = async (request: OAuthInstallRequest): Promise<OAuth
   return response.json();
 };
 
-const uninstallOAuthIntegration = async (triggerId: string): Promise<void> => {
-  const accessToken = await getAccessToken();
+const uninstallOAuthIntegration = async (triggerId: string, token: string | null): Promise<void> => {
+  if (!token) {
+    throw new Error('You must be logged in to manage integrations');
+  }
+  
   const response = await fetch(`${API_URL}/integrations/uninstall/${triggerId}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
+      'Authorization': `Bearer ${token}`,
     },
   });
 
@@ -76,9 +73,10 @@ const uninstallOAuthIntegration = async (triggerId: string): Promise<void> => {
 
 export const useInstallOAuthIntegration = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
-    mutationFn: initiateOAuthInstall,
+    mutationFn: (request: OAuthInstallRequest) => initiateOAuthInstall(request, token),
     onSuccess: (data, variables) => {
       sessionStorage.setItem('oauth_agent_id', variables.agent_id);
       sessionStorage.setItem('oauth_provider', variables.provider);
@@ -92,9 +90,10 @@ export const useInstallOAuthIntegration = () => {
 
 export const useUninstallOAuthIntegration = () => {
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   return useMutation({
-    mutationFn: uninstallOAuthIntegration,
+    mutationFn: (triggerId: string) => uninstallOAuthIntegration(triggerId, token),
     onSuccess: (_, triggerId) => {
       toast.success('Integration uninstalled successfully');
       queryClient.invalidateQueries({ queryKey: ['oauth-integrations'] });

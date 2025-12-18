@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { ReactNode, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
 import { detectBestLocale } from '@/lib/utils/geo-detection';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 // Preload default translations synchronously for immediate render
 // This prevents the loading spinner from blocking FCP
@@ -35,17 +35,9 @@ async function getTranslations(locale: Locale) {
 async function getStoredLocale(): Promise<Locale> {
   if (typeof window === 'undefined') return defaultLocale;
   
-  try {
-    // Priority 1: Check user profile preference (if authenticated)
-    // This ALWAYS takes precedence - user explicitly set it in settings
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.user_metadata?.locale && locales.includes(user.user_metadata.locale as Locale)) {
-      return user.user_metadata.locale as Locale;
-    }
-  } catch (error) {
-    // Silently fail - user might not be authenticated
-  }
+  // Note: User profile preference (user_metadata.locale) is no longer checked here
+  // as we removed Supabase auth. This functionality needs to be reimplemented
+  // with the new authentication system if needed.
   
   // Priority 2: Check cookie (explicit user preference)
   const cookies = document.cookie.split(';');
@@ -131,24 +123,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       
       if (!mounted) return;
       
-      // Check if user has explicitly set a preference (metadata, cookie, or localStorage)
-      const supabase = createClient();
-      let hasExplicitPreference = false;
-      
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.user_metadata?.locale) {
-          hasExplicitPreference = true;
-        }
-      } catch (error) {
-        // User might not be authenticated
-      }
-      
+      // Check if user has explicitly set a preference (cookie or localStorage)
       const cookies = document.cookie.split(';');
       const hasLocaleCookie = cookies.some(c => c.trim().startsWith('locale='));
       const hasLocalStorage = localStorage.getItem('locale');
       
-      hasExplicitPreference = hasExplicitPreference || hasLocaleCookie || !!hasLocalStorage;
+      const hasExplicitPreference = hasLocaleCookie || !!hasLocalStorage;
       
       // Only auto-save geo-detected locale if:
       // 1. User has NO explicit preference (no metadata, cookie, or localStorage)
