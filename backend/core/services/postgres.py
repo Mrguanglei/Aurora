@@ -92,9 +92,15 @@ class PostgresConnection:
                         logger.debug(f"Executed migration statement {i+1}/{len(statements)}")
                     except Exception as e:
                         error_msg = str(e).lower()
-                        # 忽略 "already exists" 类的错误，因为我们使用了 IF NOT EXISTS
-                        if "already exists" not in error_msg and "duplicate" not in error_msg:
+                        # 忽略 "already exists" 类的错误（包括触发器、表、索引等）
+                        # 因为我们使用了 IF NOT EXISTS 或 DROP IF EXISTS
+                        if ("already exists" not in error_msg and 
+                            "duplicate" not in error_msg and
+                            "trigger" not in error_msg):
                             logger.warning(f"⚠️  执行 SQL 语句时出错 ({i+1}): {statement[:80]}... Error: {e}")
+                        else:
+                            # 静默忽略已存在的对象错误
+                            logger.debug(f"跳过已存在的对象: {statement[:60]}...")
             
             logger.info("✅ 数据库迁移执行成功")
         except Exception as e:
@@ -146,7 +152,8 @@ class PostgresConnection:
             if not in_dollar_quote and sql_content[i] == ';':
                 current_statement.append(';')
                 stmt = ''.join(current_statement).strip()
-                if stmt:
+                # 过滤掉空语句和纯注释语句
+                if stmt and not stmt.startswith('--'):
                     statements.append(stmt)
                 current_statement = []
                 i += 1
@@ -157,7 +164,8 @@ class PostgresConnection:
         
         # 处理最后一个语句（可能没有以 ; 结尾）
         stmt = ''.join(current_statement).strip()
-        if stmt:
+        # 过滤掉空语句和纯注释语句
+        if stmt and not stmt.startswith('--'):
             statements.append(stmt)
         
         return statements

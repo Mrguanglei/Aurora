@@ -43,7 +43,7 @@ services:
       - aurora-network
 
   redis:
-    image: redis:7-alpine
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -113,12 +113,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
+        # 浏览器访问用 localhost:8011，容器内部的 Server Action 自己走 backend:8011
+        - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
         - NEXT_PUBLIC_ENV_MODE=staging
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
       - NEXT_PUBLIC_ENV_MODE=staging
     depends_on:
       backend:

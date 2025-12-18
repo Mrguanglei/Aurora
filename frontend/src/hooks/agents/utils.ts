@@ -1,6 +1,19 @@
-import { createClient } from "@/lib/supabase/client";
-
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+
+// Get auth token from localStorage (Supabase removed)
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const authData = localStorage.getItem('auth-token');
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      return parsed?.access_token || null;
+    }
+  } catch {
+    // Ignore errors
+  }
+  return null;
+}
 
 export type Agent = {
   agent_id: string;
@@ -163,10 +176,9 @@ export type AgentUpdateRequest = {
 
 export const getAgents = async (params: AgentsParams = {}): Promise<AgentsResponse> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to get agents');
     }
 
@@ -189,7 +201,7 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -208,10 +220,9 @@ export const getAgents = async (params: AgentsParams = {}): Promise<AgentsRespon
 
 export const getAgent = async (agentId: string): Promise<Agent> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to get agent details');
     }
 
@@ -219,7 +230,7 @@ export const getAgent = async (agentId: string): Promise<Agent> => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -238,10 +249,9 @@ export const getAgent = async (agentId: string): Promise<Agent> => {
 
 export const createAgent = async (agentData: AgentCreateRequest): Promise<Agent> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to create an agent');
     }
 
@@ -249,7 +259,7 @@ export const createAgent = async (agentData: AgentCreateRequest): Promise<Agent>
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(agentData),
     });
@@ -280,10 +290,9 @@ export const createAgent = async (agentData: AgentCreateRequest): Promise<Agent>
 
 export const updateAgent = async (agentId: string, agentData: AgentUpdateRequest): Promise<Agent> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to update an agent');
     }
 
@@ -291,7 +300,7 @@ export const updateAgent = async (agentId: string, agentData: AgentUpdateRequest
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(agentData),
     });
@@ -311,10 +320,9 @@ export const updateAgent = async (agentId: string, agentData: AgentUpdateRequest
 
 export const deleteAgent = async (agentId: string): Promise<void> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to delete an agent');
     }
 
@@ -322,7 +330,7 @@ export const deleteAgent = async (agentId: string): Promise<void> => {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -338,10 +346,9 @@ export const deleteAgent = async (agentId: string): Promise<void> => {
 
 export const getThreadAgent = async (threadId: string): Promise<ThreadAgentResponse> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to get thread agent');
     }
 
@@ -349,7 +356,7 @@ export const getThreadAgent = async (threadId: string): Promise<ThreadAgentRespo
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -370,16 +377,15 @@ export const getThreadAgent = async (threadId: string): Promise<ThreadAgentRespo
 
 export const getAgentVersions = async (agentId: string): Promise<AgentVersion[]> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to get agent versions');
     }
 
     const response = await fetch(`${API_URL}/agents/${agentId}/versions`, {
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -401,10 +407,9 @@ export const createAgentVersion = async (
   data: AgentVersionCreateRequest
 ): Promise<AgentVersion> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to create agent version');
     }
 
@@ -412,7 +417,7 @@ export const createAgentVersion = async (
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(data),
     });
@@ -435,10 +440,9 @@ export const activateAgentVersion = async (
   versionId: string
 ): Promise<void> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to activate agent version');
     }
 
@@ -447,7 +451,7 @@ export const activateAgentVersion = async (
       {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       }
     );
@@ -467,10 +471,9 @@ export const getAgentVersion = async (
   versionId: string
 ): Promise<AgentVersion> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to get agent version');
     }
 
@@ -478,7 +481,7 @@ export const getAgentVersion = async (
       `${API_URL}/agents/${agentId}/versions/${versionId}`,
       {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
       }
     );
@@ -502,10 +505,9 @@ export const updateAgentVersionDetails = async (
   data: { version_name?: string; change_description?: string }
 ): Promise<AgentVersion> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = getAuthToken();
 
-    if (!session) {
+    if (!token) {
       throw new Error('You must be logged in to update version details');
     }
 
@@ -515,7 +517,7 @@ export const updateAgentVersionDetails = async (
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(data),
       }

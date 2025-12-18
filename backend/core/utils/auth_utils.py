@@ -47,12 +47,21 @@ def _decode_jwt_with_verification(token: str) -> dict:
     """
     jwt_secret = config.SUPABASE_JWT_SECRET
     
+    # 私有化部署下，我们已经不再使用 Supabase 的 JWT，
+    # 如果没有配置 SUPABASE_JWT_SECRET，则回退到本地 JWTService 进行验证
     if not jwt_secret:
-        logger.error("SUPABASE_JWT_SECRET is not configured - JWT verification disabled!")
-        raise HTTPException(
-            status_code=500,
-            detail="Server authentication configuration error"
-        )
+        from core.services.jwt_service import jwt_service
+        payload = jwt_service.verify_token(token)
+        if not payload:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        # 向后兼容：大部分旧代码使用 payload['sub'] 作为 user_id
+        if "sub" not in payload and "user_id" in payload:
+            payload["sub"] = payload["user_id"]
+        return payload
     
     try:
         # Verify signature with the Supabase JWT secret

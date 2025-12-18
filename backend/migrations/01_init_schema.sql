@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255),
     password_hash VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login_at TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT true
 );
 
@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS agents (
     icon_color VARCHAR(255),
     icon_background VARCHAR(255),
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT true
 );
 
@@ -57,9 +57,9 @@ CREATE TABLE IF NOT EXISTS threads (
     account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     agent_id UUID REFERENCES agents(agent_id) ON DELETE SET NULL,
     title VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    archived_at TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    archived_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE INDEX IF NOT EXISTS idx_threads_account_id ON threads(account_id);
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     message_type VARCHAR(50) DEFAULT 'text', -- 'text', 'tool_call', 'tool_result'
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_thread_id ON messages(thread_id);
@@ -96,8 +96,8 @@ CREATE TABLE IF NOT EXISTS tool_calls (
     tool_output JSONB,
     status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed'
     error_message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE INDEX IF NOT EXISTS idx_tool_calls_thread_id ON tool_calls(thread_id);
@@ -113,8 +113,8 @@ CREATE TABLE IF NOT EXISTS user_presence_sessions (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     thread_id UUID REFERENCES threads(thread_id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_presence_user_id ON user_presence_sessions(user_id);
@@ -129,8 +129,8 @@ CREATE TABLE IF NOT EXISTS api_keys (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     key_hash VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255),
-    last_used_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT true
 );
 
@@ -149,16 +149,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 为各表创建触发器
+-- 为各表创建触发器（先删除已存在的，避免重复创建错误）
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_agents_updated_at ON agents;
 CREATE TRIGGER update_agents_updated_at BEFORE UPDATE ON agents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_threads_updated_at ON threads;
 CREATE TRIGGER update_threads_updated_at BEFORE UPDATE ON threads
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_presence_updated_at ON user_presence_sessions;
 CREATE TRIGGER update_presence_updated_at BEFORE UPDATE ON user_presence_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

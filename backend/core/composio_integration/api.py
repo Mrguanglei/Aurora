@@ -563,6 +563,19 @@ async def get_toolkit_icon(
     current_user_id: Optional[str] = Depends(get_optional_current_user_id_from_jwt)
 ):
     try:
+        # 如果没有配置 COMPOSIO_API_KEY，直接返回一个占位结果，避免无意义的 500
+        if not config.COMPOSIO_API_KEY:
+            logger.debug(
+                "COMPOSIO_API_KEY not set - returning placeholder icon response",
+                toolkit_slug=toolkit_slug,
+            )
+            return {
+                "success": False,
+                "toolkit_slug": toolkit_slug,
+                "icon_url": None,
+                "message": "Composio not configured",
+            }
+
         toolkit_service = ToolkitService()
         icon_url = await toolkit_service.get_toolkit_icon(toolkit_slug)
         
@@ -579,10 +592,15 @@ async def get_toolkit_icon(
                 "icon_url": None,
                 "message": "Icon not found"
             }
-    
     except Exception as e:
+        # Composio 只是可选集成，这里不要影响主流程，返回 graceful 错误即可
         logger.error(f"Error getting toolkit icon: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return {
+            "success": False,
+            "toolkit_slug": toolkit_slug,
+            "icon_url": None,
+            "message": "Composio error",
+        }
 
 
 @router.post("/tools/list")

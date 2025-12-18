@@ -6,82 +6,109 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 
+// Local auth types (replacing Supabase types)
+type LocalUser = {
+  id: string;
+  email?: string;
+  username?: string;
+};
+
+type LocalSession = {
+  access_token: string;
+  refresh_token?: string;
+  user: LocalUser;
+};
+
 type AuthContextType = {
-  supabase: SupabaseClient;
-  session: Session | null;
-  user: User | null;
+  session: LocalSession | null;
+  user: LocalUser | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to get auth data from localStorage
+function getStoredAuth(): LocalSession | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const authData = localStorage.getItem('auth-token');
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      if (parsed?.access_token) {
+        // Decode JWT to get user info (basic decode, not verification)
+        try {
+          const payload = JSON.parse(atob(parsed.access_token.split('.')[1]));
+          return {
+            access_token: parsed.access_token,
+            refresh_token: parsed.refresh_token,
+            user: {
+              id: payload.sub || payload.user_id || '',
+              email: payload.email,
+              username: payload.username,
+            },
+          };
+        } catch {
+          // Invalid token format
+          return null;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  return null;
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const supabase = createClient();
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<LocalSession | null>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check for stored auth on mount
   useEffect(() => {
-    const getInitialSession = async () => {
-      try {
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-      } catch (error) {
-      } finally {
-        setIsLoading(false);
+    const storedAuth = getStoredAuth();
+    if (storedAuth) {
+      setSession(storedAuth);
+      setUser(storedAuth.user);
+    }
+    setIsLoading(false);
+  }, []);
+
+  // Listen for storage changes (e.g., login in another tab)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth-token') {
+        const storedAuth = getStoredAuth();
+        setSession(storedAuth);
+        setUser(storedAuth?.user ?? null);
       }
     };
 
-    getInitialSession();
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (isLoading) setIsLoading(false);
-        switch (event) {
-          case 'SIGNED_IN':
-            break;
-          case 'SIGNED_OUT':
-            clearUserLocalStorage();
-            break;
-          case 'TOKEN_REFRESHED':
-            break;
-          case 'MFA_CHALLENGE_VERIFIED':
-            break;
-          default:
-        }
-      },
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [supabase]); // Removed isLoading from dependencies to prevent infinite loops
-
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
-      // Clear local storage after successful sign out
+      // Clear auth token from localStorage
+      localStorage.removeItem('auth-token');
+      setSession(null);
+      setUser(null);
+      // Clear other local storage
       clearUserLocalStorage();
+      // Redirect to auth page
+      window.location.href = '/auth';
     } catch (error) {
       console.error('❌ Error signing out:', error);
     }
-  };
+  }, []);
 
   const value = {
-    supabase,
     session,
     user,
     isLoading,

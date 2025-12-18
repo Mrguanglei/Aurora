@@ -3,17 +3,14 @@
 import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 
-// 从环境变量读取API_BASE，如果没有则使用默认值
+// Server Actions 内部始终走 Docker 内部网络，避免受浏览器用的 URL 影响
 const getAPIBase = () => {
-  // 对于 Server Actions，始终使用内部 Docker 网络 hostname
-  // 这样可以确保容器之间的通信正常
-  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return process.env.NEXT_PUBLIC_BACKEND_URL;
-  }
-  
-  // Docker 内部网络的 hostname（后端监听 8000 端口）
-  return 'http://backend:8000/v1';
+  // 固定使用 Docker 网络里的 backend 服务名
+  return 'http://backend:8011/v1';
 };
+
+// 注意：浏览器端请求使用 NEXT_PUBLIC_BACKEND_URL（通常是 http://localhost:8011/v1）,
+// 见 docker-compose.yaml 中 frontend 的环境变量配置。
 
 // ... existing code ...
 
@@ -70,31 +67,20 @@ export async function signInWithPassword(prevState: any, formData: FormData) {
     const data = await response.json();
 
     if (!response.ok) {
-      return { message: data.detail || 'Invalid email or password' };
+      return { message: data.detail || 'Invalid email or password', success: false };
     }
 
-    // 存储token到cookie
-    const cookieStore = await cookies();
-    cookieStore.set('auth_token', data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    // 重定向到仪表板
-    const finalReturnUrl = returnUrl || '/dashboard';
-    redirect(finalReturnUrl);
+    // 不再在这里设置 HttpOnly cookie（前端需要能访问 token）
+    // 直接把 token 返回给前端，由前端存到 localStorage
+    return {
+      success: true,
+      redirectUrl: returnUrl || '/dashboard',
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+    };
   } catch (error: any) {
-    // Log the actual error for debugging
     console.error('Login error:', error);
-    
-    // Don't show network errors or redirect errors
-    if (error?.message?.includes('NEXT_REDIRECT')) {
-      throw error;
-    }
-    
-    return { message: error?.message || 'An error occurred. Please try again.' };
+    return { message: error?.message || 'An error occurred. Please try again.', success: false };
   }
 }
 
@@ -105,15 +91,15 @@ export async function signUpWithPassword(prevState: any, formData: FormData) {
   const returnUrl = formData.get('returnUrl') as string | undefined;
 
   if (!email || !email.includes('@')) {
-    return { message: 'Please enter a valid email address' };
+    return { message: 'Please enter a valid email address', success: false };
   }
 
   if (!password || password.length < 6) {
-    return { message: 'Password must be at least 6 characters' };
+    return { message: 'Password must be at least 6 characters', success: false };
   }
 
   if (password !== confirmPassword) {
-    return { message: 'Passwords do not match' };
+    return { message: 'Passwords do not match', success: false };
   }
 
   try {
@@ -131,31 +117,20 @@ export async function signUpWithPassword(prevState: any, formData: FormData) {
     const data = await response.json();
 
     if (!response.ok) {
-      return { message: data.detail || 'Could not create account' };
+      return { message: data.detail || 'Could not create account', success: false };
     }
 
-    // 存储token到cookie
-    const cookieStore = await cookies();
-    cookieStore.set('auth_token', data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
-
-    // 重定向到仪表板
-    const finalReturnUrl = returnUrl || '/dashboard';
-    redirect(finalReturnUrl);
+    // 不再在这里设置 HttpOnly cookie（前端需要能访问 token）
+    // 直接把 token 返回给前端，由前端存到 localStorage
+    return {
+      success: true,
+      redirectUrl: returnUrl || '/dashboard',
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+    };
   } catch (error: any) {
-    // Log the actual error for debugging
     console.error('Registration error:', error);
-    
-    // Don't show network errors or redirect errors
-    if (error?.message?.includes('NEXT_REDIRECT')) {
-      throw error;
-    }
-    
-    return { message: error?.message || 'An error occurred. Please try again.' };
+    return { message: error?.message || 'An error occurred. Please try again.', success: false };
   }
 }
 

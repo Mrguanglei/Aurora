@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Suspense, lazy } from 'react';
 import { useAccounts } from '@/hooks/account';
-import { useAuth } from '@/components/AuthProvider';
 import { useMaintenanceNoticeQuery } from '@/hooks/edge-flags';
 import { useRouter } from 'next/navigation';
 import { useApiHealth } from '@/hooks/usage/use-health';
@@ -73,13 +72,14 @@ interface DashboardLayoutContentProps {
 export default function DashboardLayoutContent({
   children,
 }: DashboardLayoutContentProps) {
-  const { user, isLoading } = useAuth();
+  // 使用本地存储的 auth-token 作为登录状态判断，不再依赖 Supabase
+  const [hasAuthToken, setHasAuthToken] = useState<boolean | null>(null);
   const params = useParams();
   const threadId = params?.threadId as string | undefined;
   
   usePresence(threadId);
   
-  const { data: accounts } = useAccounts({ enabled: !!user });
+  const { data: accounts } = useAccounts({ enabled: hasAuthToken === true });
   const personalAccount = accounts?.find((account) => account.personal_account);
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -100,31 +100,41 @@ export default function DashboardLayoutContent({
       console.log('📱 Mobile Layout - Prefetched data:', {
         projects: projects?.length || 0,
         accounts: accounts?.length || 0,
-        user: !!user
+        hasAuthToken,
       });
     }
-  }, [isMobile, projects, accounts, user]);
+  }, [isMobile, projects, accounts, hasAuthToken]);
 
   // API health is now managed by useApiHealth hook
   const isApiHealthy = healthData?.status === 'ok' && !healthError;
 
-  // Check authentication status
+  // 初始检查本地是否有 auth-token
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (typeof window === 'undefined') {
+      setHasAuthToken(null);
+      return;
+    }
+    try {
+      const stored = window.localStorage.getItem('auth-token');
+      setHasAuthToken(!!stored);
+      if (!stored) {
+        router.push('/auth');
+      }
+    } catch {
+      setHasAuthToken(false);
       router.push('/auth');
     }
-  }, [user, isLoading, router]);
+  }, [router]);
 
   const mantenanceBanner: React.ReactNode | null = null;
 
   // Show skeleton immediately for FCP while checking auth
-  // This allows content to paint quickly instead of blocking
-  if (isLoading) {
+  if (hasAuthToken === null) {
     return <DashboardSkeleton />;
   }
 
   // Redirect to auth if not authenticated (don't block render)
-  if (!user) {
+  if (!hasAuthToken) {
     return <DashboardSkeleton />;
   }
 

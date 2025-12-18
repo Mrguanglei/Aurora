@@ -248,20 +248,17 @@ async def log_requests_middleware(request: Request, call_next):
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
-# Define allowed origins based on environment
-allowed_origins = ["https://www.kortix.com", "https://kortix.com"]
+# Define allowed origins（本地私有化部署，始终允许 localhost）
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 allow_origin_regex = None
 
-# Add staging-specific origins
-if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
-
-# Add staging-specific origins
+# 如果是 STAGING 环境，可以额外允许线上域名（可选）
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.aurora.so")
-    allowed_origins.append("http://localhost:3000")
-    # Allow Vercel preview deployments
+    # 允许 Vercel preview
     allow_origin_regex = r"https://kortix-.*-prjcts\.vercel\.app"
 
 app.add_middleware(

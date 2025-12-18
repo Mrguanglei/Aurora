@@ -66,7 +66,8 @@ async def register(req: RegisterRequest):
         # 创建新用户
         user_id = str(uuid.uuid4())
         password_hash = jwt_service.hash_password(req.password)
-        now = datetime.now(timezone.utc).isoformat()
+        # PostgreSQL TIMESTAMP 是 timezone-naive，所以我们需要去掉時區信息
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         
         await db.execute(
             """
@@ -131,7 +132,8 @@ async def login(req: LoginRequest):
             )
         
         # 更新最后登录时间
-        now = datetime.now(timezone.utc).isoformat()
+        # 将不伟时区的 datetime 转换为字符串以兼容 naive TIMESTAMP
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.execute(
             "UPDATE users SET last_login_at = $1 WHERE id = $2",
             now,
@@ -140,14 +142,15 @@ async def login(req: LoginRequest):
         
         logger.info(f"✅ 用户登录: {req.email}")
         
-        # 创建 tokens
-        access_token = jwt_service.create_access_token(user["id"], user["email"])
-        refresh_token = jwt_service.create_refresh_token(user["id"])
+        # 创建 tokens - 确保 user_id 是字符串
+        user_id_str = str(user["id"])
+        access_token = jwt_service.create_access_token(user_id_str, user["email"])
+        refresh_token = jwt_service.create_refresh_token(user_id_str)
         
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user_id=user["id"],
+            user_id=user_id_str,
             email=user["email"],
             name=user["username"]
         )

@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { signInWithPassword, signUpWithPassword } from '@/app/auth/actions';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ export default function PasswordSignIn({
   returnUrl, 
   onSwitchMode 
 }: PasswordSignInProps) {
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -45,21 +47,54 @@ export default function PasswordSignIn({
         }
         formData.append('acceptedTerms', 'true');
         const result = await signUpWithPassword({}, formData);
+        if (result?.success) {
+          // 注册成功，保存 token 到 localStorage，然后跳转
+          if (typeof window !== 'undefined' && result.accessToken) {
+            try {
+              window.localStorage.setItem(
+                'auth-token',
+                JSON.stringify({
+                  access_token: result.accessToken,
+                  refresh_token: result.refreshToken,
+                }),
+              );
+            } catch {
+              // 忽略本地存储错误
+            }
+          }
+          router.push(result.redirectUrl || '/dashboard');
+          return;
+        }
         if (result && typeof result === 'object' && 'message' in result) {
           toast.error(result.message as string);
         }
       } else {
         const result = await signInWithPassword({}, formData);
+        if (result?.success) {
+          // 登录成功，保存 token 到 localStorage，然后跳转
+          if (typeof window !== 'undefined' && result.accessToken) {
+            try {
+              window.localStorage.setItem(
+                'auth-token',
+                JSON.stringify({
+                  access_token: result.accessToken,
+                  refresh_token: result.refreshToken,
+                }),
+              );
+            } catch {
+              // 忽略本地存储错误
+            }
+          }
+          router.push(result.redirectUrl || '/dashboard');
+          return;
+        }
         if (result && typeof result === 'object' && 'message' in result) {
           toast.error(result.message as string);
         }
       }
     } catch (error: any) {
-      // redirect() throws an exception, which is expected behavior
-      // Only show error for actual exceptions
-      if (error.message && !error.message.includes('NEXT_REDIRECT')) {
-        toast.error(error.message || 'Authentication failed');
-      }
+      // 不需要处理重定向错误，因为我们已经在 Server Action 中返回了 redirectUrl
+      toast.error(error?.message || 'Authentication failed');
     }
   };
 

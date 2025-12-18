@@ -9,7 +9,7 @@ import { useMediaQuery } from '@/hooks/utils';
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { signUp, resendMagicLink } from './actions';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { MailCheck, Clock, ExternalLink, Mail, Lock } from 'lucide-react';
+import { MailCheck, Clock, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { toast } from 'sonner';
@@ -34,11 +34,13 @@ function LoginContent() {
   const expiredEmail = searchParams.get('email') || '';
   const t = useTranslations('auth');
 
-  const isSignUp = mode !== 'signin';
+  // 默认显示登录表单，只有在显式指定 mode=signup 时才进入注册模式
+  const isSignUp = mode === 'signup';
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [mounted, setMounted] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false); // GDPR requires explicit opt-in
-  const [authMethod, setAuthMethod] = useState<'magic-link' | 'password'>('magic-link'); // Auth method toggle
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // 默认使用密码认证方式
+  const [authMethod, setAuthMethod] = useState<'magic-link' | 'password'>('password');
 
   const { wasLastMethod: wasEmailLastMethod, markAsUsed: markEmailAsUsed } = useAuthMethodTracking('email');
 
@@ -412,118 +414,24 @@ function LoginContent() {
               </div>
             </div>
             
-            {/* Auth Method Tabs */}
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setAuthMethod('magic-link')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                  authMethod === 'magic-link'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                <Mail className="w-4 h-4" />
-                {t('magicLink') || 'Magic Link'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthMethod('password')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                  authMethod === 'password'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                <Lock className="w-4 h-4" />
-                {t('password') || 'Password'}
-              </button>
-            </div>
-            {/* Password Sign In Method */}
-            {authMethod === 'password' ? (
-              <Suspense fallback={<div className="space-y-4"><div className="h-10 bg-muted rounded animate-pulse" /></div>}>
-                <PasswordSignIn 
-                  isSignUp={isSignUp}
-                  returnUrl={returnUrl || undefined}
-                  onSwitchMode={() => setAuthMethod('magic-link')}
-                />
-              </Suspense>
-            ) : (
-              <form className="space-y-4">
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder={t('emailAddress')}
-                  required
-                />
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="gdprConsent"
-                    checked={acceptedTerms}
-                    onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-                    required
-                    className="h-5 w-5"
-                  />
-                  <label 
-                    htmlFor="gdprConsent" 
-                    className="text-xs text-muted-foreground leading-relaxed cursor-pointer select-none flex-1"
-                  >
-                    {t.rich('acceptPrivacyTerms', {
-                      privacyPolicy: (chunks) => {
-                        return (
-                          <a 
-                            href="" 
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:underline underline-offset-2 text-primary"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {chunks}
-                          </a>
-                        );
-                      },
-                      termsOfService: (chunks) => {
-                        return (
-                          <a 
-                            href="https://www.kortix.com/legal?tab=terms"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:underline underline-offset-2 text-primary"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {chunks}
-                          </a>
-                        );
-                      }
-                    })}
-                  </label>
-                </div>
-
-                <div className="relative">
-                  <SubmitButton
-                    formAction={handleAuth}
-                    className="w-full h-10"
-                    pendingText={t('sending')}
-                    disabled={!acceptedTerms}
-                  >
-                    {t('sendMagicLink')}
-                  </SubmitButton>
-                  {wasEmailLastMethod && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background shadow-sm">
-                      <div className="w-full h-full bg-green-500 rounded-full animate-pulse" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Magic Link Explanation */}
-                <p className="text-xs text-muted-foreground text-center">
-                  {t('magicLinkExplanation')}
-                </p>
-                
-              </form>
-            )}
+            {/* 仅保留密码登录，移除邮箱选项 */}
+            <Suspense fallback={<div className="space-y-4"><div className="h-10 bg-muted rounded animate-pulse" /></div>}>
+              <PasswordSignIn 
+                isSignUp={isSignUp}
+                returnUrl={returnUrl || undefined}
+                onSwitchMode={() => {
+                  // 在登录/注册之间切换，修改 URL 的 mode 参数
+                  const params = new URLSearchParams(window.location.search);
+                  if (isSignUp) {
+                    params.set('mode', 'signin');
+                  } else {
+                    params.set('mode', 'signup');
+                  }
+                  const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+                  window.history.pushState({ path: newUrl }, '', newUrl);
+                }}
+              />
+            </Suspense>
             
           </div>
         </div>
