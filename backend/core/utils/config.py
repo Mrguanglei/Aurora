@@ -369,11 +369,16 @@ class Configuration:
     # AWS Bedrock authentication
     AWS_BEARER_TOKEN_BEDROCK: Optional[str] = None
     
-    # Supabase configuration
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
-    SUPABASE_JWT_SECRET: str
+    # Supabase configuration (DEPRECATED - 已删除，改用本地 PostgreSQL)
+    # 这些配置仅保留用于向后兼容性，不再使用
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_JWT_SECRET: str = ""
+    
+    # 本地 PostgreSQL 数据库配置（私有化部署）
+    DATABASE_URL: Optional[str] = None
+    JWT_SECRET_KEY: Optional[str] = None
     
     # Redis configuration
     REDIS_HOST: Optional[str] = "localhost"
@@ -419,13 +424,14 @@ class Configuration:
     # Freestyle deployment configuration
     FREESTYLE_API_KEY: Optional[str] = None
     
-    # Stripe configuration
+    # Stripe configuration (DEPRECATED - 已删除，改用本地实现)
+    # 这些配置仅保留用于向后兼容性，不再使用
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
     STRIPE_DEFAULT_PLAN_ID: Optional[str] = None
     STRIPE_DEFAULT_TRIAL_DAYS: Optional[int] = 14
     
-    # RevenueCat configuration
+    # RevenueCat configuration (DEPRECATED - 已删除)
     REVENUECAT_WEBHOOK_SECRET: Optional[str] = None
     
     # Stripe Product IDs
@@ -466,10 +472,10 @@ class Configuration:
     COMPOSIO_API_KEY: Optional[str] = None
     COMPOSIO_WEBHOOK_SECRET: Optional[str] = None
     
-    # Webhook configuration
+    # Webhook configuration (DEPRECATED - 已删除 Webhook 系统)
     WEBHOOK_BASE_URL: Optional[str] = None
     TRIGGER_WEBHOOK_SECRET: Optional[str] = None
-    SUPABASE_WEBHOOK_SECRET: Optional[str] = None  # Secret for Supabase database webhook authentication
+    SUPABASE_WEBHOOK_SECRET: Optional[str] = None  # 已删除
     
     # Email configuration
     

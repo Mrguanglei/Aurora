@@ -1,15 +1,22 @@
 """
-Centralized database connection management for AgentPress using Supabase.
+中央数据库连接管理 - Supabase (已删除，仅用于沐兼容性)
+
+私有化部署中已改用本地 PostgreSQL
+该文件仅保留用于向后兼容性
 """
 
 from typing import Optional
-from supabase import create_async_client, AsyncClient
 from core.utils.logger import logger
 from core.utils.config import config
-import base64
-import uuid
-from datetime import datetime
 import threading
+
+# 尝试导入 Supabase，但如果不可用则安全忽略
+try:
+    from supabase import create_async_client, AsyncClient
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    logger.debug("⚠️ Supabase SDK 不可用")
 
 class DBConnection:
     """Thread-safe singleton database connection manager using Supabase."""
@@ -32,22 +39,32 @@ class DBConnection:
         pass
 
     async def initialize(self):
-        """Initialize the database connection."""
+        """初始化数据库连接。
+        
+        注意：Supabase 已在私有化部署中移除。
+        改用本地 PostgreSQL。
+        此方法保留用于兼容性，实际上是无操作的。
+        """
         if self._initialized:
             return
-                
+        
+        # 如果 Supabase 不可用，直接返回
+        if not SUPABASE_AVAILABLE:
+            logger.info("ℹ️ Supabase 已禁用（私有化部署）。使用本地 PostgreSQL 代替。")
+            self._initialized = True
+            return
+        
         try:
             supabase_url = config.SUPABASE_URL
-            # Use service role key preferentially for backend operations
             supabase_key = config.SUPABASE_SERVICE_ROLE_KEY or config.SUPABASE_ANON_KEY
             
+            # 如果未配置 Supabase，安全跳过
             if not supabase_url or not supabase_key:
-                logger.error("Missing required environment variables for Supabase connection")
-                raise RuntimeError("SUPABASE_URL and a key (SERVICE_ROLE_KEY or ANON_KEY) environment variables must be set.")
-
-            # logger.debug("Initializing Supabase connection")
+                logger.info("ℹ️ Supabase 未配置（私有化部署）。跳过 Supabase 初始化。")
+                self._initialized = True
+                return
             
-            # Create Supabase client with timeout configuration
+            # 创建 Supabase 客户端
             self._client = await create_async_client(
                 supabase_url, 
                 supabase_key,
@@ -55,36 +72,38 @@ class DBConnection:
             
             self._initialized = True
             key_type = "SERVICE_ROLE_KEY" if config.SUPABASE_SERVICE_ROLE_KEY else "ANON_KEY"
-            logger.info(f"Database connection initialized with Supabase using {key_type}")
+            logger.info(f"✅ Supabase 连接初始化（使用 {key_type}）")
             
         except Exception as e:
-            logger.error(f"Database initialization error: {e}")
-            raise RuntimeError(f"Failed to initialize database connection: {str(e)}")
+            logger.warning(f"⚠️ Supabase 初始化失败: {e}。继续使用本地 PostgreSQL。")
+            self._initialized = True  # 标记为已初始化，避免重复尝试
 
     @classmethod
     async def disconnect(cls):
-        """Disconnect from the database."""
+        """断开数据库连接。"""
         if cls._instance and cls._instance._client:
-            # logger.debug("Disconnecting from Supabase database")
             try:
-                # Close Supabase client
+                # 关闭Supabase 客户端
                 if hasattr(cls._instance._client, 'close'):
                     await cls._instance._client.close()
                     
             except Exception as e:
-                logger.warning(f"Error during disconnect: {e}")
+                logger.warning(f"⚠️ 断开连接时错误: {e}")
             finally:
                 cls._instance._initialized = False
                 cls._instance._client = None
-                logger.info("Database disconnected successfully")
+                logger.info("✅ 数据库已断开")
 
     @property
-    async def client(self) -> AsyncClient:
-        """Get the Supabase client instance."""
+    async def client(self):
+        """获取 Supabase 客户端实例。
+        
+        注意：在私有化部署中此方法更多是为了向后兼容性。
+        实际上改用本地 PostgreSQL 客户端。
+        """
         if not self._initialized:
-            # logger.debug("Supabase client not initialized, initializing now")
             await self.initialize()
         if not self._client:
-            logger.error("Database client is None after initialization")
-            raise RuntimeError("Database not initialized")
+            logger.debug("⚠️ Supabase 客户端未可用（使用本地 PostgreSQL）")
+            return None
         return self._client

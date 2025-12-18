@@ -41,12 +41,13 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAdminUserDetails, useAdminUserThreads, useAdminUserActivity } from '@/hooks/admin/use-admin-users';
-import {
-  useUserBillingSummary,
-  useAdjustCredits,
-  useProcessRefund,
-  useAdminUserTransactions,
-} from '@/hooks/billing';
+// billing hooks 已删除 - 账单系统已移除
+// import {
+//   useUserBillingSummary,
+//   useAdjustCredits,
+//   useProcessRefund,
+//   useAdminUserTransactions,
+// } from '@/hooks/billing';
 import type { UserSummary } from '@/hooks/admin/use-admin-users';
 import { formatCredits, dollarsToCredits, formatCreditsWithSign } from '@/lib/utils/credit-formatter';
 
@@ -74,24 +75,24 @@ export function AdminUserDetailsDialog({
   const [activityPage, setActivityPage] = useState(1);
 
   const { data: userDetails, isLoading } = useAdminUserDetails(user?.id || null);
-  const { data: billingSummary, refetch: refetchBilling } = useUserBillingSummary(user?.id || null);
+  // billing 相关代码已注释 - 账单系统已删除
   const { data: userThreads, isLoading: threadsLoading } = useAdminUserThreads({
     email: user?.email || '',
     page: threadsPage,
     page_size: 10,
   });
-  const { data: userTransactions, isLoading: transactionsLoading } = useAdminUserTransactions({
-    userId: user?.id || '',
-    page: transactionsPage,
-    page_size: 10,
-  });
+  // const { data: userTransactions, isLoading: transactionsLoading } = useAdminUserTransactions({
+  //   userId: user?.id || '',
+  //   page: transactionsPage,
+  //   page_size: 10,
+  // });
   const { data: userActivity, isLoading: activityLoading } = useAdminUserActivity({
     userId: user?.id || '',
     page: activityPage,
     page_size: 10,
   });
-  const adjustCreditsMutation = useAdjustCredits();
-  const processRefundMutation = useProcessRefund();
+  // const adjustCreditsMutation = useAdjustCredits();
+  // const processRefundMutation = useProcessRefund();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -104,62 +105,13 @@ export function AdminUserDetailsDialog({
   };
 
   const handleAdjustCredits = async () => {
-    if (!user || !adjustAmount || !adjustReason) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    try {
-      const result = await adjustCreditsMutation.mutateAsync({
-        account_id: user.id,
-        amount: parseFloat(adjustAmount),
-        reason: adjustReason,
-        notify_user: true,
-        is_expiring: adjustIsExpiring,
-      });
-
-      toast.success(
-        `Credits adjusted successfully. New balance: ${formatCredits(dollarsToCredits(result.new_balance))}`
-      );
-
-      refetchBilling();
-      onRefresh?.();
-      setAdjustAmount('');
-      setAdjustReason('');
-      setAdjustIsExpiring(true);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to adjust credits');
-    }
+    // billing 功能已移除
+    toast.error('Billing features have been removed in this deployment');
   };
 
   const handleProcessRefund = async () => {
-    if (!user || !refundAmount || !refundReason) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    try {
-      const result = await processRefundMutation.mutateAsync({
-        account_id: user.id,
-        amount: parseFloat(refundAmount),
-        reason: refundReason,
-        stripe_refund: false,
-        is_expiring: refundIsExpiring,
-      });
-
-      toast.success(
-        `Refund processed. New balance: ${formatCredits(dollarsToCredits(result.new_balance))}`
-      );
-
-      refetchBilling();
-      onRefresh?.();
-
-      setRefundAmount('');
-      setRefundReason('');
-      setRefundIsExpiring(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to process refund');
-    }
+    // billing 功能已移除
+    toast.error('Billing features have been removed in this deployment');
   };
 
   const getTierBadgeVariant = (tier: string) => {
@@ -394,7 +346,8 @@ export function AdminUserDetailsDialog({
                 </Card>
               </TabsContent>
 
-              <TabsContent value="transactions" className="space-y-4">
+              {/* Transactions tab hidden - billing feature removed */}
+              {/* <TabsContent value="transactions" className="space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -403,65 +356,10 @@ export function AdminUserDetailsDialog({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {transactionsLoading ? (
-                      <div className="space-y-2">
-                        {[...Array(3)].map((_, i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : userTransactions && userTransactions.data?.length > 0 ? (
-                      <div className="space-y-2">
-                        {userTransactions.data.map((transaction: any) => (
-                          <div
-                            key={transaction.id}
-                            className="flex items-center justify-between p-3 border rounded-lg"
-                          >
-                            <div>
-                              <p className="text-sm font-medium">{transaction.description}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDate(transaction.created_at)}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className={`font-semibold ${getTransactionColor(transaction.type)}`}>
-                                {formatCreditsWithSign(dollarsToCredits(transaction.amount), { showDecimals: true })}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Balance: {formatCredits(dollarsToCredits(transaction.balance_after), { showDecimals: true })}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                        {userTransactions.pagination && userTransactions.pagination.total_pages > 1 && (
-                          <div className="flex items-center justify-between pt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!userTransactions.pagination.has_prev}
-                              onClick={() => setTransactionsPage(p => Math.max(1, p - 1))}
-                            >
-                              Previous
-                            </Button>
-                            <span className="text-sm text-muted-foreground">
-                              Page {userTransactions.pagination.page} of {userTransactions.pagination.total_pages}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!userTransactions.pagination.has_next}
-                              onClick={() => setTransactionsPage(p => p + 1)}
-                            >
-                              Next
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No transactions found</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">Billing features have been removed in this deployment</p>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </TabsContent> */}
 
               <TabsContent value="activity" className="space-y-4">
                 <Card>
@@ -608,17 +506,17 @@ export function AdminUserDetailsDialog({
                       </p>
                       <Button
                         onClick={handleProcessRefund}
-                        disabled={processRefundMutation.isPending}
+                        disabled={true}
                         variant="destructive"
                         className="w-full"
                       >
-                        {processRefundMutation.isPending ? (
+                        {false ? (
                           <>
                             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                             Processing...
                           </>
                         ) : (
-                          'Process Refund'
+                          'Process Refund (Disabled)'
                         )}
                       </Button>
                     </CardContent>

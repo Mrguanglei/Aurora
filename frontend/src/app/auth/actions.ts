@@ -1,6 +1,6 @@
 'use server';
 
-import { createTrialCheckout } from '@/lib/api/billing';
+// createTrialCheckout 已删除 - 账单系统已移除
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 

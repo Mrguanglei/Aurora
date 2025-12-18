@@ -3,7 +3,4 @@
  * 本文件保留用于向后兼容性
  */
 
-export const useAdminBilling = () => ({
-  users: [],
-  totalCredits: 999999,
-});
+export { useAdminBilling } from './use-admin-billing';

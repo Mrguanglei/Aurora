@@ -6,7 +6,7 @@ from core.services.supabase import DBConnection
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, verify_admin_api_key
 from core.utils.logger import logger
 from core.sandbox.sandbox import delete_sandbox
-from core.billing.external.stripe import StripeAPIWrapper
+# 已删除账单系统
 
 router = APIRouter(tags=["account-deletion"])
 
@@ -65,7 +65,7 @@ async def request_account_deletion(
         
         deletion_id = deletion_request.data[0]['id']
         
-        await check_and_schedule_subscriptions(account_id, deletion_date, client)
+        # 已删除账单系统 - 无需处理订阅
         
         logger.info(f"Account deletion requested for user {user_id}, scheduled for {deletion_date} (will be processed by daily check)")
         
@@ -110,7 +110,7 @@ async def cancel_account_deletion(
             'cancelled_at': datetime.now(timezone.utc).isoformat()
         }).eq('id', request_id).execute()
         
-        await unschedule_subscription_cancellation(account_id, client)
+        # 已删除账单系统 - 无需处理订阅
         
         logger.info(f"Account deletion cancelled for user {user_id}")
         

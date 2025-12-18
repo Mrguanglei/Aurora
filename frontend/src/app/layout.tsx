@@ -13,13 +13,11 @@ import { roobertMono } from './fonts/roobert-mono';
 import { Suspense, lazy } from 'react';
 import { I18nProvider } from '@/components/i18n-provider';
 
-// Lazy load non-critical analytics and global components
 const Analytics = lazy(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })));
 const SpeedInsights = lazy(() => import('@vercel/speed-insights/next').then(mod => ({ default: mod.SpeedInsights })));
 const GoogleAnalytics = lazy(() => import('@next/third-parties/google').then(mod => ({ default: mod.GoogleAnalytics })));
 const PostHogIdentify = lazy(() => import('@/components/posthog-identify').then(mod => ({ default: mod.PostHogIdentify })));
-const PlanSelectionModal = lazy(() => import('@/components/billing/pricing/plan-selection-modal').then(mod => ({ default: mod.PlanSelectionModal })));
-const AnnouncementDialog = lazy(() => import('@/components/announcements/announcement-dialog').then(mod => ({ default: mod.AnnouncementDialog })));
+// 账单系统已整体移除，PlanSelectionModal 不再全局渲染
 
 
 export const viewport: Viewport = {
@@ -241,9 +239,6 @@ export default function RootLayout({
               <ReactQueryProvider>
                 {children}
                 <Toaster />
-                <Suspense fallback={null}>
-                  <PlanSelectionModal />
-                </Suspense>
               </ReactQueryProvider>
               </PresenceProvider>
             </AuthProvider>

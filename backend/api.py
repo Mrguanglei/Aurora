@@ -10,6 +10,7 @@ import sentry
 from contextlib import asynccontextmanager
 from core.agentpress.thread_manager import ThreadManager
 from core.services.supabase import DBConnection
+from core.services.postgres import PostgresConnection
 from datetime import datetime, timezone
 from core.utils.config import config, EnvMode
 import asyncio
@@ -32,10 +33,9 @@ from core.utils.rate_limiter import (
 from core import api as core_api
 
 from core.sandbox import api as sandbox_api
-from core.billing.api import router as billing_router
-from core.setup import router as setup_router, webhook_router
+from core.auth import router as auth_router
+from core.setup import router as setup_router
 from core.admin.admin_api import router as admin_router
-from core.admin.billing_admin_api import router as billing_admin_router
 from core.admin.notification_admin_api import router as notification_admin_router
 from core.admin.analytics_admin_api import router as analytics_admin_router
 from core.services import transcription as transcription_api
@@ -69,6 +69,12 @@ async def lifespan(app: FastAPI):
     env_mode = config.ENV_MODE.value if config.ENV_MODE else "unknown"
     logger.debug(f"Starting up FastAPI application with instance ID: {instance_id} in {env_mode} mode")
     try:
+        # 初始化本地 PostgreSQL 连接（代替 Supabase）
+        postgres_db = PostgresConnection()
+        await postgres_db.initialize()
+        logger.info("✅ PostgreSQL 数据库连接已建立")
+        
+        # 保持 Supabase 连接用于兼容性（现在为空）
         await db.initialize()
         
         # Pre-load tool classes and schemas to avoid first-request delay
@@ -154,6 +160,11 @@ async def lifespan(app: FastAPI):
 
         logger.debug("Disconnecting from database")
         await db.disconnect()
+        
+        # 关闭 PostgreSQL 连接
+        from core.services.postgres import PostgresConnection
+        postgres_db = PostgresConnection()
+        await postgres_db.disconnect()
     except Exception as e:
         logger.error(f"Error during application startup: {e}")
         raise
@@ -187,7 +198,7 @@ async def rate_limit_middleware(request: Request, call_next):
         rate_limiter = api_key_rate_limiter
     elif "/v1/admin" in path:
         rate_limiter = admin_rate_limiter
-    elif any(sensitive in path for sensitive in ["/v1/setup/initialize", "/v1/billing/webhook"]):
+    elif any(sensitive in path for sensitive in ["/v1/setup/initialize"]):
         rate_limiter = auth_rate_limiter
     
     if rate_limiter:
@@ -270,11 +281,12 @@ api_router = APIRouter()
 # Include all API routers without individual prefixes
 api_router.include_router(core_api.router)
 api_router.include_router(sandbox_api.router)
-api_router.include_router(billing_router)
+api_router.include_router(auth_router)  # 本地 JWT 认证
+# 已删除账单系统
 api_router.include_router(setup_router)
-api_router.include_router(webhook_router)  # Webhooks at /api/webhooks/*
+# 已删除 Webhook 系统
 api_router.include_router(api_keys_api.router)
-api_router.include_router(billing_admin_router)
+# 已删除账单管理API
 api_router.include_router(admin_router)
 api_router.include_router(notification_admin_router)
 api_router.include_router(analytics_admin_router)

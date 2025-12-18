@@ -1,9 +1,15 @@
-export * from './pricing';
-export * from './credit-purchase';
-export * from './credit-transactions';
-export * from './subscription-cancellation-card';
-export * from './scheduled-downgrade-card';
-export { CreditsDisplay } from './credits-display';
-export { TierBadge } from './tier-badge';
-export { getPlanName, getPlanIcon } from './plan-utils';
-export { UpgradeCelebration } from './upgrade-celebration';
+/**
+ * 账单系统已删除（私有化部署）
+ * 本文件保留用于向后兼容性
+ */
+
+export const getPlanName = () => 'Premium';
+export const getPlanIcon = () => null;
+export const UpgradeCelebration = (_props: {
+  isOpen?: boolean;
+  onClose?: () => void;
+  planName?: string;
+  isLoading?: boolean;
+}) => null;
+export const CreditsDisplay = () => null;
+export const WelcomeBonusBanner = () => null;

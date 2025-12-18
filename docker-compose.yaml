@@ -1,30 +1,48 @@
 # ============================================================================
-# KORTIX SUPER WORKER DOCKER COMPOSE - LOCAL DEVELOPMENT
+# AURORA DOCKER COMPOSE - LOCAL DEVELOPMENT
 # ============================================================================
-# This Docker Compose file runs Kortix Super Worker services (Backend, Worker, Frontend, Redis)
+# 这个 Docker Compose 文件运行 Aurora 的所有服务
+# (Backend, Worker, Frontend, Redis, PostgreSQL)
 #
-# ⚠️  IMPORTANT LIMITATION - LOCAL SUPABASE:
-# Currently, local Supabase (via `npx supabase start`) is NOT supported with
-# Docker Compose due to network configuration complexity.
+# 特点：
+# - 完全私有化部署
+# - 使用本地 PostgreSQL 数据库（替代 Supabase）
+# - 支持多用户管理
+# - 保留 Agent 运行和实时更新功能
 #
-# TODO: Integrate Supabase services directly into this compose file to enable
-#       full Docker-based local development with proper network configuration.
+# 快速开始：
+#   docker compose up -d          # 启动所有服务
+#   docker compose down           # 停止所有服务
+#   docker compose logs -f        # 查看所有日志
 #
-# CURRENT WORKAROUND:
-# - Use cloud Supabase for Docker Compose setup
-# - OR run everything manually (no Docker) to use local Supabase
-#
-# Quick Start:
-#   docker compose up -d          # Start all services
-#   docker compose down           # Stop all services
-#   docker compose logs -f        # View all logs
-#
-# Access:
-#   - Kortix Super Worker Frontend:     http://localhost:3000
-#   - Kortix Super Worker Backend API:  http://localhost:8011
+# 访问地址：
+#   - Aurora Frontend:     http://localhost:3000
+#   - Aurora Backend API:  http://localhost:8011
+#   - PostgreSQL:          localhost:5432
 # ============================================================================
 
 services:
+  # PostgreSQL 数据库
+  postgres:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: aurora_db
+      POSTGRES_USER: aurora_user
+      POSTGRES_PASSWORD: aurora_password_change_me
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurora_user -d aurora_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurora-network
+
   redis:
     image: redis:7-alpine
     ports:
@@ -38,6 +56,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - aurora-network
 
   backend:
     image: ghcr.io/aurora-ai/aurora-backend:latest
@@ -50,15 +70,20 @@ services:
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
+      - DATABASE_URL=postgresql://aurora_user:aurora_password_change_me@postgres:5432/aurora_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       worker:
         condition: service_started
+    networks:
+      - aurora-network
 
   worker:
     image: ghcr.io/aurora-ai/aurora-backend:latest
@@ -70,13 +95,18 @@ services:
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
+      - DATABASE_URL=postgresql://aurora_user:aurora_password_change_me@postgres:5432/aurora_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - aurora-network
 
   frontend:
     init: true
@@ -87,6 +117,13 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+    networks:
+      - aurora-network
 
 volumes:
+  postgres_data:
   redis_data:
+
+networks:
+  aurora-network:
+    driver: bridge
