@@ -4,8 +4,6 @@ from pydantic import BaseModel
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
 from core.services.supabase import DBConnection
-from core.billing import subscription_service
-from core.billing.shared.config import is_memory_enabled, get_memory_config
 from .retrieval_service import memory_retrieval_service
 from .models import MemoryType
 
@@ -60,17 +58,8 @@ async def list_memories(
     memory_type: Optional[str] = Query(None)
 ):
     try:
-        tier_info = await subscription_service.get_user_subscription_tier(user_id)
-        tier_name = tier_info['name']
-        
-        if not is_memory_enabled(tier_name):
-            return MemoryListResponse(
-                memories=[],
-                total=0,
-                page=page,
-                limit=limit,
-                pages=0
-            )
+        # Billing removed - always assume memory is enabled
+        tier_name = "default"
         
         offset = (page - 1) * limit
         
@@ -123,9 +112,9 @@ async def get_memory_stats(
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     try:
-        tier_info = await subscription_service.get_user_subscription_tier(user_id)
-        tier_name = tier_info['name']
-        memory_config = get_memory_config(tier_name)
+        # Billing removed - assume memory is enabled for all users
+        tier_name = "default"
+        memory_config = {'max_memories': 10000, 'retrieval_limit': 100}
         
         stats = await memory_retrieval_service.get_memory_stats(user_id)
         
@@ -159,12 +148,8 @@ async def delete_memory(
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     try:
-        tier_info = await subscription_service.get_user_subscription_tier(user_id)
-        tier_name = tier_info['name']
-        
-        if not is_memory_enabled(tier_name):
-            raise HTTPException(status_code=403, detail="Memory feature not available for your tier")
-        
+        # Billing removed - assume memory is enabled
+        tier_name = "default"
         success = await memory_retrieval_service.delete_memory(user_id, memory_id)
         
         if not success:
@@ -187,11 +172,8 @@ async def delete_all_memories(
         if not confirm:
             raise HTTPException(status_code=400, detail="Confirmation required to delete all memories. Set confirm=true query parameter.")
         
-        tier_info = await subscription_service.get_user_subscription_tier(user_id)
-        tier_name = tier_info['name']
-        
-        if not is_memory_enabled(tier_name):
-            raise HTTPException(status_code=403, detail="Memory feature not available for your tier")
+        # Billing removed - assume memory is enabled
+        tier_name = "default"
         
         deleted_count = await memory_retrieval_service.delete_all_memories(user_id)
         

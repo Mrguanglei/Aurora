@@ -53,22 +53,44 @@ class CredentialAccessDeniedError(Exception):
 
 class EncryptionService:
     def __init__(self):
-        self._encryption_key = self._get_or_create_encryption_key()
-        self._cipher = Fernet(self._encryption_key)
+        self._encryption_key = None
+        self._cipher = None
+        try:
+            self._encryption_key = self._get_or_create_encryption_key()
+            self._cipher = Fernet(self._encryption_key)
+        except ValueError as e:
+            logger.warning(f"Encryption service disabled: {e}")
+            # Continue without encryption - MCP credentials won't be encrypted
     
     def _get_or_create_encryption_key(self) -> bytes:
         # Try MCP_CREDENTIAL_ENCRYPTION_KEY first, then fall back to ENCRYPTION_KEY
         key_env = os.getenv("MCP_CREDENTIAL_ENCRYPTION_KEY") or os.getenv("ENCRYPTION_KEY")
         
         if not key_env:
-            logger.error("No encryption key found in environment variables")
-            raise ValueError("MCP_CREDENTIAL_ENCRYPTION_KEY or ENCRYPTION_KEY must be set")
+            logger.warning("No encryption key found in environment variables - credentials will not be encrypted")
+            raise ValueError("MCP_CREDENTIAL_ENCRYPTION_KEY or ENCRYPTION_KEY not set")
         
         try:
+            # Try to handle different key formats
             if isinstance(key_env, str):
-                return key_env.encode('utf-8')
+                # If it looks like hex (64 chars, all hex digits), convert to proper Fernet key
+                if len(key_env) == 64 and all(c in '0123456789abcdefABCDEF' for c in key_env):
+                    # Convert hex to bytes, then to base64 for Fernet
+                    key_bytes = bytes.fromhex(key_env)
+                    # Fernet requires 32 bytes, padded and base64 encoded
+                    import base64
+                    key_b64 = base64.urlsafe_b64encode(key_bytes)
+                    Fernet(key_b64)  # Validate
+                    return key_b64
+                else:
+                    # Assume it's already base64 encoded
+                    key_bytes = key_env.encode('utf-8')
             else:
-                return key_env
+                key_bytes = key_env
+            
+            # Validate it's a proper Fernet key
+            Fernet(key_bytes)
+            return key_bytes
                 
         except Exception as e:
             logger.error(f"Invalid encryption key: {e}")
@@ -79,13 +101,23 @@ class EncryptionService:
         config_bytes = config_json.encode('utf-8')
         
         config_hash = hashlib.sha256(config_bytes).hexdigest()
-        encrypted_config = self._cipher.encrypt(config_bytes)
         
+        # If encryption is disabled, just return the plain bytes
+        if not self._cipher:
+            logger.warning("Encryption disabled - credentials stored unencrypted")
+            return config_bytes, config_hash
+        
+        encrypted_config = self._cipher.encrypt(config_bytes)
         return encrypted_config, config_hash
     
     def decrypt_config(self, encrypted_config: bytes, expected_hash: str) -> Dict[str, Any]:
         try:
-            decrypted_bytes = self._cipher.decrypt(encrypted_config)
+            # If encryption is disabled, encrypted_config is actually plain text
+            if not self._cipher:
+                logger.warning("Encryption disabled - decrypting as plain text")
+                decrypted_bytes = encrypted_config
+            else:
+                decrypted_bytes = self._cipher.decrypt(encrypted_config)
             
             actual_hash = hashlib.sha256(decrypted_bytes).hexdigest()
             if actual_hash != expected_hash:

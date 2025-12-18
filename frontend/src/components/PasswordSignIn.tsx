@@ -44,12 +44,22 @@ export default function PasswordSignIn({
           return;
         }
         formData.append('acceptedTerms', 'true');
-        await signUpWithPassword({}, formData);
+        const result = await signUpWithPassword({}, formData);
+        if (result && typeof result === 'object' && 'message' in result) {
+          toast.error(result.message as string);
+        }
       } else {
-        await signInWithPassword({}, formData);
+        const result = await signInWithPassword({}, formData);
+        if (result && typeof result === 'object' && 'message' in result) {
+          toast.error(result.message as string);
+        }
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      // redirect() throws an exception, which is expected behavior
+      // Only show error for actual exceptions
+      if (error.message && !error.message.includes('NEXT_REDIRECT')) {
+        toast.error(error.message || 'Authentication failed');
+      }
     }
   };
 
@@ -103,7 +113,7 @@ export default function PasswordSignIn({
             {t.rich('acceptPrivacyTerms', {
               privacyPolicy: (chunks) => (
                 <a 
-                  href="https://www.kortix.com/legal?tab=privacy" 
+                  href="" 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline underline-offset-2 text-primary"
@@ -114,7 +124,7 @@ export default function PasswordSignIn({
               ),
               termsOfService: (chunks) => (
                 <a 
-                  href="https://www.kortix.com/legal?tab=terms"
+                  href=""
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline underline-offset-2 text-primary"

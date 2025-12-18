@@ -1,14 +1,6 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'API Keys | Kortix',
-  description: 'Manage your API keys for programmatic access to Kortix',
-  openGraph: {
-    title: 'API Keys | Kortix',
-    description: 'Manage your API keys for programmatic access to Kortix',
-    type: 'website',
-  },
-};
+// Disable static generation to avoid Supabase client errors during build
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function APIKeysLayout({
   children,

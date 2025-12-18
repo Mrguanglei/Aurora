@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
 import { BillingError, AgentRunLimitError, ProjectLimitError, ThreadLimitError, NoAccessTokenAvailableError, RequestTooLargeError, parseTierRestrictionError } from './errors';
@@ -548,12 +547,19 @@ export const streamAgent = (
         return;
       }
 
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      // Supabase removed - get token from localStorage
+      const token = typeof window !== 'undefined' ? (() => {
+        try {
+          const authData = localStorage.getItem('auth-token');
+          if (authData) {
+            const parsed = JSON.parse(authData);
+            return parsed?.access_token || null;
+          }
+        } catch {}
+        return null;
+      })() : null;
 
-      if (!session?.access_token) {
+      if (!token) {
         const authError = new NoAccessTokenAvailableError();
         callbacks.onError(authError);
         callbacks.onClose();
@@ -561,7 +567,9 @@ export const streamAgent = (
       }
 
       const url = new URL(`${API_URL}/agent-run/${agentRunId}/stream`);
-      url.searchParams.append('token', session.access_token);
+      if (token) {
+        url.searchParams.append('token', token);
+      }
 
       const eventSource = new EventSource(url.toString());
 

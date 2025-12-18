@@ -28,7 +28,6 @@ import {
     Mail,
     Smartphone,
     AppWindow,
-    Users,
     Key,
     Camera,
     Loader2,
@@ -57,19 +56,7 @@ import {
     useCancelAccountDeletion,
     useDeleteAccountImmediately
 } from '@/hooks/account/use-account-deletion';
-import { AccountState } from '@/lib/api/billing';
 import { useAuth } from '@/components/AuthProvider';
-import { PlanSelectionModal, PricingSection } from '@/components/billing/pricing';
-import { CreditBalanceDisplay, CreditPurchaseModal } from '@/components/billing/credit-purchase';
-import { ScheduledDowngradeCard } from '@/components/billing/scheduled-downgrade-card';
-import { 
-    useAccountState,
-    accountStateSelectors,
-    useCreatePortalSession,
-    useCancelSubscription,
-    useReactivateSubscription,
-    invalidateAccountState,
-} from '@/hooks/billing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -88,18 +75,13 @@ import {
     ArrowRight
 } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { getPlanName, getPlanIcon } from '../billing/plan-utils';
-import { TierBadge } from '../billing/tier-badge';
-import { siteConfig } from '@/lib/site-config';
-import ThreadUsage from '@/components/billing/thread-usage';
 import { formatCredits } from '@/lib/utils/credit-formatter';
 import { LanguageSwitcher } from './language-switcher';
 import { useTranslations } from 'next-intl';
-import { ReferralsTab } from '@/components/referrals/referrals-tab';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MemorySettings } from '@/components/memory/MemorySettings';
 
-type TabId = 'general' | 'plan' | 'billing' | 'usage' | 'memory' | 'env-manager' | 'knowledge-base' | 'integrations' | 'api-keys' | 'referrals';
+type TabId = 'general' | 'usage' | 'memory' | 'env-manager' | 'knowledge-base' | 'integrations' | 'api-keys';
 
 interface Tab {
     id: TabId;
@@ -124,16 +106,12 @@ export function UserSettingsModal({
     const router = useRouter();
     const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
-    const [showPlanModal, setShowPlanModal] = useState(false);
     const isLocal = isLocalMode();
     const isProduction = isProductionMode();
     const tabs: Tab[] = [
         { id: 'general', label: 'General', icon: Settings },
-        { id: 'plan', label: 'Plan', icon: Zap },
-        { id: 'billing', label: 'Billing', icon: CreditCard },
         { id: 'usage', label: 'Usage', icon: TrendingDown },
         { id: 'memory', label: 'Memory', icon: Brain },
-        ...(!isProduction ? [{ id: 'referrals' as TabId, label: 'Referrals', icon: Users }] : []),
         { id: 'knowledge-base', label: 'Knowledge Base', icon: FileText },
         { id: 'integrations', label: 'Integrations', icon: Plug },
         { id: 'api-keys', label: 'API Keys', icon: Key },
@@ -145,9 +123,7 @@ export function UserSettingsModal({
     }, [defaultTab]);
 
     const handleTabClick = (tabId: TabId) => {
-        if (tabId === 'plan') {
-            setShowPlanModal(true);
-        } else if (tabId === 'knowledge-base') {
+        if (tabId === 'knowledge-base') {
             // Close modal first for instant feel, then navigate
             onOpenChange(false);
             router.push('/knowledge');
@@ -224,10 +200,8 @@ export function UserSettingsModal({
                         <div className="flex-1 overflow-x-hidden overflow-y-auto">
                             <div className="w-full max-w-full">
                                 {activeTab === 'general' && <GeneralTab onClose={() => onOpenChange(false)} />}
-                                {activeTab === 'billing' && <BillingTab returnUrl={returnUrl} onOpenPlanModal={() => setShowPlanModal(true)} isActive={activeTab === 'billing'} />}
                                 {activeTab === 'usage' && <UsageTab />}
                                 {activeTab === 'memory' && <MemorySettings />}
-                                {activeTab === 'referrals' && <ReferralsTab />}
                                 {activeTab === 'env-manager' && isLocal && <EnvManagerTab />}
                             </div>
                         </div>
@@ -277,21 +251,13 @@ export function UserSettingsModal({
                         {/* Desktop Content */}
                         <div className="flex-1 overflow-y-auto min-h-0 w-full max-w-full">
                             {activeTab === 'general' && <GeneralTab onClose={() => onOpenChange(false)} />}
-                            {activeTab === 'billing' && <BillingTab returnUrl={returnUrl} onOpenPlanModal={() => setShowPlanModal(true)} isActive={activeTab === 'billing'} />}
                             {activeTab === 'usage' && <UsageTab />}
                             {activeTab === 'memory' && <MemorySettings />}
-                            {activeTab === 'referrals' && <ReferralsTab />}
                             {activeTab === 'env-manager' && isLocal && <EnvManagerTab />}
                         </div>
                     </div>
                 )}
 
-                {/* Full-screen Plan Selection Modal */}
-                <PlanSelectionModal
-                    open={showPlanModal}
-                    onOpenChange={setShowPlanModal}
-                    returnUrl={returnUrl}
-                />
             </DialogContent>
         </Dialog>
     );
@@ -821,483 +787,10 @@ function NotificationToggle({ icon: Icon, label, description, enabled, onToggle 
     );
 }
 
-// Billing Tab Component - Usage, credits, subscription management
-function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: string; onOpenPlanModal: () => void; isActive: boolean }) {
-    const { session, isLoading: authLoading } = useAuth();
-    const [showCreditPurchaseModal, setShowCreditPurchaseModal] = useState(false);
-    const [showCancelDialog, setShowCancelDialog] = useState(false);
-    const queryClient = useQueryClient();
-
-    const isLocal = isLocalMode();
-
-    // Use unified account state hook
-    const {
-        data: accountState,
-        isLoading: isLoadingSubscription,
-        error: subscriptionError,
-        refetch: refetchSubscription
-    } = useAccountState({
-        enabled: !!session && !authLoading,
-    });
-    
-    // Get commitment info from account state
-    const commitmentInfo = accountState?.subscription.commitment;
-
-    const createPortalSessionMutation = useCreatePortalSession();
-    const cancelSubscriptionMutation = useCancelSubscription();
-    const reactivateSubscriptionMutation = useReactivateSubscription();
-
-    const planName = accountStateSelectors.planName(accountState);
-    const planIcon = getPlanIcon(planName, isLocal);
-    
-    // Get scheduled change from account state
-    const hasScheduledChange = accountState?.subscription.has_scheduled_change && accountState?.subscription.scheduled_change;
-    const scheduledChange = accountState?.subscription.scheduled_change;
-    
-    const getFrontendTierName = (tierKey: string) => {
-        const tier = siteConfig.cloudPricingItems.find(p => p.tierKey === tierKey);
-        return tier?.name || tierKey || 'Basic';
-    };
-
-    // Calculate hours until daily refresh
-    const getHoursUntilDailyRefresh = () => {
-        const dailyInfo = accountState?.credits.daily_refresh;
-        if (!dailyInfo?.enabled) return null;
-        
-        if (dailyInfo.seconds_until_refresh) {
-            const hours = Math.ceil(dailyInfo.seconds_until_refresh / 3600);
-            return hours > 0 ? hours : null;
-        }
-        
-        if (dailyInfo.next_refresh_at) {
-            const nextRefresh = new Date(dailyInfo.next_refresh_at);
-            const now = new Date();
-            const diffMs = nextRefresh.getTime() - now.getTime();
-            const hours = Math.ceil(diffMs / (1000 * 60 * 60));
-            return hours > 0 ? hours : null;
-        }
-        
-        return null;
-    };
-
-    const hoursUntilDailyRefresh = getHoursUntilDailyRefresh();
-    const dailyCreditsInfo = accountState?.credits.daily_refresh;
-    
-    // Use the clean credits breakdown from API
-    const dailyCredits = accountState?.credits.daily ?? 0;
-    const monthlyCredits = accountState?.credits.monthly ?? 0;
-    const nonExpiringCredits = accountState?.credits.extra ?? 0;
-    const totalCredits = accountState?.credits.total ?? 0;
-    
-    console.log('[BillingTab] Credit breakdown:', { 
-        accountState: accountState?.credits,
-        dailyCreditsInfo, 
-        dailyCredits, 
-        monthlyCredits, 
-        nonExpiringCredits, 
-        totalCredits
-    });
-
-    // Refetch billing info whenever the billing tab becomes active (only once per activation)
-    const prevIsActiveRef = useRef(false);
-    useEffect(() => {
-        // Only refetch if tab just became active (not on every render)
-        if (isActive && !prevIsActiveRef.current && session && !authLoading) {
-            console.log('🔄 Billing tab activated, refetching billing info...');
-            // Use centralized invalidation which includes deduplication
-            invalidateAccountState(queryClient, true);
-        }
-        prevIsActiveRef.current = isActive;
-        // Only depend on isActive, session, and authLoading - not the refetch functions
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isActive, session, authLoading]);
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
-    };
-
-    const formatDateFromTimestamp = (timestamp: number) => {
-        return new Date(timestamp * 1000).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
-    };
-
-    const formatDateFlexible = (dateValue: string | number) => {
-        if (typeof dateValue === 'number') {
-            // If it's a number, treat it as Unix timestamp (seconds)
-            return formatDateFromTimestamp(dateValue);
-        }
-        // Otherwise treat it as ISO string
-        return formatDate(dateValue);
-    };
-
-    const formatEndDate = (dateString: string) => {
-        try {
-            return new Date(dateString).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        } catch {
-            return dateString;
-        }
-    };
-
-    const getEffectiveCancellationDate = () => {
-        if (accountState?.subscription.cancellation_effective_date) {
-            return formatDate(accountState.subscription.cancellation_effective_date);
-        }
-        if (accountState?.subscription.current_period_end) {
-            return formatDateFlexible(accountState.subscription.current_period_end);
-        }
-        return 'N/A';
-    };
-
-    const handleManageSubscription = () => {
-        console.log('[BillingTab] Creating portal session with return_url:', returnUrl);
-        createPortalSessionMutation.mutate({ return_url: returnUrl });
-    };
-
-    const handleCancel = () => {
-        setShowCancelDialog(false);
-        cancelSubscriptionMutation.mutate(undefined);
-    };
-
-    const handleReactivate = () => {
-        reactivateSubscriptionMutation.mutate();
-    };
-
-    const isLoading = isLoadingSubscription || authLoading;
-    const error = subscriptionError ? (subscriptionError instanceof Error ? subscriptionError.message : 'Failed to load subscription data') : null;
-
-    if (isLoading) {
+function UsageTab() {
         return (
             <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 min-w-0 max-w-full overflow-x-hidden">
-                <Skeleton className="h-8 w-32" />
-                <div className="space-y-4">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                </div>
-            </div>
-        );
-    }
-
-    if (isLocalMode()) {
-        return (
-            <div className="p-4 sm:p-6 min-w-0 max-w-full overflow-x-hidden">
-                <Alert className="border-blue-500/50 bg-blue-500/10">
-                    <Shield className="h-4 w-4 text-blue-500" />
-                    <AlertDescription>
-                        <div className="font-medium mb-1">Local Mode Active</div>
-                        <div className="text-sm text-muted-foreground">
-                            All premium features are available in this environment
-                        </div>
-                    </AlertDescription>
-                </Alert>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 sm:p-6 min-w-0 max-w-full overflow-x-hidden">
-                <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            </div>
-        );
-    }
-
-    const subStatus = accountState?.subscription.status;
-    const isSubscribed = subStatus === 'active' || subStatus === 'trialing';
-    const isFreeTier = accountState?.subscription.tier_key === 'free' || accountState?.subscription.tier_key === 'none';
-    const isCancelled = accountState?.subscription.is_cancelled || accountState?.subscription.cancel_at_period_end;
-    const canPurchaseCredits = accountState?.subscription.can_purchase_credits || false;
-
-    return (
-        <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 min-w-0 max-w-full overflow-x-hidden">
-            {/* Header with Plan Badge on Right */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 min-w-0">
-                <div className="space-y-1 min-w-0 flex-1">
-                    <h1 className="text-xl sm:text-2xl font-medium tracking-tight">Billing Status</h1>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Manage your credits and subscription</p>
-                </div>
-
-                {/* Plan Badge with Renewal Info - Right aligned */}
-                {!isFreeTier && planName && (
-                    <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-2">
-                            {planIcon && (
-                                <div className="rounded-full py-0.5 flex items-center justify-center">
-                                    <img 
-                                        src={planIcon} 
-                                        alt={planName} 
-                                        className="h-6 w-auto" 
-                                        style={{ height: '24px', width: 'auto' }}
-                                    />
-                                </div>
-                            )}
-                            {accountState?.subscription.current_period_end && !hasScheduledChange && (
-                                <span className="text-xs text-muted-foreground">
-                                    Renews {formatDateFlexible(accountState.subscription.current_period_end)}
-                                </span>
-                            )}
-                        </div>
-                        {/* Scheduled Downgrade Info - inline below plan */}
-                        {hasScheduledChange && scheduledChange && (
-                            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                                <CalendarClock className="h-3 w-3" />
-                                <span>
-                                    Changing to {getFrontendTierName(scheduledChange.target_tier.name)} on{' '}
-                                    {new Date(scheduledChange.effective_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* Credit Breakdown - Grid adapts based on tier */}
-            <div className={cn(
-                "grid gap-2 sm:gap-4",
-                dailyCreditsInfo?.enabled 
-                    ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-4" 
-                    : "grid-cols-2 sm:grid-cols-2 md:grid-cols-3"
-            )}>
-                {/* Total Available Credits */}
-                <div className="relative overflow-hidden rounded-xl sm:rounded-[18px] border border-border bg-card p-3 sm:p-5">
-                    <div className="flex flex-col gap-1.5 sm:gap-2">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                            <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Total</span>
-                        </div>
-                        <div>
-                            <div className="text-base sm:text-xl leading-none font-semibold">{formatCredits(totalCredits)}</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Daily Credits - Only for free tier */}
-                {dailyCreditsInfo?.enabled && (
-                    <div className="relative overflow-hidden rounded-xl sm:rounded-[18px] border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent p-3 sm:p-5">
-                        <div className="flex flex-col gap-1.5 sm:gap-2">
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                                <RotateCcw className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
-                                <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Daily</span>
-                            </div>
-                            <div>
-                                <div className="text-base sm:text-xl leading-none font-semibold">{formatCredits(dailyCredits)}</div>
-                                <p className="text-[10px] sm:text-[11px] text-blue-500/80 mt-1 sm:mt-1.5 truncate">
-                                    {hoursUntilDailyRefresh !== null 
-                                        ? `${hoursUntilDailyRefresh}h`
-                                        : 'Daily'
-                                    }
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Monthly Credits - For paid tiers OR expiring credits display */}
-                {(!dailyCreditsInfo?.enabled || monthlyCredits > 0) && (
-                    <div className="relative overflow-hidden rounded-xl sm:rounded-[18px] border border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-transparent p-3 sm:p-5">
-                        <div className="flex flex-col gap-1.5 sm:gap-2">
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500 flex-shrink-0" />
-                                <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Monthly</span>
-                            </div>
-                            <div>
-                                <div className="text-base sm:text-xl leading-none font-semibold">
-                                    {formatCredits(dailyCreditsInfo?.enabled ? monthlyCredits : (accountState?.credits.monthly || 0))}
-                                </div>
-                                {accountState?.subscription.current_period_end && (
-                                    <p className="text-[10px] sm:text-[11px] text-orange-500/80 mt-1 sm:mt-1.5 truncate">
-                                        {formatDateFlexible(accountState.subscription.current_period_end)}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Extra Credits */}
-                <div className="relative overflow-hidden rounded-xl sm:rounded-[18px] border border-border bg-card p-3 sm:p-5">
-                    <div className="flex flex-col gap-1.5 sm:gap-2">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                            <Infinity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Extra</span>
-                        </div>
-                        <div>
-                            <div className="text-base sm:text-xl leading-none font-semibold">{formatCredits(nonExpiringCredits)}</div>
-                            <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1 sm:mt-1.5">Non-expiring</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Action Buttons - Clean Layout */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                <Button
-                    onClick={handleManageSubscription}
-                    disabled={createPortalSessionMutation.isPending}
-                    className="h-10 w-full sm:w-auto"
-                >
-                    {createPortalSessionMutation.isPending ? 'Loading...' : 'Manage Subscription'}
-                </Button>
-                {canPurchaseCredits && (
-                    <Button
-                        onClick={() => setShowCreditPurchaseModal(true)}
-                        variant="outline"
-                        className="h-10 w-full sm:w-auto"
-                    >
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Get Additional Credits
-                    </Button>
-                )}
-                {planName && (
-                    hasScheduledChange ? (
-                        <Button
-                            variant="outline"
-                            className="h-10 w-full sm:w-auto border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-sm"
-                            disabled
-                        >
-                            <CalendarClock className="h-4 w-4 mr-2 flex-shrink-0" />
-                            <span className="truncate">Downgrade Scheduled</span>
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={onOpenPlanModal}
-                            variant="outline"
-                            className="h-10 w-full sm:w-auto"
-                        >
-                            Change Plan
-                        </Button>
-                    )
-                )}
-            </div>
-
-            {/* Commitment or Cancellation Alerts */}
-            {commitmentInfo?.has_commitment && (
-                <Alert className="border-blue-500/20 bg-blue-500/5 rounded-[18px]">
-                    <Shield className="h-4 w-4 text-blue-500" />
-                    <AlertDescription>
-                        <strong className="text-sm">Annual Commitment</strong>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Active until {formatEndDate(commitmentInfo.commitment_end_date || '')}
-                        </p>
-                    </AlertDescription>
-                </Alert>
-            )}
-
-            {hasScheduledChange && scheduledChange && (
-                <ScheduledDowngradeCard
-                    scheduledChange={scheduledChange}
-                    onCancel={() => {
-                        refetchSubscription();
-                    }}
-                />
-            )}
-
-            {isCancelled && (
-                <Alert variant="destructive" className="rounded-[18px]">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                        Your subscription will be cancelled on {getEffectiveCancellationDate()}
-                        {!isCancelled && (
-                            <Button
-                                onClick={handleReactivate}
-                                variant="outline"
-                                size="sm"
-                                className="ml-4"
-                            >
-                                Reactivate
-                            </Button>
-                        )}
-                    </AlertDescription>
-                </Alert>
-            )}
-
-            {/* Help Link - Subtle */}
-            <div className="flex items-center justify-center pt-6 border-t border-border/50">
-                <Button
-                    variant="link"
-                    onClick={() => window.open('/credits-explained', '_blank')}
-                    className="text-muted-foreground hover:text-foreground h-auto p-0"
-                >
-                    <Lightbulb className="h-3.5 w-3.5 mr-2" />
-                    <span className="text-sm">Credits explained</span>
-                </Button>
-            </div>
-
-            {/* Cancel Plan Button - Subtle Placement */}
-            {!isFreeTier && !isCancelled && (
-                <div className="flex justify-center">
-                    <Button
-                        onClick={() => setShowCancelDialog(true)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-destructive h-auto p-2 text-xs"
-                    >
-                        Cancel Plan
-                    </Button>
-                </div>
-            )}
-
-            {isCancelled && (
-                <div className="flex justify-center">
-                    <Button
-                        onClick={handleReactivate}
-                        disabled={reactivateSubscriptionMutation.isPending}
-                        variant="outline"
-                        size="sm"
-                    >
-                        <RotateCcw className="h-3.5 w-3.5 mr-2" />
-                        {reactivateSubscriptionMutation.isPending ? 'Reactivating...' : 'Reactivate Subscription'}
-                    </Button>
-                </div>
-            )}
-            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Cancel Subscription</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                            Are you sure you want to cancel your subscription? You'll continue to have access until{' '}
-                            {accountState?.subscription.current_period_end && formatDateFlexible(accountState.subscription.current_period_end)}.
-                        </p>
-                        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-                            <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="w-full sm:w-auto">
-                                Keep Subscription
-                            </Button>
-                            <Button 
-                                variant="destructive" 
-                                onClick={handleCancel} 
-                                disabled={cancelSubscriptionMutation.isPending}
-                                className="w-full sm:w-auto"
-                            >
-                                {cancelSubscriptionMutation.isPending ? 'Cancelling...' : 'Cancel Plan'}
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-            <CreditPurchaseModal
-                open={showCreditPurchaseModal}
-                onOpenChange={setShowCreditPurchaseModal}
-                currentBalance={totalCredits / 100}
-                canPurchase={canPurchaseCredits}
-                onPurchaseComplete={() => {
-                    refetchSubscription();
-                }}
-            />
+        <div className="text-sm text-muted-foreground">Usage information is not available.</div>
         </div>
     );
 }
@@ -1322,13 +815,6 @@ function CreditsHelpAlert() {
   );
 }
 
-function UsageTab() {
-  return (
-      <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 min-w-0 max-w-full overflow-x-hidden">
-        <ThreadUsage />
-      </div>
-  );
-}
 
 function EnvManagerTab() {
     return (

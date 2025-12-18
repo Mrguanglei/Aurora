@@ -33,9 +33,6 @@ const PresentationViewerWrapper = lazy(() =>
 const OnboardingProvider = lazy(() => 
   import('@/components/onboarding/onboarding-provider').then(mod => ({ default: mod.OnboardingProvider }))
 );
-const WelcomeBonusBanner = lazy(() => 
-  import('@/components/billing/welcome-bonus-banner').then(mod => ({ default: mod.WelcomeBonusBanner }))
-);
 
 const PresenceDebug = lazy(() => 
   import('@/components/debug/presence-debug').then(mod => ({ default: mod.PresenceDebug }))
@@ -163,10 +160,6 @@ export default function DashboardLayoutContent({
       }
     >
       <div className="relative h-full">
-        {/* Site-wide welcome bonus banner for free tier users */}
-        <Suspense fallback={null}>
-          <WelcomeBonusBanner />
-        </Suspense>
         <Suspense fallback={null}>
           <AnnouncementDialog />
         </Suspense>

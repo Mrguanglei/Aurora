@@ -18,7 +18,7 @@
 # 访问地址：
 #   - Aurora Frontend:     http://localhost:3000
 #   - Aurora Backend API:  http://localhost:8011
-#   - PostgreSQL:          localhost:5432
+#   - PostgreSQL:          localhost:54321
 # ============================================================================
 
 services:
@@ -26,12 +26,11 @@ services:
   postgres:
     image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "54321:5432"
     environment:
       POSTGRES_DB: aurora_db
       POSTGRES_USER: aurora_user
       POSTGRES_PASSWORD: aurora_password_change_me
-      POSTGRES_INITDB_ARGS: "-c max_connections=200"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
@@ -113,10 +112,17 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
+        - NEXT_PUBLIC_ENV_MODE=staging
     ports:
       - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
+      - NEXT_PUBLIC_ENV_MODE=staging
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     networks:
       - aurora-network
 

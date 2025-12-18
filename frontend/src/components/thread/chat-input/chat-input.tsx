@@ -37,9 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useAccountState, accountStateSelectors } from '@/hooks/billing';
 import { isStagingMode, isLocalMode } from '@/lib/config';
-import { PlanSelectionModal } from '@/components/billing/pricing';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { MemoryToggle } from './memory-toggle';
@@ -195,11 +193,9 @@ interface IntegrationsDropdownProps {
   loading: boolean;
   disabled: boolean;
   isAgentRunning: boolean;
-  isFreeTier: boolean;
   quickIntegrations: Array<{ id: string; name: string; slug: string }>;
   integrationIcons: Record<string, string | undefined>;
   onOpenRegistry: (slug: string | null) => void;
-  onOpenPlanModal: () => void;
 }
 
 // Rotating integration logos carousel with smooth transitions
@@ -350,11 +346,9 @@ const IntegrationsDropdown = memo(function IntegrationsDropdown({
   loading,
   disabled,
   isAgentRunning,
-  isFreeTier,
   quickIntegrations,
   integrationIcons,
   onOpenRegistry,
-  onOpenPlanModal,
 }: IntegrationsDropdownProps) {
   if (!isLoggedIn) return null;
 
@@ -368,20 +362,11 @@ const IntegrationsDropdown = memo(function IntegrationsDropdown({
             className="h-10 w-10 p-0 bg-transparent border-[1.5px] border-border rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center justify-center cursor-pointer"
             disabled={loading || (disabled && !isAgentRunning)}
             onClick={() => {
-              if (!isFreeTier || isLocalMode()) {
                 onOpenRegistry(null);
-              } else {
-                onOpenPlanModal();
-              }
             }}
           >
             <IntegrationLogosCarousel enabled={isLoggedIn && !loading && !(disabled && !isAgentRunning)} />
           </Button>
-          {isFreeTier && !isLocalMode() && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center z-10 pointer-events-none">
-              <Lock className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-          )}
         </div>
       </TooltipTrigger>
       <TooltipContent side="top">
@@ -662,7 +647,6 @@ export interface ChatInputProps {
   onConfigureAgent?: (agentId: string) => void;
   hideAgentSelection?: boolean;
   defaultShowSnackbar?: 'tokens' | 'upgrade' | false;
-  showToLowCreditUsers?: boolean;
   showScrollToBottomIndicator?: boolean;
   onScrollToBottom?: () => void;
   selectedMode?: string | null;
@@ -716,7 +700,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       onConfigureAgent,
       hideAgentSelection = false,
       defaultShowSnackbar = false,
-      showToLowCreditUsers = true,
       showScrollToBottomIndicator = false,
       onScrollToBottom,
       selectedMode,
@@ -764,8 +747,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [registryDialogOpen, setRegistryDialogOpen] = useState(false);
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
-    const [userDismissedUsage, setUserDismissedUsage] = useState(false);
-    const [planModalOpen, setPlanSelectionModalOpen] = useState(false);
+    // Billing system removed
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
@@ -783,67 +765,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       refreshCustomModels,
     } = useModelSelection();
 
-    const { data: accountState, isLoading: isAccountStateLoading } = useAccountState({ enabled: isLoggedIn });
+    // Billing system removed - self-hosted version
     const deleteFileMutation = useFileDelete();
     const queryClient = useQueryClient();
     
-    // Transform accountState to subscriptionData format for backward compatibility
-    const subscriptionData = accountState ? (() => {
-      const isFreeTier = accountState.subscription.tier_key === 'free' || 
-                         accountState.subscription.tier_key === 'none' ||
-                         accountState.tier.monthly_credits === 0;
-      
-      // For free tier with daily credits, use daily credits
-      if (isFreeTier && accountState.credits.daily_refresh?.enabled) {
-        const dailyAmount = accountState.credits.daily_refresh.daily_amount || 0;
-        const dailyRemaining = accountState.credits.daily || 0;
-        const currentUsage = Math.max(0, dailyAmount - dailyRemaining);
-        
-        return {
-          tier_key: accountState.subscription.tier_key,
-          tier: {
-            name: accountState.subscription.tier_key,
-            display_name: accountState.subscription.tier_display_name,
-          },
-          plan_name: accountState.subscription.tier_display_name,
-          status: accountState.subscription.status,
-          current_usage: currentUsage,
-          cost_limit: dailyAmount,
-          credits: {
-            balance: accountState.credits.total,
-            tier_credits: dailyAmount,
-          },
-        };
-      }
-      
-      // For paid tiers, use monthly credits
-      const monthlyCreditsGranted = accountState.tier.monthly_credits || 0;
-      const monthlyCreditsRemaining = accountState.credits.monthly || 0;
-      const currentUsage = Math.max(0, monthlyCreditsGranted - monthlyCreditsRemaining);
-      
-      return {
-        tier_key: accountState.subscription.tier_key,
-        tier: {
-          name: accountState.subscription.tier_key,
-          display_name: accountState.subscription.tier_display_name,
-        },
-        plan_name: accountState.subscription.tier_display_name,
-        status: accountState.subscription.status,
-        current_usage: currentUsage,
-        cost_limit: monthlyCreditsGranted,
-        credits: {
-          balance: accountState.credits.total,
-          tier_credits: accountState.tier.monthly_credits,
-        },
-      };
-    })() : null;
-    
-    // Check if user is on free tier
-    const isFreeTier = accountState && (
-      accountState.subscription.tier_key === 'free' ||
-      accountState.subscription.tier_key === 'none' ||
-      !accountState.subscription.tier_key
-    );
+    // Billing system removed - self-hosted version
     
     // Chat input button has inverted background from theme
     // Dark theme → light button → needs black loader
@@ -870,30 +796,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       'notion': notionIcon?.icon_url,
     }), [googleDriveIcon, slackIcon, notionIcon]);
     
-    // Show usage preview logic:
-    // - For free users with daily credits: only show when they've used 70%+ of daily credits
-    // - For paid users: only show when they're at 70% or more of their monthly credit limit
-    const shouldShowUsage = useMemo(() => {
-      if (!accountState || !subscriptionData || !showToLowCreditUsers || isLocalMode()) return false;
-
-      const costLimit = subscriptionData.cost_limit || 0;
-      const currentUsage = subscriptionData.current_usage || 0;
-      
-      // Don't show if no limit is set
-      if (costLimit === 0) return false;
-
-      // Show when at 70% or more of limit (30% or less remaining)
-      return currentUsage >= (costLimit * 0.7);
-    }, [accountState, subscriptionData, showToLowCreditUsers, isLocalMode]);
-
-    // Auto-show usage preview when we have subscription data
-    useEffect(() => {
-      if (shouldShowUsage && defaultShowSnackbar !== false && !userDismissedUsage && (showSnackbar === false || showSnackbar === defaultShowSnackbar)) {
-        setShowSnackbar('upgrade');
-      } else if (!shouldShowUsage && showSnackbar !== false) {
-        setShowSnackbar(false);
-      }
-    }, [subscriptionData, showSnackbar, defaultShowSnackbar, shouldShowUsage, subscriptionStatus, showToLowCreditUsers, userDismissedUsage]);
+    // Billing removed - usage preview logic removed
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -1262,9 +1165,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       setRegistryDialogOpen(true);
     }, []);
 
-    const handleOpenPlanModal = useCallback(() => {
-      setPlanSelectionModalOpen(true);
-    }, []);
+    // Billing system removed
 
     // Controls are split into left and right to minimize re-renders
     // Memoized to prevent recreation on every keystroke
@@ -1292,11 +1193,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           loading={loading}
           disabled={disabled}
           isAgentRunning={isAgentRunning}
-          isFreeTier={isFreeTier ?? false}
           quickIntegrations={quickIntegrations}
           integrationIcons={integrationIcons}
           onOpenRegistry={handleOpenRegistry}
-          onOpenPlanModal={handleOpenPlanModal}
         />
 
         {/* {isLoggedIn && !threadId && (
@@ -1322,7 +1221,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           />
         )}
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, isFreeTier, quickIntegrations, integrationIcons, handleOpenRegistry, handleOpenPlanModal, threadId, memoryEnabled, onMemoryToggle, isSunaAgent, sunaAgentModes, onModeDeselect, selectedMode, isModeDismissing, handleModeDeselect]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, quickIntegrations, integrationIcons, handleOpenRegistry, threadId, memoryEnabled, onMemoryToggle, isSunaAgent, sunaAgentModes, onModeDeselect, selectedMode, isModeDismissing, handleModeDeselect]);
 
     const rightControls = useMemo(() => (
       <div className='flex items-center gap-2 flex-shrink-0'>
@@ -1355,7 +1254,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       </div>
     ), [leftControls, rightControls]);
 
-    const isSnackVisible = showToolPreview || !!showSnackbar || (isFreeTier && subscriptionData && !isLocalMode());
+    const isSnackVisible = showToolPreview || !!showSnackbar;
 
     // Message Queue - get from store
     const allQueuedMessages = useMessageQueueStore((state) => state.queuedMessages);
@@ -1444,8 +1343,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             onExpandToolPreview={onExpandToolPreview}
             agentName={agentName}
             showToolPreview={showToolPreview}
-            subscriptionData={subscriptionData}
-            onOpenUpgrade={() => setPlanSelectionModalOpen(true)}
+            onOpenUpgrade={() => {}}
             isVisible={isSnackVisible}
           />
 
@@ -1606,15 +1504,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                 onToolsSelected={(profileId, selectedTools, appName, appSlug) => {
                 }}
                 initialSelectedApp={selectedIntegration}
-                isBlocked={isFreeTier && !isLocalMode()}
-                onBlockedClick={() => setPlanSelectionModalOpen(true)}
+                isBlocked={false}
+                onBlockedClick={() => {}}
               />
             </DialogContent>
           </Dialog>
-          <PlanSelectionModal
-            open={planModalOpen}
-            onOpenChange={setPlanSelectionModalOpen}
-          />
           {selectedAgentId && agentConfigDialog.open && (
             <AgentConfigurationDialog
               open={agentConfigDialog.open}

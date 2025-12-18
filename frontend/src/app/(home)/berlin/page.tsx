@@ -11,7 +11,6 @@ import { optimisticAgentStart } from '@/lib/api/agents';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { toast } from 'sonner';
 import { AgentRunLimitError, BillingError, ProjectLimitError, ThreadLimitError } from '@/lib/api/errors';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { useQuery } from '@tanstack/react-query';
@@ -29,7 +28,6 @@ export default function BerlinPage() {
   const chatInputRef = useRef<ChatInputHandles>(null);
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const pricingModalStore = usePricingModalStore();
   const { selectedAgentId, setSelectedAgent, initializeFromAgents } = useAgentSelection();
   const {
     selectedMode,
@@ -114,10 +112,7 @@ export default function BerlinPage() {
         
         if (error instanceof BillingError || error?.status === 402) {
           router.replace('/');
-          pricingModalStore.openPricingModal({ 
-            isAlert: true,
-            alertTitle: 'You ran out of credits'
-          });
+          toast.error('You ran out of credits');
           return;
         }
         

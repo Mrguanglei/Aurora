@@ -716,6 +716,7 @@
     "signUpFailed": "注册失败，请重试",
     "sendMagicLink": "发送魔法链接",
     "sending": "发送中...",
+    "magicLink": "魔法链接",
     "magicLinkSent": "我们已向以下地址发送魔法链接",
     "magicLinkDescription": "点击邮件中的链接以登录。链接将在1小时后过期。",
     "magicLinkExplanation": "我们将向您发送一个安全的登录链接。无需密码。",

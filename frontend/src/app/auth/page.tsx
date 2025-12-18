@@ -15,7 +15,6 @@ import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { AuroraLogo } from '@/components/sidebar/aurora-logo';
-import { ReferralCodeDialog } from '@/components/referrals/referral-code-dialog';
 import { isElectron, getAuthOrigin } from '@/lib/utils/is-electron';
 
 // Lazy load heavy components
@@ -33,13 +32,9 @@ function LoginContent() {
   const message = searchParams.get('message');
   const isExpired = searchParams.get('expired') === 'true';
   const expiredEmail = searchParams.get('email') || '';
-  const referralCodeParam = searchParams.get('ref') || '';
   const t = useTranslations('auth');
 
   const isSignUp = mode !== 'signin';
-  const [referralCode, setReferralCode] = useState(referralCodeParam);
-  const [showReferralInput, setShowReferralInput] = useState(false);
-  const [showReferralDialog, setShowReferralDialog] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [mounted, setMounted] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false); // GDPR requires explicit opt-in
@@ -398,11 +393,11 @@ function LoginContent() {
             </div>
             <div className="space-y-3 mb-4">
               <Suspense fallback={<div className="h-11 bg-muted/20 rounded-full animate-pulse" />}>
-                <GoogleSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} />
+                <GoogleSignIn returnUrl={returnUrl || undefined} />
               </Suspense>
               {/* GitHub auth commented out
               <Suspense fallback={<div className="h-11 bg-muted/20 rounded-full animate-pulse" />}>
-                <GitHubSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} />
+                <GitHubSignIn returnUrl={returnUrl || undefined} />
               </Suspense>
               */}
             </div>
@@ -463,14 +458,6 @@ function LoginContent() {
                   required
                 />
 
-                {referralCodeParam && (
-                  <div className="bg-card border rounded-xl p-3">
-                    <p className="text-xs text-muted-foreground mb-1">{t('referralCode')}</p>
-                    <p className="text-sm font-semibold">{referralCode}</p>
-                  </div>
-                )}
-
-                {!referralCodeParam && <input type="hidden" name="referralCode" value={referralCode} />}
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="gdprConsent"
@@ -487,7 +474,7 @@ function LoginContent() {
                       privacyPolicy: (chunks) => {
                         return (
                           <a 
-                            href="https://www.kortix.com/legal?tab=privacy" 
+                            href="" 
                             target="_blank"
                             rel="noopener noreferrer"
                             className="hover:underline underline-offset-2 text-primary"
@@ -535,29 +522,9 @@ function LoginContent() {
                   {t('magicLinkExplanation')}
                 </p>
                 
-                {/* Minimal Referral Link */}
-                {!referralCodeParam && (
-                  <button
-                    type="button"
-                    onClick={() => setShowReferralDialog(true)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-center mt-1"
-                  >
-                    Have a referral code?
-                  </button>
-                )}
               </form>
             )}
             
-            {/* Referral Code Dialog */}
-            <ReferralCodeDialog
-              open={showReferralDialog}
-              onOpenChange={setShowReferralDialog}
-              referralCode={referralCode}
-              onCodeChange={(code) => {
-                setReferralCode(code);
-                setShowReferralDialog(false);
-              }}
-            />
           </div>
         </div>
         <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">

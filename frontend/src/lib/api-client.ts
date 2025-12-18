@@ -1,8 +1,23 @@
-import { createClient } from '@/lib/supabase/client';
 import { handleApiError, handleNetworkError, ErrorContext, ApiError } from './error-handler';
 import { parseTierRestrictionError, RequestTooLargeError } from './api/errors';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+
+// Get auth token from localStorage (Supabase removed)
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    // Try to get token from localStorage
+    const authData = localStorage.getItem('auth-token');
+    if (authData) {
+      const parsed = JSON.parse(authData);
+      return parsed?.access_token || null;
+    }
+  } catch {
+    // Ignore errors
+  }
+  return null;
+}
 
 export interface ApiClientOptions {
   showErrors?: boolean;
@@ -39,9 +54,6 @@ async function makeRequest<T = any>(
       }
     }, timeout);
 
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
     // Don't set Content-Type for FormData - browser will set it automatically with boundary
     const isFormData = fetchOptions.body instanceof FormData;
     const headers: Record<string, string> = {};
@@ -53,12 +65,11 @@ async function makeRequest<T = any>(
     // Merge with any headers from fetchOptions
     Object.assign(headers, fetchOptions.headers as Record<string, string>);
 
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    // Get auth token from localStorage (Supabase removed)
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
-
-    // Note: X-Refresh-Token was removed to reduce header size and prevent HTTP 431 errors.
-    // The backend handles token refresh via Supabase directly.
 
     const response = await fetch(url, {
       ...fetchOptions,

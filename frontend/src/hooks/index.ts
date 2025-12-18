@@ -18,9 +18,6 @@ export * from './files/use-sandbox-mutations';
 // Export file utilities separately to avoid conflicts
 export { useCachedFile, FileCache, getCachedFile, fetchFileContent, useVncPreloader } from './files';
 
-// Account State - unified billing hook
-export { useAccountState, useAccountStateWithStreaming, useCreatePortalSession, accountStateSelectors } from './billing';
-
 // Dashboard
 export * from './dashboard/use-initiate-agent';
 
@@ -33,9 +30,6 @@ export * from './knowledge-base/use-folders';
 
 // Triggers
 export * from './triggers';
-
-// Billing
-export * from './billing';
 
 // Account
 export * from './account';

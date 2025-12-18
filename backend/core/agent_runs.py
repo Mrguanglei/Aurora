@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, Request, Body, Fil
 from fastapi.responses import StreamingResponse
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_user_id_from_stream_auth, verify_and_authorize_thread_access
 from core.utils.logger import logger, structlog
-from core.billing.credits.integration import billing_integration
+# Billing removed
 from core.utils.config import config, EnvMode
 from core.services import redis
 from core.sandbox.sandbox import create_sandbox, delete_sandbox, get_or_start_sandbox
@@ -210,9 +210,8 @@ async def _check_billing_and_limits(client, account_id: str, model_name: Optiona
     t_start = time.time()
     
     async def check_billing():
-        return await billing_integration.check_model_and_billing_access(
-            account_id, model_name, client
-        )
+        # Billing removed - always allow access
+        return {'can_start': True, 'message': 'Billing removed'}
     
     async def check_agent_runs():
         if config.ENV_MODE == EnvMode.LOCAL:
@@ -366,12 +365,7 @@ async def _create_agent_run_record(
     except Exception as cache_error:
         logger.warning(f"Failed to invalidate running runs cache: {cache_error}")
     
-    # Invalidate account-state cache to refresh concurrent runs limit
-    try:
-        from core.billing.shared.cache_utils import invalidate_account_state_cache
-        await invalidate_account_state_cache(actual_user_id)
-    except Exception as cache_error:
-        logger.warning(f"Failed to invalidate account-state cache: {cache_error}")
+    # Billing removed - no cache invalidation needed
 
     return agent_run_id
 

@@ -4,7 +4,6 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Download, File, Loader } from 'lucide-react';
-import { useDownloadRestriction } from '@/hooks/billing';
 
 interface BinaryRendererProps {
   url: string;
@@ -23,16 +22,7 @@ export function BinaryRenderer({
 }: BinaryRendererProps) {
   const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
   
-  // Download restriction for free tier users
-  const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-    featureName: 'files',
-  });
-
   const handleDownload = () => {
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
     if (onDownload) {
       onDownload();
     } else if (url) {

@@ -2,7 +2,6 @@ from typing import List, Dict, Any, Optional
 from core.utils.logger import logger
 from core.utils.cache import Cache
 from core.services.supabase import DBConnection
-from core.billing.shared.config import get_memory_config, is_memory_enabled
 from .embedding_service import EmbeddingService
 from .models import MemoryItem, MemoryType
 
@@ -20,16 +19,8 @@ class MemoryRetrievalService:
         similarity_threshold: float = 0.1
     ) -> List[MemoryItem]:
         try:
-            if not is_memory_enabled(tier_name):
-                logger.debug(f"Memory disabled for tier: {tier_name}")
-                return []
-            
-            memory_config = get_memory_config(tier_name)
-            retrieval_limit = memory_config.get('retrieval_limit', 0)
-            
-            if retrieval_limit == 0:
-                logger.debug(f"Memory retrieval limit is 0 for tier: {tier_name}")
-                return []
+            # Billing removed - assume memory is enabled for all tiers
+            retrieval_limit = 100  # Default limit
             
             cache_key = f"memories:retrieved:{account_id}:{hash(query_text)}"
             cached = await Cache.get(cache_key)
@@ -94,9 +85,7 @@ class MemoryRetrievalService:
         memory_type: Optional[MemoryType] = None
     ) -> Dict[str, Any]:
         try:
-            if not is_memory_enabled(tier_name):
-                return {"memories": [], "total": 0}
-            
+            # Billing removed - assume memory is enabled for all tiers
             client = await self.db.client
             
             query = client.table('user_memories').select('*', count='exact').eq('account_id', account_id)

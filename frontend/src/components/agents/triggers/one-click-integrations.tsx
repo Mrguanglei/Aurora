@@ -19,8 +19,6 @@ import {
 import { toast } from 'sonner';
 import { EventBasedTriggerDialog } from './event-based-trigger-dialog';
 import { config, EnvMode, isLocalMode } from '@/lib/config';
-import { useAccountState } from '@/hooks/billing';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import {
   Tooltip,
   TooltipContent,
@@ -47,13 +45,8 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 }) => {
   const [configuringSchedule, setConfiguringSchedule] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
-  const { data: accountState } = useAccountState();
-  const { openPricingModal } = usePricingModalStore();
   
-  const isFreeTier = accountState && (
-    accountState.subscription?.tier_key === 'free' ||
-    accountState.tier?.name === 'free'
-  ) && !isLocalMode();
+  const isFreeTier = false; // Billing removed
   
   // Schedule trigger form state
   const [scheduleConfig, setScheduleConfig] = useState<ScheduleTriggerConfig>({
@@ -269,7 +262,6 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
         {isFreeTier && (
           <div 
             className="relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 cursor-pointer hover:border-primary/50 hover:from-primary/15 transition-all group"
-            onClick={() => openPricingModal()}
           >
             <div className="flex items-start gap-3">
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/15 border border-primary/20 flex-shrink-0 group-hover:bg-primary/20 transition-colors">

@@ -784,10 +784,7 @@ async def update_agent_run_status(
                         except Exception as cache_error:
                             logger.warning(f"Failed to invalidate running runs cache: {cache_error}")
                         
-                        # Invalidate account-state cache to refresh concurrent runs limit
-                        try:
-                            from core.billing.shared.cache_utils import invalidate_account_state_cache
-                            await invalidate_account_state_cache(account_id)
+                        # Billing removed - no cache invalidation needed
                         except Exception as cache_error:
                             logger.warning(f"Failed to invalidate account-state cache: {cache_error}")
                     

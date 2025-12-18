@@ -7,7 +7,6 @@ from core.services.supabase import DBConnection
 from core.utils.logger import logger
 from core.utils.pagination import PaginationService, PaginationParams, PaginatedResponse
 from core.utils.auth_utils import verify_admin_api_key
-from core.utils.aurora_default_agent_service import AuroraDefaultAgentService
 from core.utils.config import config, EnvMode
 from dotenv import load_dotenv, set_key, find_dotenv, dotenv_values
 import os

@@ -37,7 +37,7 @@ def load_static_aurora_config() -> Dict[str, Any]:
     if _SUNA_STATIC_LOADED:
         return _SUNA_STATIC_CONFIG
     
-    from core.aurora_config import AURORA_CONFIG
+    from core.suna_config import SUNA_CONFIG
     from core.config_helper import _extract_agentpress_tools_for_run
     
     _SUNA_STATIC_CONFIG = {
@@ -192,7 +192,7 @@ async def warm_up_suna_config_cache() -> None:
     t_start = time.time()
     
     # Load static Suna config (system prompt, model, tools) - instant
-    load_static_suna_config()
+    load_static_aurora_config()
     
     elapsed = (time.time() - t_start) * 1000
     logger.info(f"✅ Suna static config loaded in {elapsed:.1f}ms (zero DB calls)")

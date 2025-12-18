@@ -26,7 +26,6 @@ import { getAgents } from '@/hooks/agents/utils';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
 import { useTranslations } from 'next-intl';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { DynamicGreeting } from '@/components/ui/dynamic-greeting';
 
 const GoogleSignIn = lazy(() => import('@/components/GoogleSignIn'));
@@ -71,7 +70,6 @@ export function HeroSection() {
     } = useSunaModePersistence();
     const router = useRouter();
     const { user, isLoading } = useAuth();
-    const pricingModalStore = usePricingModalStore();
     const queryClient = useQueryClient();
     const chatInputRef = useRef<ChatInputHandles>(null);
     const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
@@ -232,10 +230,9 @@ export function HeroSection() {
                             : undefined;
                     
                     router.replace('/');
-                    pricingModalStore.openPricingModal({ 
-                        isAlert: true,
-                        alertTitle,
-                        alertSubtitle
+                    toast.error(alertTitle, {
+                        description: alertSubtitle,
+                        duration: 6000,
                     });
                     return;
                 }
@@ -253,19 +250,13 @@ export function HeroSection() {
                 
                 if (error instanceof ProjectLimitError) {
                     router.replace('/');
-                    pricingModalStore.openPricingModal({ 
-                        isAlert: true,
-                        alertTitle: `${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-                    });
+                    toast.error(`${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}`);
                     return;
                 }
                 
                 if (error instanceof ThreadLimitError) {
                     router.replace('/');
-                    pricingModalStore.openPricingModal({ 
-                        isAlert: true,
-                        alertTitle: `${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-                    });
+                    toast.error(`${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}`);
                     return;
                 }
                 
@@ -430,11 +421,11 @@ export function HeroSection() {
 
                     <div className="mt-8 text-center text-[13px] text-muted-foreground leading-relaxed">
                         By continuing, you agree to our{' '}
-                        <a href="https://www.kortix.com/legal?tab=terms" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
+                        <a href="" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
                             Terms of Service
                         </a>{' '}
                         and{' '}
-                        <a href="https://www.kortix.com/legal?tab=privacy" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
+                        <a href="" target="_blank" rel="noopener noreferrer" className="text-foreground/70 hover:text-foreground underline underline-offset-2 transition-colors">
                             Privacy Policy
                         </a>
                     </div>

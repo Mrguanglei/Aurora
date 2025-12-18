@@ -4,7 +4,6 @@ from typing import List, Dict, Any
 from datetime import datetime, timezone, timedelta
 from core.utils.logger import logger, structlog
 from core.services.supabase import DBConnection
-from core.billing.shared.config import get_memory_config, is_memory_enabled
 from .extraction_service import MemoryExtractionService
 from .embedding_service import EmbeddingService
 from .models import MemoryType, ExtractionQueueStatus
@@ -38,14 +37,10 @@ async def extract_memories_from_conversation(
     client = await db.client
     
     try:
-        from core.billing import subscription_service
-        tier_info = await subscription_service.get_user_subscription_tier(account_id)
-        tier_name = tier_info['name']
+        # Billing removed - assume memory is enabled for all users
+        tier_name = "default"
         
-        if not is_memory_enabled(tier_name):
-            logger.debug(f"Memory disabled for tier {tier_name}, skipping extraction")
-            return
-        
+        # Skip memory enabled check - billing removed
         user_memory_result = await client.rpc('get_user_memory_enabled', {'p_account_id': account_id}).execute()
         user_memory_enabled = user_memory_result.data if user_memory_result.data is not None else True
         if not user_memory_enabled:
@@ -141,11 +136,9 @@ async def embed_and_store_memories(
     client = await db.client
     
     try:
-        from core.billing import subscription_service
-        tier_info = await subscription_service.get_user_subscription_tier(account_id)
-        tier_name = tier_info['name']
-        memory_config = get_memory_config(tier_name)
-        max_memories = memory_config.get('max_memories', 0)
+        # Billing removed - assume memory is enabled for all users  
+        tier_name = "default"
+        memory_config = {'max_memories': 10000, 'retrieval_limit': 100}
         
         current_count_result = await client.table('user_memories').select('memory_id', count='exact').eq('account_id', account_id).execute()
         current_count = current_count_result.count or 0

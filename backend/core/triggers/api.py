@@ -12,8 +12,7 @@ from core.services.supabase import DBConnection
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
 from core.utils.config import config, EnvMode
-# Billing checks now handled by billing_integration.check_model_and_billing_access
-from core.billing.credits.integration import billing_integration
+# Billing removed
 
 from .trigger_service import get_trigger_service, TriggerType
 from .provider_service import get_provider_service

@@ -3,7 +3,6 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
-import { PricingSection } from '@/components/billing/pricing';
 
 interface AgentCountLimitDialogProps {
   open: boolean;
@@ -59,12 +58,7 @@ export const AgentCountLimitDialog: React.FC<AgentCountLimitDialogProps> = ({
       contentClassName="w-full max-w-full pb-4"
     >
       <div className="w-full">
-        <PricingSection
-          returnUrl={returnUrl}
-          showTitleAndTabs={false}
-          insideDialog={true}
-          noPadding={true}
-        />
+        <div className="text-sm text-muted-foreground">Billing removed</div>
       </div>
     </UpgradeDialog>
   );

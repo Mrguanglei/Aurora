@@ -43,7 +43,6 @@ import {
   useDirectoryQuery,
   FileCache
 } from '@/hooks/files';
-import { useDownloadRestriction } from '@/hooks/billing';
 import JSZip from 'jszip';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { cn } from '@/lib/utils';
@@ -79,9 +78,6 @@ export function FileBrowserView({
   } = useKortixComputerStore();
   
   // Download restriction for free tier users
-  const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-    featureName: 'files',
-  });
 
   // Use React Query for directory listing
   const {
@@ -252,10 +248,6 @@ export function FileBrowserView({
 
   // Function to download all files as a zip from current directory
   const handleDownloadFolder = useCallback(async () => {
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
     if (!session?.access_token || isDownloadingAll) return;
 
     try {
@@ -387,7 +379,7 @@ export function FileBrowserView({
       setIsDownloadingAll(false);
       setDownloadProgress(null);
     }
-  }, [sandboxId, session?.access_token, isDownloadingAll, discoverAllFiles, isDownloadRestricted, openUpgradeModal, currentPath]);
+  }, [sandboxId, session?.access_token, isDownloadingAll, discoverAllFiles, currentPath]);
 
   // Handle file upload
   const handleUpload = useCallback(() => {

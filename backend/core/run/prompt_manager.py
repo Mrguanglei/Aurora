@@ -492,7 +492,7 @@ Example of correct tool call format (multiple invokes in one block):
         
         try:
             from core.memory.retrieval_service import memory_retrieval_service
-            from core.billing import subscription_service
+            # Billing removed
             
             user_memory_result = await client.rpc('get_user_memory_enabled', {'p_account_id': user_id}).execute()
             user_memory_enabled = user_memory_result.data if user_memory_result.data is not None else True
@@ -506,7 +506,9 @@ Example of correct tool call format (multiple invokes in one block):
                 logger.debug(f"Memory fetch: disabled for thread {thread_id}")
                 return None
             
-            tier_info = await subscription_service.get_user_subscription_tier(user_id)
+            # Billing removed - default tier
+            # Billing removed - default tier
+            tier_info = {'name': 'pro', 'tier_name': 'pro', 'is_free_tier': False}
             tier_name = tier_info['name']
             logger.debug(f"Memory fetch: user {user_id}, tier {tier_name}")
             

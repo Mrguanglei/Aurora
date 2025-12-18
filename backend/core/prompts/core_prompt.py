@@ -156,3 +156,13 @@ complete()工具：
 - 如果user_confirmed=False，工具将失败
 
 """
+
+def get_core_system_prompt() -> str:
+    """获取核心系统提示"""
+    return CORE_SYSTEM_PROMPT
+
+def get_dynamic_system_prompt(minimal_index: dict = None) -> str:
+    """获取动态系统提示（包含最小工具索引）"""
+    if minimal_index is None:
+        minimal_index = {}
+    return CORE_SYSTEM_PROMPT

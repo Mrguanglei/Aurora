@@ -10,8 +10,6 @@ import { ComposioToolsManager } from '../composio/composio-tools-manager';
 import { ToolsManager } from './tools-manager';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAccountState } from '@/hooks/billing';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { isLocalMode } from '@/lib/config';
 
 export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
@@ -32,13 +30,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(agentId);
   const queryClient = useQueryClient();
   
-  const { data: accountState } = useAccountState();
-  const { openPricingModal } = usePricingModalStore();
-  
-  const isFreeTier = accountState && (
-    accountState.subscription?.tier_key === 'free' ||
-    accountState.tier?.name === 'free'
-  ) && !isLocalMode();
+  const isFreeTier = false; // Billing removed
 
   const handleAgentChange = (newAgentId: string | undefined) => {
     setSelectedAgentId(newAgentId);
@@ -173,7 +165,6 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               }
             }}
             isBlocked={isFreeTier}
-            onBlockedClick={() => openPricingModal()}
           />
         </DialogContent>
       </Dialog>

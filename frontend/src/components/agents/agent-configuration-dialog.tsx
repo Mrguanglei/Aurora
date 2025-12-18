@@ -49,8 +49,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAccountState } from '@/hooks/billing';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { isLocalMode } from '@/lib/config';
 
 import { useAgentVersionData } from '@/hooks/agents';
@@ -98,13 +96,7 @@ export function AgentConfigurationDialog({
   const updateAgentMCPsMutation = useUpdateAgentMCPs();
   const exportMutation = useExportAgent();
   
-  const { data: accountState } = useAccountState();
-  const { openPricingModal } = usePricingModalStore();
-  
-  const isFreeTier = accountState && (
-    accountState.subscription?.tier_key === 'free' ||
-    accountState.tier?.name === 'free'
-  ) && !isLocalMode();
+  const isFreeTier = false; // Billing removed
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -708,7 +700,6 @@ export function AgentConfigurationDialog({
                         <div className="relative h-full flex flex-col items-center justify-center px-8">
                           <div 
                             className="max-w-md w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-8 cursor-pointer hover:border-primary/50 transition-all group shadow-lg"
-                            onClick={() => openPricingModal()}
                           >
                             <div className="flex flex-col items-center text-center gap-4">
                               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 group-hover:bg-primary/20 transition-colors">
@@ -723,7 +714,6 @@ export function AgentConfigurationDialog({
                               <Button 
                                 variant="default"
                                 className="mt-2 gap-2"
-                                onClick={(e) => { e.stopPropagation(); openPricingModal(); }}
                               >
                                 <Sparkles className="h-4 w-4" />
                                 Upgrade to Unlock
@@ -745,7 +735,6 @@ export function AgentConfigurationDialog({
                         <div className="relative h-full flex flex-col items-center justify-center px-8">
                           <div 
                             className="max-w-md w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-8 cursor-pointer hover:border-primary/50 transition-all group shadow-lg"
-                            onClick={() => openPricingModal()}
                           >
                             <div className="flex flex-col items-center text-center gap-4">
                               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 group-hover:bg-primary/20 transition-colors">
@@ -760,7 +749,6 @@ export function AgentConfigurationDialog({
                               <Button 
                                 variant="default"
                                 className="mt-2 gap-2"
-                                onClick={(e) => { e.stopPropagation(); openPricingModal(); }}
                               >
                                 <Sparkles className="h-4 w-4" />
                                 Upgrade to Unlock
@@ -782,7 +770,6 @@ export function AgentConfigurationDialog({
                         <div className="relative h-full flex flex-col items-center justify-center px-8">
                           <div 
                             className="max-w-md w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-8 cursor-pointer hover:border-primary/50 transition-all group shadow-lg"
-                            onClick={() => openPricingModal()}
                           >
                             <div className="flex flex-col items-center text-center gap-4">
                               <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 border border-primary/20 group-hover:bg-primary/20 transition-colors">
@@ -797,7 +784,6 @@ export function AgentConfigurationDialog({
                               <Button 
                                 variant="default"
                                 className="mt-2 gap-2"
-                                onClick={(e) => { e.stopPropagation(); openPricingModal(); }}
                               >
                                 <Sparkles className="h-4 w-4" />
                                 Upgrade to Unlock

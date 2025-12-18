@@ -3,7 +3,6 @@
 import React, { useState, Suspense, lazy } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { accountStateKeys } from '@/hooks/billing';
 import {
   ChatInput,
   ChatInputHandles,
@@ -23,10 +22,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
 import { useInitiateAgentWithInvalidation } from '@/hooks/dashboard/use-initiate-agent';
 import { optimisticAgentStart } from '@/lib/api/agents';
-import { useAccountState, accountStateSelectors, invalidateAccountState } from '@/hooks/billing';
-import { getPlanName } from '@/components/billing/plan-utils';
 import { useAgents } from '@/hooks/agents/use-agents';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
@@ -36,17 +32,10 @@ import { Button } from '../ui/button';
 import { X, ChevronRight, HelpCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NotificationDropdown } from '../notifications/notification-dropdown';
-import { UsageLimitsPopover } from './usage-limits-popover';
 import { useSidebar } from '@/components/ui/sidebar';
 import { DynamicGreeting } from '@/components/ui/dynamic-greeting';
 
 // Lazy load heavy components that aren't immediately visible
-const PlanSelectionModal = lazy(() => 
-  import('@/components/billing/pricing').then(mod => ({ default: mod.PlanSelectionModal }))
-);
-const UpgradeCelebration = lazy(() => 
-  import('@/components/billing/upgrade-celebration').then(mod => ({ default: mod.UpgradeCelebration }))
-);
 const SunaModesPanel = lazy(() => 
   import('./suna-modes-panel').then(mod => ({ default: mod.SunaModesPanel }))
 );
@@ -59,16 +48,12 @@ const CustomAgentsSection = lazy(() =>
 const AgentConfigurationDialog = lazy(() => 
   import('@/components/agents/agent-configuration-dialog').then(mod => ({ default: mod.AgentConfigurationDialog }))
 );
-const CreditsDisplay = lazy(() => 
-  import('@/components/billing/credits-display').then(mod => ({ default: mod.CreditsDisplay }))
-);
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
 export function DashboardContent() {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
-  const tBilling = useTranslations('billing');
   const tAuth = useTranslations('auth');
   const [inputValue, setInputValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,7 +88,6 @@ export function DashboardContent() {
     runningCount: number;
     runningThreadIds: string[];
   } | null>(null);
-  const [showUpgradeCelebration, setShowUpgradeCelebration] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -112,7 +96,6 @@ export function DashboardContent() {
   const { setOpen: setSidebarOpen } = useSidebar();
   const chatInputRef = React.useRef<ChatInputHandles>(null);
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
-  const pricingModalStore = usePricingModalStore();
   
   const prefetchedRouteRef = React.useRef<string | null>(null);
   const prefetchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -136,32 +119,8 @@ export function DashboardContent() {
     : (selectedAgent?.metadata?.is_suna_default || (!selectedAgentId && sunaAgent !== undefined) || false);
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
-  const { data: accountState, isLoading: isAccountStateLoading } = useAccountState({ enabled: !!user });
   const isLocal = isLocalMode();
-  const planName = accountStateSelectors.planName(accountState);
-  const canCreateThread = accountState?.limits?.threads?.can_create || false;
-  
-  const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
-  const threadLimitExceeded = !isAccountStateLoading && !canCreateThread && !isDismissed;
-  
-  const dailyCreditsInfo = accountState?.credits.daily_refresh;
-  const hasLowCredits = accountStateSelectors.totalCredits(accountState) <= 10;
-  const hasDailyRefresh = dailyCreditsInfo?.enabled && dailyCreditsInfo?.seconds_until_refresh;
-  
-  const alertType = hasLowCredits && hasDailyRefresh 
-    ? 'daily_refresh' 
-    : threadLimitExceeded 
-    ? 'thread_limit' 
-    : null;
-  
-  const formatTimeUntilRefresh = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  };
+  const canCreateThread = true; // Always allow in self-hosted version
 
   React.useEffect(() => {
     if (agents.length > 0) {
@@ -219,16 +178,7 @@ export function DashboardContent() {
       console.log('🎉 Subscription success detected! Showing celebration...');
       celebrationTriggeredRef.current = true;
       
-      // Invalidate and force refetch billing queries to refresh data immediately
-      // This ensures fresh data after checkout, bypassing staleTime
-      // Use invalidateAccountState helper which includes debouncing
-      invalidateAccountState(queryClient, true, true); // skipCache=true to bypass backend cache after checkout
-      
-      // Close sidebar for cleaner celebration view
-      setSidebarOpen(false);
-      
-      // Show celebration immediately
-      setShowUpgradeCelebration(true);
+      // Billing system removed - no celebration needed
       
       // Clean up URL params after a short delay
       setTimeout(() => {
@@ -358,11 +308,7 @@ export function DashboardContent() {
               : undefined;
           
           router.replace('/dashboard');
-          pricingModalStore.openPricingModal({ 
-            isAlert: true,
-            alertTitle,
-            alertSubtitle
-          });
+          toast.error(alertTitle || 'Billing error');
           return;
         }
         
@@ -377,21 +323,9 @@ export function DashboardContent() {
           return;
         }
         
-        if (error instanceof ProjectLimitError) {
+        if (error instanceof ProjectLimitError || error instanceof ThreadLimitError) {
           router.replace('/dashboard');
-          pricingModalStore.openPricingModal({ 
-            isAlert: true,
-            alertTitle: `${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-          });
-          return;
-        }
-        
-        if (error instanceof ThreadLimitError) {
-          router.replace('/dashboard');
-          pricingModalStore.openPricingModal({ 
-            isAlert: true,
-            alertTitle: `${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-          });
+          toast.error('Limit reached');
           return;
         }
         
@@ -399,45 +333,10 @@ export function DashboardContent() {
       });
     } catch (error: any) {
       console.error('Error during submission process:', error);
-      if (error instanceof ProjectLimitError) {
-        pricingModalStore.openPricingModal({ 
-          isAlert: true,
-          alertTitle: `${tBilling('reachedLimit')} ${tBilling('projectLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-        });
-      } else if (error instanceof ThreadLimitError) {
-        pricingModalStore.openPricingModal({ 
-          isAlert: true,
-          alertTitle: `${tBilling('reachedLimit')} ${tBilling('threadLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
-        });
+      if (error instanceof ProjectLimitError || error instanceof ThreadLimitError) {
+        toast.error('Limit reached');
       } else if (error instanceof BillingError) {
-        const message = error.detail?.message?.toLowerCase() || '';
-        const originalMessage = error.detail?.message || '';
-        const isCreditsExhausted = 
-          message.includes('credit') ||
-          message.includes('balance') ||
-          message.includes('insufficient') ||
-          message.includes('out of credits') ||
-          message.includes('no credits');
-        
-        // Extract balance from message if present
-        const balanceMatch = originalMessage.match(/balance is (-?\d+)\s*credits/i);
-        const balance = balanceMatch ? balanceMatch[1] : null;
-        
-        const alertTitle = isCreditsExhausted 
-          ? 'You ran out of credits'
-          : 'Pick the plan that works for you';
-        
-        const alertSubtitle = balance 
-          ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
-          : isCreditsExhausted 
-            ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
-            : undefined;
-        
-        pricingModalStore.openPricingModal({ 
-          isAlert: true,
-          alertTitle,
-          alertSubtitle
-        });
+        toast.error('Billing error occurred');
       } else if (error instanceof AgentRunLimitError) {
         const { running_thread_ids, running_count } = error.detail;
         setAgentLimitData({
@@ -516,17 +415,9 @@ export function DashboardContent() {
 
   return (
     <>
-      <Suspense fallback={null}>
-        <PlanSelectionModal />
-      </Suspense>
-
       <div className="flex flex-col h-screen w-full overflow-hidden relative">
         <div className="absolute flex items-center gap-2 top-4 right-4">
         <NotificationDropdown />
-          <Suspense fallback={<div className="h-8 w-20 bg-muted/30 rounded animate-pulse" />}>
-            <CreditsDisplay />
-          </Suspense>
-          <UsageLimitsPopover />
           <a
             href="mailto:support@kortix.com"
             className="flex items-center justify-center h-[41px] w-[41px] border-[1.5px] border-border/60 dark:border-border rounded-full bg-background dark:bg-background hover:bg-accent/30 dark:hover:bg-accent/20 hover:border-border dark:hover:border-border/80 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -612,44 +503,6 @@ export function DashboardContent() {
                           onMemoryToggle={setMemoryEnabled}
                         />
 
-                        {alertType === 'daily_refresh' && (
-                          <div 
-                            className='w-full h-16 p-2 px-4 dark:bg-blue-500/5 bg-blue-500/10 dark:border-blue-500/10 border-blue-700/10 border rounded-b-3xl flex items-center justify-between overflow-hidden'
-                            style={{
-                              marginTop: '-40px',
-                              transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
-                            }}
-                          >
-                            <span className='-mb-3.5 dark:text-blue-400 text-blue-700 text-sm'>
-                              {tBilling('creditsExhausted', { time: formatTimeUntilRefresh(dailyCreditsInfo!.seconds_until_refresh!) })}
-                            </span>
-                            <div className='flex items-center -mb-3.5'>
-                              <Button 
-                                size='sm' 
-                                className='h-6 text-xs'
-                                onClick={() => pricingModalStore.openPricingModal()}
-                              >
-                              {tCommon('upgrade')}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        {alertType === 'thread_limit' && (
-                          <div 
-                            className='w-full h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-b-3xl flex items-center justify-center overflow-hidden cursor-pointer hover:bg-amber-500/15 transition-colors'
-                            style={{
-                              marginTop: '-40px',
-                              transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
-                            }}
-                            onClick={() => pricingModalStore.openPricingModal()}
-                          >
-                            <span className='-mb-3.5 dark:text-amber-500 text-amber-700 text-sm flex items-center gap-1'>
-                              {t('limitsExceeded')}
-                              <ChevronRight className='h-4 w-4' />
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -723,15 +576,6 @@ export function DashboardContent() {
         </Suspense>
       )}
 
-      {/* Upgrade Celebration Modal */}
-      <Suspense fallback={null}>
-        <UpgradeCelebration
-          isOpen={showUpgradeCelebration}
-          onClose={() => setShowUpgradeCelebration(false)}
-          planName={planName}
-          isLoading={isAccountStateLoading}
-        />
-      </Suspense>
     </>
   );
 }

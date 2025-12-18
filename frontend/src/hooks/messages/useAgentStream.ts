@@ -16,8 +16,6 @@ import { agentKeys } from '@/hooks/agents/keys';
 import { composioKeys } from '@/hooks/composio/keys';
 import { knowledgeBaseKeys } from '@/hooks/knowledge-base/keys';
 import { fileQueryKeys } from '@/hooks/files/use-file-queries';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
-import { accountStateKeys } from '@/hooks/billing';
 
 // Define the structure returned by the hook
 export interface UseAgentStreamResult {
@@ -277,11 +275,6 @@ export function useAgentStream(
         queryKey: ['active-agent-runs'],
       });
 
-      // Invalidate account state after agent run completes (credits may have been deducted)
-      queryClient.invalidateQueries({ 
-        queryKey: accountStateKeys.all,
-      });
-
       if (agentId) {
         // Core agent data
         queryClient.invalidateQueries({ queryKey: agentKeys.all });
@@ -391,32 +384,7 @@ export function useAgentStream(
               setError(errorMessage);
             });
             callbacksRef.current.onError?.(errorMessage);
-            
-            const isCreditsExhausted = 
-              messageLower.includes('insufficient credits') ||
-              messageLower.includes('out of credits') ||
-              messageLower.includes('no credits') ||
-              messageLower.includes('balance');
-            
-            // Extract balance from message if present
-            const balanceMatch = errorMessage.match(/balance is (-?\d+)\s*credits/i);
-            const balance = balanceMatch ? balanceMatch[1] : null;
-            
-            const alertTitle = isCreditsExhausted 
-              ? 'You ran out of credits'
-              : 'Billing check failed';
-            
-            const alertSubtitle = balance 
-              ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
-              : isCreditsExhausted 
-                ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
-                : 'Please upgrade to continue.';
-            
-            usePricingModalStore.getState().openPricingModal({ 
-              isAlert: true, 
-              alertTitle,
-              alertSubtitle
-            });
+            toast.error(errorMessage);
             return;
           }
           
@@ -448,33 +416,7 @@ export function useAgentStream(
               setError(jsonData.message);
             });
             callbacksRef.current.onError?.(jsonData.message);
-            
-            const isCreditsExhausted = 
-              message.includes('insufficient credits') ||
-              message.includes('out of credits') ||
-              message.includes('no credits') ||
-              message.includes('balance');
-            
-            // Extract balance from message if present
-            const balanceMatch = originalMessage.match(/balance is (-?\d+)\s*credits/i);
-            const balance = balanceMatch ? balanceMatch[1] : null;
-            
-            const alertTitle = isCreditsExhausted 
-              ? 'You ran out of credits'
-              : 'Billing check failed';
-            
-            const alertSubtitle = balance 
-              ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
-              : isCreditsExhausted 
-                ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
-                : 'Please upgrade to continue.';
-            
-            usePricingModalStore.getState().openPricingModal({ 
-              isAlert: true, 
-              alertTitle,
-              alertSubtitle
-            });
-            
+            toast.error(jsonData.message);
             finalizeStream('stopped', currentRunIdRef.current);
             return;
           }
@@ -686,32 +628,7 @@ export function useAgentStream(
             );
             setError(errorMessage);
             callbacksRef.current.onError?.(errorMessage);
-            
-            const isCreditsExhausted = 
-              lower.includes('insufficient credits') ||
-              lower.includes('out of credits') ||
-              lower.includes('no credits') ||
-              lower.includes('balance');
-            
-            // Extract balance from message if present
-            const balanceMatch = errorMessage.match(/balance is (-?\d+)\s*credits/i);
-            const balance = balanceMatch ? balanceMatch[1] : null;
-            
-            const alertTitle = isCreditsExhausted 
-              ? 'You ran out of credits'
-              : 'Billing check failed';
-            
-            const alertSubtitle = balance 
-              ? `Your current balance is ${balance} credits. Upgrade your plan to continue.`
-              : isCreditsExhausted 
-                ? 'Upgrade your plan to get more credits and continue using the AI assistant.'
-                : 'Please upgrade to continue.';
-            
-            usePricingModalStore.getState().openPricingModal({ 
-              isAlert: true, 
-              alertTitle,
-              alertSubtitle
-            });
+            toast.error(errorMessage);
           }
           
           const finalStatus = mapAgentStatus(agentStatus.status);

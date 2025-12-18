@@ -42,6 +42,12 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_OUTPUT=standalone
 
+# 接受並使用构建时的编辨伙变量
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_ENV_MODE=staging
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:8011/v1}
+ENV NEXT_PUBLIC_ENV_MODE=${NEXT_PUBLIC_ENV_MODE}
+
 RUN \
   if [ -f yarn.lock ]; then yarn run build; \
   elif [ -f package-lock.json ]; then npm run build; \

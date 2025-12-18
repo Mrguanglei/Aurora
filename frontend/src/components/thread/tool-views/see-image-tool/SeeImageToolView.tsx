@@ -18,7 +18,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useImageContent } from '@/hooks/files';
-import { useDownloadRestriction } from '@/hooks/billing';
 
 function SafeImage({ src, alt, filePath, className, sandboxId, project }: { 
   src: string; 
@@ -32,9 +31,6 @@ function SafeImage({ src, alt, filePath, className, sandboxId, project }: {
   const [zoomLevel, setZoomLevel] = useState(1);
   
   // Download restriction for free tier users
-  const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-    featureName: 'images',
-  });
   
   // Use our robust retry hook instead of custom fetch
   const {
@@ -71,10 +67,6 @@ function SafeImage({ src, alt, filePath, className, sandboxId, project }: {
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
     if (!finalImageUrl) return;
 
     const link = document.createElement('a');

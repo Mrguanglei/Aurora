@@ -46,7 +46,9 @@ class RefreshTokenRequest(BaseModel):
 async def register(req: RegisterRequest):
     """用户注册"""
     try:
+        logger.debug(f"Register attempt for email: {req.email}")
         db = PostgresConnection()
+        await db.initialize()
         
         # 检查邮箱是否已存在
         existing = await db.fetchrow(
@@ -55,6 +57,7 @@ async def register(req: RegisterRequest):
         )
         
         if existing:
+            logger.warning(f"Registration failed: email already exists {req.email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="邮箱已被注册"
@@ -95,7 +98,7 @@ async def register(req: RegisterRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ 注册错误: {e}")
+        logger.error(f" 注册错误: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="注册失败"
@@ -106,6 +109,7 @@ async def login(req: LoginRequest):
     """用户登录"""
     try:
         db = PostgresConnection()
+        await db.initialize()
         
         # 查找用户
         user = await db.fetchrow(
@@ -172,6 +176,7 @@ async def refresh_token(req: RefreshTokenRequest):
         
         user_id = payload.get("user_id")
         db = PostgresConnection()
+        await db.initialize()
         
         # 获取用户信息
         user = await db.fetchrow(
@@ -222,11 +227,12 @@ async def get_current_user(authorization: str = None):
         if not payload:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效或过期的令牌"
+                detail="无效或过旧的令牌"
             )
         
         user_id = payload.get("user_id")
         db = PostgresConnection()
+        await db.initialize()
         
         # 获取用户信息
         user = await db.fetchrow(

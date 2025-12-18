@@ -10,7 +10,7 @@ from core.agentpress.thread_manager import ThreadManager
 from core.agentpress.response_processor import ProcessorConfig
 from core.agentpress.error_processor import ErrorProcessor
 from core.utils.logger import logger
-from core.billing.credits.integration import billing_integration
+# Billing removed
 from core.services.langfuse import langfuse
 from core.tools.mcp_tool_wrapper import MCPToolWrapper
 
@@ -505,16 +505,9 @@ class AgentRunner:
                     }
                     break
 
-                can_run, message, reservation_id = await billing_integration.check_and_reserve_credits(self.account_id)
-                if not can_run:
-                    error_msg = f"Insufficient credits: {message}"
-                    logger.warning(f"Stopping agent - balance is negative: {error_msg}")
-                    yield {
-                        "type": "status",
-                        "status": "stopped",
-                        "message": error_msg
-                    }
-                    break
+                # Billing removed - always allow
+                can_run, message, reservation_id = True, "Billing removed", None
+                # Billing removed - no credit checks
 
                 latest_message = await self.client.table('messages').select('type').eq('thread_id', self.config.thread_id).in_('type', ['assistant', 'tool', 'user']).order('created_at', desc=True).limit(1).execute()
                 if latest_message.data and len(latest_message.data) > 0:

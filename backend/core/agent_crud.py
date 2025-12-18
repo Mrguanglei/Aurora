@@ -584,11 +584,11 @@ async def create_agent(
         
         try:
             version_service = await _get_version_service()
-            from .aurora_config import AURORA_CONFIG
+            from .suna_config import SUNA_CONFIG
             from .config_helper import _get_default_agentpress_tools
             from core.ai_models import model_manager
             
-            system_prompt = AURORA_CONFIG["system_prompt"]
+            system_prompt = SUNA_CONFIG["system_prompt"]
             
             agentpress_tools = agent_data.agentpress_tools if agent_data.agentpress_tools else _get_default_agentpress_tools()
             agentpress_tools = ensure_core_tools_enabled(agentpress_tools)

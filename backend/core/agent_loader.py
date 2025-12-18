@@ -368,17 +368,17 @@ class AgentLoader:
     def _row_to_agent_data(self, row: Dict[str, Any]) -> AgentData:
         """Convert database row to AgentData.
         
-        For Aurora agents, always overrides name and description from AURORA_CONFIG
+        For Aurora agents, always overrides name and description from SUNA_CONFIG
         regardless of what's stored in the database.
         """
         metadata = row.get('metadata', {}) or {}
         is_aurora_default = metadata.get('is_aurora_default', False)
         
-        # For Aurora agents, always use name from AURORA_CONFIG (never DB value)
+        # For Aurora agents, always use name from SUNA_CONFIG (never DB value)
         if is_aurora_default:
-            from core.aurora_config import AURORA_CONFIG
-            name = AURORA_CONFIG['name']
-            description = AURORA_CONFIG.get('description')
+            from core.suna_config import SUNA_CONFIG
+            name = SUNA_CONFIG['name']
+            description = SUNA_CONFIG.get('description')
         else:
             name = row['name']
             description = row.get('description')
@@ -418,7 +418,7 @@ class AgentLoader:
         
         Static parts (prompt, model, tools) = instant from memory
         User MCPs = check cache first, then DB if miss
-        Always overrides name from AURORA_CONFIG regardless of DB value.
+        Always overrides name from SUNA_CONFIG regardless of DB value.
         """
         import time
         t_start = time.time()
@@ -431,9 +431,9 @@ class AgentLoader:
         if not static_config:
             static_config = load_static_aurora_config()
         
-        # Always override name from AURORA_CONFIG (never use DB value)
-        agent.name = AURORA_CONFIG['name']
-        agent.description = AURORA_CONFIG.get('description')
+        # Always override name from SUNA_CONFIG (never use DB value)
+        agent.name = SUNA_CONFIG['name']
+        agent.description = SUNA_CONFIG.get('description')
         agent.system_prompt = static_config['system_prompt']
         agent.model = static_config['model']
         agent.agentpress_tools = static_config['agentpress_tools']

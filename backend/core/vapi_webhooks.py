@@ -2,7 +2,8 @@ from typing import Dict, Any, Optional, List
 from fastapi import Request, HTTPException
 from core.utils.logger import logger
 from core.services.supabase import DBConnection
-from core.billing.shared.config import TOKEN_PRICE_MULTIPLIER
+# Billing removed
+TOKEN_PRICE_MULTIPLIER = 1  # Default multiplier
 from core.vapi_config import vapi_config
 from decimal import Decimal
 import json
@@ -228,15 +229,14 @@ class VapiWebhookHandler:
             
             if user_id and cost > 0:
                 try:
-                    from core.billing.credits.manager import credit_manager
+                    # Billing removed - skip credit deduction
                     cost_in_credits = Decimal(str(cost)) * TOKEN_PRICE_MULTIPLIER
                     
-                    deduct_result = await credit_manager.use_credits(
-                        account_id=user_id,
-                        amount=cost_in_credits,
-                        description=f"Vapi voice call ({duration}s)",
-                        thread_id=thread_id
-                    )
+                    # Billing removed - no credit deduction
+                    deduct_result = {'success': True}
+                    if False:  # Never execute original code
+                        pass
+                   
                     
                     if deduct_result.get('success'):
                         credit_deducted = True
@@ -391,25 +391,12 @@ class VapiWebhookHandler:
             
             if user_id and cost > 0:
                 try:
-                    from core.billing.credits.manager import CreditManager
-                    # credit_manager instance is already available from the import
-                    
+                    # Billing removed
                     cost_in_credits = Decimal(str(cost)) * TOKEN_PRICE_MULTIPLIER
+                    # Billing removed - no credit deduction
+                    deduct_result = {'success': True}
                     
-                    from core.billing.credits.manager import credit_manager
-                    deduct_result = await credit_manager.use_credits(
-                        account_id=user_id,
-                        amount=cost_in_credits,
-                        description=f"Vapi voice call ({duration}s)",
-                        thread_id=thread_id
-                    )
-                    
-                    if deduct_result.get('success'):
-                        credit_deducted = True
-                        actual_cost_deducted = float(cost_in_credits)
-                        logger.info(f"Successfully deducted {cost_in_credits} credits for call {call_id}")
-                    else:
-                        logger.warning(f"Failed to deduct credits for call {call_id}: {deduct_result.get('error', 'Unknown error')}")
+             
                 except Exception as e:
                     logger.error(f"Error deducting credits for call {call_id}: {e}")
         

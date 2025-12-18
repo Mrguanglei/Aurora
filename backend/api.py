@@ -162,9 +162,7 @@ async def lifespan(app: FastAPI):
         await db.disconnect()
         
         # 关闭 PostgreSQL 连接
-        from core.services.postgres import PostgresConnection
-        postgres_db = PostgresConnection()
-        await postgres_db.disconnect()
+        postgres_db.close()
     except Exception as e:
         logger.error(f"Error during application startup: {e}")
         raise

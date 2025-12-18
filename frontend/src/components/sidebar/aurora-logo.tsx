@@ -39,8 +39,8 @@ export function AuroraLogo({ size = 24, variant = 'symbol', className }: AuroraL
   // Default symbol variant behavior
   return (
     <img
-      src="/aurora-symbol.svg"
-      alt="Aurora"
+      src="/kortix-symbol.svg"
+      alt="Kortix"
       className={cn(`${shouldInvert ? 'invert' : ''} flex-shrink-0`, className)}
       style={{ width: `${size}px`, height: `${size}px` }}
     />

@@ -53,8 +53,6 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ComposioProfileSummary, ComposioToolkitGroup } from '@/hooks/composio/utils';
-import { useAccountState } from '@/hooks/billing';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { isLocalMode } from '@/lib/config';
 
 interface ComposioConnectionsSectionProps {
@@ -497,13 +495,8 @@ export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProp
   const [searchQuery, setSearchQuery] = useState('');
   const [showRegistry, setShowRegistry] = useState(false);
   const queryClient = useQueryClient();
-  const { data: accountState } = useAccountState();
-  const { openPricingModal } = usePricingModalStore();
   
-  const isFreeTier = accountState && (
-    accountState.subscription?.tier_key === 'free' ||
-    accountState.tier?.name === 'free'
-  ) && !isLocalMode();
+  const isFreeTier = false; // Billing removed
 
   const filteredToolkits = useMemo(() => {
     if (!toolkits || !searchQuery.trim()) return toolkits || [];
@@ -690,7 +683,6 @@ export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProp
             onClose={() => setShowRegistry(false)}
             onToolsSelected={handleProfileCreated}
             isBlocked={isFreeTier}
-            onBlockedClick={() => openPricingModal()}
           />
         </DialogContent>
       </Dialog>

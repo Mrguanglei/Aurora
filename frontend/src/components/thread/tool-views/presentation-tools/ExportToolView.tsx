@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/AuthProvider';
-import { useDownloadRestriction } from '@/hooks/billing';
 import { cn } from '@/lib/utils';
 
 interface ExportToolViewProps extends ToolViewProps {
@@ -63,9 +62,6 @@ export function ExportToolView({
   project,
 }: ExportToolViewProps) {
   const { session } = useAuth();
-  const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-    featureName: 'exports',
-  });
   
   const [downloadingFormat, setDownloadingFormat] = useState<ExportFormat | null>(null);
 
@@ -123,10 +119,6 @@ export function ExportToolView({
   }
 
   const handleDownload = async (downloadFormat: DownloadFormat, format: ExportFormat) => {
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
     if (!project?.sandbox?.sandbox_url || !presentationName) return;
 
     setDownloadingFormat(format);
@@ -147,11 +139,6 @@ export function ExportToolView({
   };
 
   const handleDirectDownload = async (format: ExportFormat) => {
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
-    
     const exportData = exports?.[format];
     if (!exportData?.download_url || !project?.sandbox?.id) return;
     

@@ -24,7 +24,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useImageContent } from '@/hooks/files';
-import { useDownloadRestriction } from '@/hooks/billing';
 
 interface ImageDisplayProps {
   filePath: string;
@@ -37,9 +36,6 @@ function ImageDisplay({ filePath, sandboxId, label, compact = false }: ImageDisp
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-    featureName: 'images',
-  });
   
   const {
     data: imageUrl,
@@ -68,10 +64,6 @@ function ImageDisplay({ filePath, sandboxId, label, compact = false }: ImageDisp
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
     if (!imageUrl) return;
 
     const link = document.createElement('a');

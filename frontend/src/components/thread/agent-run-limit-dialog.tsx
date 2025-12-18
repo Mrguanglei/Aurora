@@ -16,7 +16,6 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { getThread } from '@/hooks/threads/utils';
 import { getProject } from '@/lib/api/threads';
 import { threadKeys } from '@/hooks/threads/keys';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 
 interface RunningThreadInfo {
   threadId: string;
@@ -155,7 +154,6 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
   runningThreadIds,
   projectId,
 }) => {
-  const pricingModalStore = usePricingModalStore();
   
   const threadQueries = useQueries({
     queries: runningThreadIds.map(threadId => ({
@@ -234,9 +232,7 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
   };
 
   const handleUpgrade = () => {
-    pricingModalStore.openPricingModal({
-      title: 'Upgrade to run more agents in parallel'
-    });
+    toast.error('Upgrade to run more agents in parallel');
     onOpenChange(false);
   };
 

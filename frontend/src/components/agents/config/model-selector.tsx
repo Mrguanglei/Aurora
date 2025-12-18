@@ -22,8 +22,8 @@ import { useModelSelection } from '@/hooks/agents';
 import { formatModelName } from '@/stores/model-store';
 import { isLocalMode } from '@/lib/config';
 import { CustomModelDialog, CustomModelFormData } from '@/components/thread/chat-input/custom-model-dialog';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 // Helper to render model labels with special styling for Kortix modes
 const ModelLabel = ({ label, className }: { label: string; className?: string }) => {
@@ -90,8 +90,8 @@ export function AgentModelSelector({
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  const openPricingModal = usePricingModalStore((state) => state.openPricingModal);
-  const isFreeTier = subscriptionStatus !== 'active';
+  // Billing removed - always false
+  const isFreeTier = false;
   
   const [isCustomModelDialogOpen, setIsCustomModelDialogOpen] = useState(false);
   const [dialogInitialData, setDialogInitialData] = useState<CustomModelFormData>({ id: '', label: '' });
@@ -113,7 +113,7 @@ export function AgentModelSelector({
         modelMap.set(model.id, {
           id: model.id, // Use the actual model ID
           label: displayName,
-          requiresSubscription: !model.allowed, // If not allowed, requires subscription
+          requiresSubscription: false, // Billing removed - all models free
           priority: model.priority || 0,
           recommended: false, // Remove recommended badges since we commented out non-Anthropic models
           top: (model.priority || 0) >= 90,
@@ -169,18 +169,14 @@ export function AgentModelSelector({
   }, [enhancedModelOptions, searchQuery]);
 
   const sortedModels = useMemo(() => {
+    // Billing removed - sort by priority only
     return [...filteredOptions].sort((a, b) => {
-      if (a.requiresSubscription !== b.requiresSubscription) {
-        return a.requiresSubscription ? 1 : -1;
-      }
       return (b.priority ?? 0) - (a.priority ?? 0);
     });
   }, [filteredOptions]);
 
-  const freeModels = sortedModels.filter(m => !m.requiresSubscription);
-  const premiumModels = sortedModels.filter(m => m.requiresSubscription);
-
-  const shouldDisplayAll = !isLocalMode() && premiumModels.length > 0;
+  // Billing removed - all models are accessible
+  const allAccessibleModels = sortedModels; // All models are now accessible
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -202,19 +198,11 @@ export function AgentModelSelector({
       return;
     }
     
-    const hasAccess = isLocalMode() || canAccessModel(modelId);
-    if (hasAccess) {
+    // Billing removed - all models are accessible
+    const model = enhancedModelOptions.find(m => m.id === modelId);
+    if (model) {
       onChange(modelId);
       setIsOpen(false);
-    } else {
-      // If user doesn't have access, open pricing modal
-      setIsOpen(false);
-      const model = enhancedModelOptions.find(m => m.id === modelId);
-      const isPowerModel = modelId === 'kortix/power';
-      openPricingModal({
-        isAlert: true,
-        alertTitle: isPowerModel ? 'Upgrade to access Kortix Power mode' : 'Upgrade to access this model',
-      });
     }
   };
 
@@ -308,7 +296,7 @@ export function AgentModelSelector({
   const renderModelOption = (model: any, index: number) => {
     const isCustom = Boolean(model.isCustom) || 
       (isLocalMode() && customModels.some(m => m.id === model.id));
-    const accessible = isCustom ? true : (isLocalMode() || canAccessModel(model.id));
+    const accessible = true; // Billing removed - all models accessible
     const isHighlighted = index === highlightedIndex;
     const isPremium = model.requiresSubscription;
     const isLowQuality = false; // API models are quality controlled
@@ -357,9 +345,6 @@ export function AgentModelSelector({
                   {isLowQuality && (
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   )}
-                  {!accessible && !isLocalMode() && (
-                    <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
                   {isLocalMode() && isCustom && (
                     <div className="flex items-center gap-1">
                       <button
@@ -386,11 +371,7 @@ export function AgentModelSelector({
               </DropdownMenuItem>
             </div>
           </TooltipTrigger>
-          {!accessible && !isLocalMode() ? (
-            <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>{isPowerModel ? 'Upgrade to access Kortix Power mode' : 'Upgrade to access this model'}</p>
-            </TooltipContent>
-          ) : isLowQuality ? (
+          {isLowQuality ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
               <p>Not recommended for complex tasks</p>
             </TooltipContent>
@@ -515,127 +496,16 @@ export function AgentModelSelector({
                 </div>
               </div>
               
-              {shouldDisplayAll ? (
-                <div>
-                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
-                    Available Models
+              {/* Billing removed - show all models together */}
+              <div>
+                {sortedModels.length > 0 ? (
+                  sortedModels.map((model, index) => renderModelOption(model, index))
+                ) : (
+                  <div className="text-sm text-center py-4 text-muted-foreground">
+                    No models match your search
                   </div>
-                  {freeModels.map((model, index) => renderModelOption(model, index))}
-                  
-                  {premiumModels.length > 0 && (
-                    <>
-                      <div className="mt-4 border-t border-border pt-2">
-                        <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center">
-                          <Crown className="h-3.5 w-3.5 mr-1.5" />
-                          {subscriptionStatus === 'active' ? 'Premium Models' : 'Additional Models'}
-                        </div>
-                        {/* Pricing Header for Premium Models */}
-                        <div className="px-2 py-2">
-                          <div className="flex items-center gap-0 text-xs text-muted-foreground">
-                            <div className="flex-1 pl-2">Model</div>
-                            <div className="w-16 text-right pr-2">Input</div>
-                            <div className="w-16 text-right pr-2">Output</div>
-                            <div className="w-8"></div>
-                          </div>
-                        </div>
-                        <div className="relative overflow-hidden" style={{ maxHeight: subscriptionStatus === 'active' ? 'none' : '160px' }}>
-                          {(subscriptionStatus === 'active' ? premiumModels : premiumModels.slice(0, 3)).map((model, index) => {
-                            const canAccess = isLocalMode() || canAccessModel(model.id);
-                            const isRecommended = false; // Remove recommended badges
-                            
-                            // Format cost display
-                            const formatCost = (cost: number | null | undefined) => {
-                              if (cost === null || cost === undefined) return null;
-                              return `$${cost.toFixed(2)}`;
-                            };
-
-                            const inputCost = formatCost(model.inputCostPerMillionTokens);
-                            const outputCost = formatCost(model.outputCostPerMillionTokens);
-                            
-                            return (
-                              <Tooltip key={`premium-${model.id}-${index}`}>
-                                <TooltipTrigger asChild>
-                                    <div className='w-full'>
-                                      <DropdownMenuItem
-                                        className={cn(
-                                          "text-sm px-2 py-2 mx-2 my-0.5 flex items-center gap-0 cursor-pointer rounded-lg transition-all duration-200",
-                                          selectedModel === model.id && "bg-muted border border-border",
-                                          !canAccess && "opacity-70"
-                                        )}
-                                        onClick={() => handleSelect(model.id)}
-                                      >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1 pl-2">
-                                          <ModelProviderIcon modelId={model.id} size={24} />
-                                          <ModelLabel label={model.label} />
-                                        </div>
-                                        <div className="w-16 text-right text-xs text-muted-foreground pr-2">
-                                          {inputCost || '—'}
-                                        </div>
-                                        <div className="w-16 text-right text-xs text-muted-foreground pr-2">
-                                          {outputCost || '—'}
-                                        </div>
-                                        <div className="w-8 flex items-center justify-center">
-                                          {!canAccess && <Crown className="h-3.5 w-3.5 text-muted-foreground" />}
-                                        </div>
-                                      </DropdownMenuItem>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="left" className="text-xs max-w-xs">
-                                    <p>
-                                      {canAccess 
-                                        ? 'Premium model' 
-                                        : 'Requires subscription to access premium model'
-                                      }
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                            );
-                          })}
-                          {isFreeTier && premiumModels.length > 0 && (
-                            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent flex items-end justify-center pointer-events-none">
-                              <div className="w-full p-3 pointer-events-auto">
-                                <div className="rounded-xl bg-gradient-to-br from-muted/80 to-muted/70 dark:from-muted/40 dark:to-muted/30 shadow-sm border border-border p-3">
-                                  <div className="flex flex-col space-y-2">
-                                    <div className="flex items-center">
-                                      <Crown className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
-                                      <div>
-                                        <p className="text-sm font-medium">Unlock all models + higher limits</p>
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      className="w-full h-8 font-medium"
-                                      onClick={() => {
-                                        setIsOpen(false);
-                                        openPricingModal({
-                                          isAlert: true,
-                                          alertTitle: 'Upgrade to access premium models',
-                                        });
-                                      }}
-                                    >
-                                      Upgrade now
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  {sortedModels.length > 0 ? (
-                    sortedModels.map((model, index) => renderModelOption(model, index))
-                  ) : (
-                    <div className="text-sm text-center py-4 text-muted-foreground">
-                      No models match your search
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
             
             {/* Pricing Info Footer */}

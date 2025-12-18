@@ -9,8 +9,7 @@ from core.agentpress.tool import Tool, ToolResult, openapi_schema, tool_metadata
 from core.utils.config import config, EnvMode
 from core.utils.logger import logger
 from core.agentpress.thread_manager import ThreadManager
-from core.billing.credits.manager import CreditManager
-from core.billing.shared.config import TOKEN_PRICE_MULTIPLIER
+# Billing removed - credit management disabled
 from core.services.supabase import DBConnection
 
 @tool_metadata(
@@ -62,7 +61,6 @@ class CompanySearchTool(Tool):
         self.thread_manager = thread_manager
         self.api_key = config.EXA_API_KEY
         self.db = DBConnection()
-        self.credit_manager = CreditManager()
         self.exa_client = None
         
         if self.api_key:
@@ -90,27 +88,9 @@ class CompanySearchTool(Tool):
         return None, None
     
     async def _deduct_credits(self, user_id: str, num_results: int, thread_id: Optional[str] = None) -> bool:
-        base_cost = Decimal('0.45')
-        total_cost = base_cost * TOKEN_PRICE_MULTIPLIER
-        
-        try:
-            result = await self.credit_manager.use_credits(
-                account_id=user_id,
-                amount=total_cost,
-                description=f"Company search: {num_results} results",
-                thread_id=thread_id
-            )
-            
-            if result.get('success'):
-                logger.info(f"Deducted ${total_cost:.2f} for company search ({num_results} results)")
-                return True
-            else:
-                logger.warning(f"Failed to deduct credits: {result.get('error')}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error deducting credits: {e}")
-            return False
+        # Billing removed - always return True
+        logger.info(f"Credit deduction skipped for company search ({num_results} results) - billing disabled")
+        return True
 
     @openapi_schema({
         "type": "function",

@@ -6,8 +6,6 @@ from core.tools.image_search_tool import SandboxImageSearchTool
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
 from core.tools.task_list_tool import TaskListTool
-from core.tools.people_search_tool import PeopleSearchTool
-from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
 from core.tools.vapi_voice_tool import VapiVoiceTool
 from core.agentpress.thread_manager import ThreadManager
@@ -177,13 +175,22 @@ class ToolManager:
                 self.thread_manager.add_tool(PaperSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
         
         if config.EXA_API_KEY:
-            if 'people_search_tool' not in disabled_tools:
-                enabled_methods = self._get_enabled_methods_for_tool('people_search_tool')
-                self.thread_manager.add_tool(PeopleSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
+            # Lazy import - these tools depend on the removed billing module
+            try:
+                if 'people_search_tool' not in disabled_tools:
+                    from core.tools.people_search_tool import PeopleSearchTool
+                    enabled_methods = self._get_enabled_methods_for_tool('people_search_tool')
+                    self.thread_manager.add_tool(PeopleSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
+            except ImportError as e:
+                logger.warning(f"❌ Failed to load people_search_tool: {e}")
             
-            if 'company_search_tool' not in disabled_tools:
-                enabled_methods = self._get_enabled_methods_for_tool('company_search_tool')
-                self.thread_manager.add_tool(CompanySearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
+            try:
+                if 'company_search_tool' not in disabled_tools:
+                    from core.tools.company_search_tool import CompanySearchTool
+                    enabled_methods = self._get_enabled_methods_for_tool('company_search_tool')
+                    self.thread_manager.add_tool(CompanySearchTool, function_names=enabled_methods, thread_manager=self.thread_manager)
+            except ImportError as e:
+                logger.warning(f"❌ Failed to load company_search_tool: {e}")
         
         if config.ENV_MODE != EnvMode.PRODUCTION and config.VAPI_PRIVATE_KEY and 'vapi_voice_tool' not in disabled_tools:
             enabled_methods = self._get_enabled_methods_for_tool('vapi_voice_tool')

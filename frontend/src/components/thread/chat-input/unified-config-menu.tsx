@@ -33,10 +33,9 @@ import { useTranslations } from 'next-intl';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
-import { usePricingModalStore } from '@/stores/pricing-modal-store';
-import { useAccountState, accountStateSelectors } from '@/hooks/billing';
 import { isLocalMode } from '@/lib/config';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { toast } from 'sonner';
 
 // Helper to render model labels with special styling for Kortix modes
 const ModelLabel = ({ label, className }: { label: string; className?: string }) => {
@@ -101,16 +100,10 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
-    const { data: accountState } = useAccountState();
-    const { openPricingModal } = usePricingModalStore();
     const [isMobile, setIsMobile] = useState(false);
     const [mobileSection, setMobileSection] = useState<'main' | 'agents'>('main');
 
-    const tierKey = accountStateSelectors.tierKey(accountState);
-    const isFreeTier = tierKey && (
-      tierKey === 'free' ||
-      tierKey === 'none'
-    ) && !isLocalMode();
+    const isFreeTier = false; // Billing removed
 
     // Detect mobile view
     useEffect(() => {
@@ -327,58 +320,37 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 )}
                 onClick={() => {
                     setIsOpen(false);
-                    if (isFreeTier) {
-                        openPricingModal();
-                    } else {
-                        setShowNewAgentDialog(true);
-                    }
+                    setShowNewAgentDialog(true);
                 }}
             >
                 <div className={cn(
                     "flex items-center justify-center border-[1.5px] flex-shrink-0 transition-colors",
                     compact ? "w-8 h-8" : "w-10 h-10 sm:w-8 sm:h-8",
-                    isFreeTier
-                        ? "bg-primary/10 border-primary/30"
-                        : "bg-card border-border"
+                    "bg-card border-border"
                 )} style={{ borderRadius: '10.4px' }}>
-                    {isFreeTier ? (
-                        <Sparkles className={cn(
-                            "text-primary",
-                            compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
-                        )} />
-                    ) : (
-                        <Plus className={cn(
-                            "text-muted-foreground",
-                            compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
-                        )} />
-                    )}
+                    <Plus className={cn(
+                        "text-muted-foreground",
+                        compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
+                    )} />
                 </div>
                 <div className="flex-1 min-w-0">
                     <span className={cn(
                         "font-medium",
                         compact ? "text-sm" : "text-base sm:text-sm",
-                        isFreeTier ? "text-primary" : "text-foreground"
+                        "text-foreground"
                     )}>
                         Create AI Worker
                     </span>
-                    {isFreeTier && (
-                        <p className={cn(
-                            "text-muted-foreground leading-tight mt-0.5",
-                            compact ? "text-[10px]" : "text-xs sm:text-[10px]"
-                        )}>
-                            Upgrade to create custom workers
-                        </p>
-                    )}
                 </div>
             </div>
         </div>
-    ), [isFreeTier, openPricingModal]);
+    ), []);
 
     const ModeToggle = useCallback(({ compact = false }: { compact?: boolean }) => {
         const basicModel = modelOptions.find(m => m.id === 'kortix/basic' || m.label === 'Kortix Basic');
         const powerModel = modelOptions.find(m => m.id === 'kortix/power' || m.label === 'Kortix Advanced Mode');
 
-        const canAccessPower = powerModel ? canAccessModel(powerModel.id) : false;
+        // Billing removed - all models accessible
         const isPowerSelected = powerModel && selectedModel === powerModel.id;
         const isBasicSelected = basicModel && selectedModel === basicModel.id;
 
@@ -412,15 +384,8 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 <button
                     onClick={() => {
                         if (powerModel) {
-                            if (canAccessPower) {
-                                onModelChange(powerModel.id);
-                            } else {
-                                setIsOpen(false);
-                                usePricingModalStore.getState().openPricingModal({
-                                    isAlert: true,
-                                    alertTitle: 'Upgrade to access Kortix Advanced mode'
-                                });
-                            }
+                            // Billing removed - all models accessible
+                            onModelChange(powerModel.id);
                         }
                     }}
                     className={cn(
@@ -428,27 +393,19 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                         compact ? "px-3 py-1.5" : "px-4 py-2",
                         isPowerSelected
                             ? "bg-background shadow-sm"
-                            : canAccessPower
-                                ? "text-muted-foreground hover:text-foreground"
-                                : "text-muted-foreground/50"
+                            : "text-muted-foreground hover:text-foreground"
                     )}
                 >
                     <AuroraLogo size={compact ? 10 : 12} variant="symbol" />
                     <span className={cn(
                         "font-medium",
                         compact ? "text-xs" : "text-sm",
-                        isPowerSelected ? "text-primary" : canAccessPower ? "text-muted-foreground" : "text-muted-foreground/50"
+                        isPowerSelected ? "text-primary" : "text-muted-foreground"
                     )}>Advanced</span>
-                    {!canAccessPower && (
-                        <Lock className={cn(
-                            "text-muted-foreground/50",
-                            compact ? "h-3 w-3" : "h-3.5 w-3.5"
-                        )} />
-                    )}
                 </button>
             </div>
         );
-    }, [modelOptions, selectedModel, canAccessModel, onModelChange]);
+    }, [modelOptions, selectedModel, onModelChange]);
 
     const WorkerSettingsButtons = useCallback(({ compact = false }: { compact?: boolean }) => (
         onAgentSelect && (selectedAgentId || displayAgent?.agent_id) ? (
@@ -668,6 +625,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                     </div>
                                     <div className="px-2 pb-2">
                                         <SpotlightCard className="transition-colors cursor-pointer bg-transparent">
+                                            <div>
                                             <DropdownMenuSub>
                                                 <DropdownMenuSubTrigger className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent w-full">
                                                     <div className="flex items-center justify-center w-8 h-8 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
@@ -699,6 +657,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                                     </DropdownMenuSubContent>
                                                 </DropdownMenuPortal>
                                             </DropdownMenuSub>
+                                            </div>
                                         </SpotlightCard>
                                     </div>
                                 </>
@@ -729,8 +688,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                         selectedAgentId={selectedAgentId}
                         onAgentChange={onAgentSelect}
                         onClose={() => setIntegrationsOpen(false)}
-                        isBlocked={isFreeTier}
-                        onBlockedClick={() => openPricingModal()}
+                        isBlocked={false}
                     />
                 </DialogContent>
             </Dialog>

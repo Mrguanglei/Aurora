@@ -724,6 +724,7 @@
     "signUpFailed": "Sign up failed. Please try again.",
     "sendMagicLink": "Send magic link",
     "sending": "Sending...",
+    "magicLink": "Magic Link",
     "magicLinkSent": "We sent a magic link to",
     "magicLinkDescription": "Click the link in your email to sign in. The link will expire in 1 hour.",
     "magicLinkExplanation": "We'll send you a secure link to sign in. No password needed.",

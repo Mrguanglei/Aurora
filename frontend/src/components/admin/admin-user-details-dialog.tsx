@@ -47,7 +47,6 @@ import { useAdminUserDetails, useAdminUserThreads, useAdminUserActivity } from '
 //   useAdjustCredits,
 //   useProcessRefund,
 //   useAdminUserTransactions,
-// } from '@/hooks/billing';
 import type { UserSummary } from '@/hooks/admin/use-admin-users';
 import { formatCredits, dollarsToCredits, formatCreditsWithSign } from '@/lib/utils/credit-formatter';
 

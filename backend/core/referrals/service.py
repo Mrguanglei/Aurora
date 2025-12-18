@@ -2,12 +2,13 @@ from typing import Dict, Optional, List
 from decimal import Decimal
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
-from core.billing.shared.config import CREDITS_PER_DOLLAR
 from .config import REFERRAL_CREDITS, MAX_EARNABLE_CREDITS_FROM_REFERRAL
 import json
 import re
 from core.notifications.notification_service import NotificationService
 from core.utils.config import config
+
+CREDITS_PER_DOLLAR = Decimal('1')  # Billing removed - use 1:1 ratio
 
 class ReferralService:
     def __init__(self, db: DBConnection):

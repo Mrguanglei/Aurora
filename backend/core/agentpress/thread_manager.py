@@ -20,7 +20,7 @@ from core.utils.logger import logger
 from langfuse.client import StatefulGenerationClient, StatefulTraceClient
 from core.services.langfuse import langfuse
 from datetime import datetime, timezone
-from core.billing.credits.integration import billing_integration
+# Billing removed
 from litellm.utils import token_counter
 import litellm
 
@@ -177,21 +177,8 @@ class ThreadManager:
                 else:
                     logger.debug(f"❌ NO CACHE: All {prompt_tokens} tokens processed fresh")
 
-                deduct_result = await billing_integration.deduct_usage(
-                    account_id=user_id,
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    model=model or "unknown",
-                    message_id=saved_message['message_id'],
-                    thread_id=thread_id,
-                    cache_read_tokens=cache_read_tokens,
-                    cache_creation_tokens=cache_creation_tokens
-                )
-                
-                if deduct_result.get('success'):
-                    logger.info(f"Successfully deducted ${deduct_result.get('cost', 0):.6f}")
-                else:
-                    logger.error(f"Failed to deduct credits: {deduct_result}")
+                # Billing removed - no longer deducting credits
+                logger.debug(f"Billing removed - skipping credit deduction for {prompt_tokens} prompt + {completion_tokens} completion tokens")
         except Exception as e:
             logger.error(f"Error handling billing: {str(e)}", exc_info=True)
 
@@ -757,22 +744,10 @@ class ThreadManager:
                     logger.info(f"Cancellation signal received in auto-continue generator for thread {thread_id}")
                     break
                 
-                # Check credits before each auto-continue iteration (skip cache to get fresh balance)
+                # Billing removed - no credit checks
                 if account_id:
-                    try:
-                        from core.billing.credits.integration import billing_integration
-                        can_run, message, _ = await billing_integration.check_and_reserve_credits(account_id)
-                        if not can_run:
-                            logger.warning(f"Stopping auto-continue - insufficient credits: {message}")
-                            yield {
-                                "type": "status",
-                                "status": "stopped",
-                                "message": f"Insufficient credits: {message}"
-                            }
-                            break
-                    except Exception as e:
-                        logger.error(f"Error checking credits in auto-continue: {e}")
-                        # Continue execution if credit check fails (don't block on billing errors)
+                    # Billing removed - always allow auto-continue
+                    pass
                 
                 response_gen = await self._execute_run(
                     thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,

@@ -17,7 +17,6 @@ import {
 
 import { useFileContent, useImageContent } from '@/hooks/files';
 import { useAuth } from '@/components/AuthProvider';
-import { useDownloadRestriction } from '@/hooks/billing';
 import { Project } from '@/lib/api/threads';
 import { PresentationSlidePreview } from '@/components/thread/tool-views/presentation-tools/PresentationSlidePreview';
 import { usePresentationViewerStore } from '@/stores/presentation-viewer-store';
@@ -222,10 +221,6 @@ export function FileAttachment({
     const { session } = useAuth();
     const { openPresentation } = usePresentationViewerStore();
     
-    // Download restriction for free tier users
-    const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-        featureName: 'files',
-    });
 
     // Simplified state management
     const [hasError, setHasError] = React.useState(false);
@@ -395,11 +390,6 @@ export function FileAttachment({
 
     const handleDownload = async (e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent triggering the main click handler
-
-        if (isDownloadRestricted) {
-            openUpgradeModal();
-            return;
-        }
 
         try {
             if (!sandboxId || !session?.access_token) {

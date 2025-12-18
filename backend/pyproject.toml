@@ -101,8 +101,8 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://www.kortix.com"
-repository = "https://github.com/kortix-ai/suna"
+homepage = ""
+repository = ""
 
 [tool.uv]
 package = false

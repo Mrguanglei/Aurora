@@ -35,13 +35,13 @@ ENV THREADS=2
 ENV WORKER_CONNECTIONS=2000
 
 ENV PYTHONPATH=/app
-EXPOSE 8000
+EXPOSE 8011
 
 # Gunicorn configuration
 CMD ["sh", "-c", "uv run gunicorn api:app \
   --workers $WORKERS \
   --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000 \
+  --bind 0.0.0.0:8011 \
   --timeout 1800 \
   --graceful-timeout 600 \
   --keep-alive 1800 \

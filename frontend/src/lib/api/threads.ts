@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
 
@@ -332,23 +331,35 @@ export const getThread = async (threadId: string): Promise<Thread> => {
 };
 
 export const createThread = async (projectId: string): Promise<Thread> => {
-  const supabase = createClient();
+  // Supabase removed - get token from localStorage
+  const token = typeof window !== 'undefined' ? (() => {
+    try {
+      const authData = localStorage.getItem('auth-token');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        return parsed?.access_token || null;
+      }
+    } catch {}
+    return null;
+  })() : null;
 
-  // If user is not logged in, redirect to login
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
+  if (!token) {
     throw new Error('You must be logged in to create a thread');
   }
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   // Use backend API endpoint - it handles project creation as well
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_URL}/threads`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-    },
+    headers,
     body: JSON.stringify({ project_id: projectId }),
   });
 
@@ -374,8 +385,18 @@ export const addUserMessage = async (
   content: string,
 ): Promise<void> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    // Supabase removed - get token from localStorage
+    const token = typeof window !== 'undefined' ? (() => {
+      try {
+        const authData = localStorage.getItem('auth-token');
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          return parsed?.access_token || null;
+        }
+      } catch {}
+      return null;
+    })() : null;
+    const session = token ? { access_token: token } : null;
 
     if (!session?.access_token) {
       throw new NoAccessTokenAvailableError();
@@ -423,8 +444,18 @@ const shouldUseOptimizedMessages = (): boolean => {
 
 export const getMessages = async (threadId: string): Promise<Message[]> => {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    // Supabase removed - get token from localStorage
+    const token = typeof window !== 'undefined' ? (() => {
+      try {
+        const authData = localStorage.getItem('auth-token');
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          return parsed?.access_token || null;
+        }
+      } catch {}
+      return null;
+    })() : null;
+    const session = token ? { access_token: token } : null;
 
     const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 

@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
@@ -28,7 +27,6 @@ const PUBLIC_ROUTES = [
   '/templates', // Template pages should be public
   '/enterprise', // Enterprise page should be public
   '/master-login', // Master password admin login
-  '/checkout', // Public checkout wrapper for Apple compliance
   '/support', // Support page should be public
   '/suna', // Kortix rebrand page should be public for SEO
   '/help', // Help center and documentation should be public
@@ -38,10 +36,9 @@ const PUBLIC_ROUTES = [
   ...locales.flatMap(locale => MARKETING_ROUTES.map(route => `/${locale}${route === '/' ? '' : route}`)),
 ];
 
-// Routes that require authentication but are related to billing/trials/setup
+// Routes that require authentication but are related to setup
 const BILLING_ROUTES = [
   '/activate-trial',
-  '/subscription',
   '/setting-up',
 ];
 
@@ -139,39 +136,9 @@ export async function middleware(request: NextRequest) {
     const localeCookie = request.cookies.get('locale')?.value;
     const hasExplicitPreference = !!localeCookie && locales.includes(localeCookie as Locale);
     
-    // Check user metadata (if authenticated) - only if no cookie preference
-    let userLocale: Locale | null = null;
+    // For now, skip user metadata check (would require auth token)
+    // Just use geo-detection
     if (!hasExplicitPreference) {
-      try {
-        const supabase = createServerClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            cookies: {
-              getAll() {
-                return request.cookies.getAll();
-              },
-              setAll() {
-                // No-op for middleware
-              },
-            },
-          }
-        );
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.user_metadata?.locale && locales.includes(user.user_metadata.locale as Locale)) {
-          userLocale = user.user_metadata.locale as Locale;
-        }
-      } catch (error) {
-        // User might not be authenticated, continue with geo-detection
-      }
-    }
-    
-    // Only auto-redirect if:
-    // - No explicit preference (no cookie, no user metadata)
-    // - Detected locale is not English (default)
-    // This prevents unnecessary redirects for English speakers and users with preferences
-    if (!hasExplicitPreference && !userLocale) {
       const acceptLanguage = request.headers.get('accept-language');
       
       const detectedLocale = detectBestLocaleFromHeaders(acceptLanguage);
@@ -204,127 +171,9 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    // Redirect to auth if not authenticated
-    if (authError || !user) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/auth';
-      url.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(url);
-    }
-
-    // Skip billing checks in local mode
-    const isLocalMode = process.env.NEXT_PUBLIC_ENV_MODE?.toLowerCase() === 'local'
-    if (isLocalMode) {
-      return supabaseResponse;
-    }
-
-    // Skip billing checks for billing-related routes
-    if (BILLING_ROUTES.some(route => pathname.startsWith(route))) {
-      return supabaseResponse;
-    }
-
-    // Only check billing for protected routes that require active subscription
-    // NOTE: Middleware is server-side code, so direct Supabase queries are acceptable here
-    // for performance reasons. Only client-side (browser) code should use backend API.
-    if (PROTECTED_ROUTES.some(route => pathname.startsWith(route))) {
-      const { data: accounts } = await supabase
-        .schema('basejump')
-        .from('accounts')
-        .select('id')
-        .eq('personal_account', true)
-        .eq('primary_owner_user_id', user.id)
-        .single();
-
-      if (!accounts) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/activate-trial';
-        return NextResponse.redirect(url);
-      }
-
-      const accountId = accounts.id;
-      const { data: creditAccount } = await supabase
-        .from('credit_accounts')
-        .select('tier, trial_status, trial_ends_at')
-        .eq('account_id', accountId)
-        .single();
-
-      const { data: trialHistory } = await supabase
-        .from('trial_history')
-        .select('id')
-        .eq('account_id', accountId)
-        .single();
-
-      const hasUsedTrial = !!trialHistory;
-
-      if (!creditAccount) {
-        if (hasUsedTrial) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/subscription';
-          return NextResponse.redirect(url);
-        } else {
-          const url = request.nextUrl.clone();
-          url.pathname = '/activate-trial';
-          return NextResponse.redirect(url);
-        }
-      }
-
-      const hasPaidTier = creditAccount.tier && creditAccount.tier !== 'none' && creditAccount.tier !== 'free';
-      const hasFreeTier = creditAccount.tier === 'free';
-      const hasActiveTrial = creditAccount.trial_status === 'active';
-      const trialExpired = creditAccount.trial_status === 'expired' || creditAccount.trial_status === 'cancelled';
-      const trialConverted = creditAccount.trial_status === 'converted';
-      
-      // If user is coming from Stripe checkout with subscription=success, allow access to dashboard
-      // The webhook might not have processed yet, but we should still allow them to see the success page
-      const subscriptionSuccess = request.nextUrl.searchParams.get('subscription') === 'success';
-      if (subscriptionSuccess && pathname === '/dashboard') {
-        return supabaseResponse;
-      }
-      
-      if (hasPaidTier || hasFreeTier) {
-        return supabaseResponse;
-      }
-
-      if (!hasPaidTier && !hasFreeTier && !hasActiveTrial && !trialConverted) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/subscription';
-        return NextResponse.redirect(url);
-      } else if ((trialExpired || trialConverted) && !hasPaidTier && !hasFreeTier) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/subscription';
-        return NextResponse.redirect(url);
-      }
-    }
-
-    return supabaseResponse;
-  } catch (error) {
-    console.error('Middleware error:', error);
-    return supabaseResponse;
-  }
+  // For now, skip authentication checks in middleware
+  // Authentication is handled at the page/API level via auth tokens
+  return supabaseResponse;
 }
 
 export const config = {

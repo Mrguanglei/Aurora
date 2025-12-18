@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Toggle } from '@/components/ui/toggle';
 import { useImageContent } from '@/hooks/files';
-import { useDownloadRestriction } from '@/hooks/billing';
 
 interface DesignElement {
   id: string;
@@ -139,9 +138,6 @@ export function DesignerToolView({
   const lastProcessedPath = useRef<string>('');
   
   // Download restriction for free tier users
-  const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
-    featureName: 'designs',
-  });
   
   const gridSize = 20;
   const artboardPadding = 50;
@@ -388,10 +384,6 @@ export function DesignerToolView({
   };
 
   const handleDownload = () => {
-    if (isDownloadRestricted) {
-      openUpgradeModal();
-      return;
-    }
     const element = elements.find(el => el.id === selectedElement);
     if (element?.directUrl || element?.filePath) {
       const link = document.createElement('a');

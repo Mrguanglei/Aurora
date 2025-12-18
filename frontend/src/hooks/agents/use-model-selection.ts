@@ -1,9 +1,7 @@
 'use client';
 
 import { useModelStore } from '@/stores/model-store';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useAccountState } from '@/hooks/billing';
-import { useAuth } from '@/components/AuthProvider';
+import { useCallback, useEffect, useMemo } from 'react';
 
 export interface ModelOption {
   id: string;
@@ -16,11 +14,7 @@ export interface ModelOption {
   contextWindow?: number;
 }
 
-// Helper to check if user has a PAID subscription (not free tier)
-const isPaidTier = (tierKey: string | undefined): boolean => {
-  if (!tierKey) return false;
-  return tierKey !== 'free' && tierKey !== 'none';
-};
+// Billing removed - all models are free
 
 const getDefaultModel = (accessibleModels: ModelOption[]): string => {
   // Pick the first accessible model (sorted by priority)
@@ -40,54 +34,25 @@ const getDefaultModel = (accessibleModels: ModelOption[]): string => {
 };
 
 export const useModelSelection = () => {
-  const { user, isLoading: isAuthLoading } = useAuth();
-
-  // Get account state which includes models
-  const { data: accountState, isLoading } = useAccountState({
-    enabled: !!user && !isAuthLoading
-  });
-
   const { selectedModel, setSelectedModel } = useModelStore();
 
-  // Track previous tier to detect upgrades
-  const prevTierKey = useRef<string | null>(null);
-
-  // Check if user has paid subscription based on tier_key (not status!)
-  const hasPaidSubscription = useMemo(() => {
-    return isPaidTier(accountState?.subscription.tier_key);
-  }, [accountState?.subscription.tier_key]);
-
-  // Transform API data to ModelOption format
-  // The backend's `allowed` field is the source of truth!
+  // Billing removed - use default models
   const availableModels = useMemo<ModelOption[]>(() => {
-    if (!accountState?.models) return [];
+    // Default models - billing removed
+    return [
+      { id: 'kortix/basic', label: 'Kortix Basic', requiresSubscription: false, priority: 1, recommended: true },
+      { id: 'kortix/power', label: 'Kortix Advanced Mode', requiresSubscription: false, priority: 2, recommended: true },
+    ];
+  }, []);
 
-    return accountState.models.map(model => ({
-      id: model.id,
-      label: model.name,
-      requiresSubscription: !model.allowed, // Backend already computed this correctly
-      priority: model.priority || 0,
-      recommended: model.recommended || false,
-      capabilities: model.capabilities || [],
-      contextWindow: model.context_window || 128000,
-    })).sort((a, b) => {
-      // Sort accessible models first, then by priority
-      if (a.requiresSubscription !== b.requiresSubscription) {
-        return a.requiresSubscription ? 1 : -1;
-      }
-      if (a.priority !== b.priority) return b.priority - a.priority;
-      return a.label.localeCompare(b.label);
-    });
-  }, [accountState?.models]);
-
-  // Get accessible models - use the backend's `allowed` field directly!
+  // All models are accessible - billing removed
   const accessibleModels = useMemo(() => {
-    return availableModels.filter(model => !model.requiresSubscription);
+    return availableModels;
   }, [availableModels]);
 
   // Initialize selected model when data loads
   useEffect(() => {
-    if (isLoading || !accessibleModels.length) return;
+    if (!accessibleModels.length) return;
 
     // If no model selected or selected model is not accessible, set a default
     const needsUpdate = !selectedModel ||
@@ -95,35 +60,12 @@ export const useModelSelection = () => {
 
     if (needsUpdate) {
       const defaultModelId = getDefaultModel(accessibleModels);
-
       if (defaultModelId && defaultModelId !== selectedModel) {
-        console.log('🔧 useModelSelection: Setting default model:', defaultModelId, '(tier:', accountState?.subscription.tier_key, ')');
+        console.log('🔧 useModelSelection: Setting default model:', defaultModelId);
         setSelectedModel(defaultModelId);
       }
     }
-  }, [selectedModel, accessibleModels, isLoading, setSelectedModel, accountState?.subscription.tier_key]);
-
-  // Auto-switch to Advanced mode when user upgrades to paid tier
-  useEffect(() => {
-    if (isLoading || !availableModels.length) return;
-
-    const currentTier = accountState?.subscription.tier_key;
-    const wasFree = prevTierKey.current === 'free' || prevTierKey.current === 'none';
-    const isNowPaid = isPaidTier(currentTier);
-
-    // Detect upgrade: was free, now paid
-    if (wasFree && isNowPaid && prevTierKey.current !== null) {
-      // Check if power model is now accessible
-      const powerModel = availableModels.find(m => m.id === 'kortix/power' && !m.requiresSubscription);
-      if (powerModel) {
-        console.log('🚀 useModelSelection: Upgraded to paid tier! Switching to kortix/power');
-        setSelectedModel('kortix/power');
-      }
-    }
-
-    // Update ref for next comparison
-    prevTierKey.current = currentTier || null;
-  }, [accountState?.subscription.tier_key, availableModels, isLoading, setSelectedModel]);
+  }, [selectedModel, accessibleModels, setSelectedModel]);
 
   const handleModelChange = useCallback((modelId: string) => {
     const model = accessibleModels.find(m => m.id === modelId);
@@ -133,22 +75,20 @@ export const useModelSelection = () => {
     }
   }, [accessibleModels, setSelectedModel]);
 
-  // subscriptionStatus for UI purposes - based on tier, not status
-  const subscriptionStatus = hasPaidSubscription ? 'active' as const : 'no_subscription' as const;
+  // Billing removed - subscription always active
+  const subscriptionStatus = 'active' as const;
 
-  // Stable callback for checking model access
+  // Stable callback for checking model access - all models accessible now
   const canAccessModel = useCallback((modelId: string) => {
-    // Use the backend's `allowed` field directly - it's the source of truth
+    // Billing removed - all models are accessible
     const model = availableModels.find(m => m.id === modelId);
-    if (!model) return false;
-    return !model.requiresSubscription; // requiresSubscription = !allowed from backend
+    return !!model;
   }, [availableModels]);
 
-  // Stable callback for checking subscription requirement
+  // Stable callback for checking subscription requirement - always false now
   const isSubscriptionRequired = useCallback((modelId: string) => {
-    const model = availableModels.find(m => m.id === modelId);
-    return model?.requiresSubscription || false;
-  }, [availableModels]);
+    return false; // No subscription required - billing removed
+  }, []);
 
   // Stable callback for getting actual model ID
   const getActualModelId = useCallback((modelId: string) => modelId, []);
@@ -164,8 +104,8 @@ export const useModelSelection = () => {
     setSelectedModel: handleModelChange,
     availableModels: accessibleModels,
     allModels: availableModels,
-    isLoading,
-    modelsData: accountState ? { models: accountState.models, tier: accountState.subscription.tier_key } : undefined,
+    isLoading: false,
+    modelsData: undefined,
     subscriptionStatus,
     canAccessModel,
     isSubscriptionRequired,
