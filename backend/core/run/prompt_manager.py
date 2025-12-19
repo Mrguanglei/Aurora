@@ -494,13 +494,15 @@ Example of correct tool call format (multiple invokes in one block):
             from core.memory.retrieval_service import memory_retrieval_service
             # Billing removed
             
-            user_memory_result = await client.rpc('get_user_memory_enabled', {'p_account_id': user_id}).execute()
+            rpc_call = client.rpc('get_user_memory_enabled', {'p_account_id': user_id})
+            user_memory_result = await rpc_call.execute()
             user_memory_enabled = user_memory_result.data if user_memory_result.data is not None else True
             if not user_memory_enabled:
                 logger.debug(f"Memory fetch: disabled by user {user_id}")
                 return None
             
-            thread_memory_result = await client.rpc('get_thread_memory_enabled', {'p_thread_id': thread_id}).execute()
+            thread_rpc_call = client.rpc('get_thread_memory_enabled', {'p_thread_id': thread_id})
+            thread_memory_result = await thread_rpc_call.execute()
             thread_memory_enabled = thread_memory_result.data if thread_memory_result.data is not None else True
             if not thread_memory_enabled:
                 logger.debug(f"Memory fetch: disabled for thread {thread_id}")

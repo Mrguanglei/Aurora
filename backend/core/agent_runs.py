@@ -519,7 +519,15 @@ async def _ensure_sandbox_for_thread(client, project_id: str, files: List[Upload
         logger.warning(f"Project {project_id} not found when checking for sandbox")
         return None, None
     
-    existing_sandbox_data = project_result.data[0].get('sandbox')
+    # Handle both string (JSON) and dict types from database
+    sandbox_data = project_result.data[0].get('sandbox')
+    if isinstance(sandbox_data, str):
+        import json
+        existing_sandbox_data = json.loads(sandbox_data) if sandbox_data else None
+    elif isinstance(sandbox_data, dict):
+        existing_sandbox_data = sandbox_data
+    else:
+        existing_sandbox_data = None
     
     # If sandbox already exists, retrieve it
     if existing_sandbox_data and existing_sandbox_data.get('id'):

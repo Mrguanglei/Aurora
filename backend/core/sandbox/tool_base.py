@@ -42,7 +42,16 @@ class SandboxToolsBase(Tool):
                     raise ValueError(f"Project {self.project_id} not found")
 
                 project_data = project.data[0]
-                sandbox_info = project_data.get('sandbox') or {}
+                
+                # Handle both string (JSON) and dict types from database
+                sandbox_data = project_data.get('sandbox')
+                if isinstance(sandbox_data, str):
+                    import json
+                    sandbox_info = json.loads(sandbox_data) if sandbox_data else {}
+                elif isinstance(sandbox_data, dict):
+                    sandbox_info = sandbox_data
+                else:
+                    sandbox_info = {}
 
                 # If there is no sandbox recorded for this project, create one lazily
                 if not sandbox_info.get('id'):

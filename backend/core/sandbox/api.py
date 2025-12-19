@@ -463,7 +463,16 @@ async def ensure_project_sandbox_active(
                 raise HTTPException(status_code=403, detail="Not authorized to access this project")
     
     try:
-        sandbox_info = project_data.get('sandbox', {})
+        sandbox_data = project_data.get('sandbox')
+        # Handle both string (JSON) and dict types from database
+        if isinstance(sandbox_data, str):
+            import json
+            sandbox_info = json.loads(sandbox_data) if sandbox_data else {}
+        elif isinstance(sandbox_data, dict):
+            sandbox_info = sandbox_data
+        else:
+            sandbox_info = {}
+            
         if not sandbox_info.get('id'):
             raise HTTPException(status_code=404, detail="No sandbox found for this project")
             
@@ -519,7 +528,16 @@ async def get_project_sandbox_details(
                 raise HTTPException(status_code=403, detail="Not authorized to access this project")
     
     try:
-        sandbox_info = project_data.get('sandbox', {})
+        sandbox_data = project_data.get('sandbox')
+        # Handle both string (JSON) and dict types from database
+        if isinstance(sandbox_data, str):
+            import json
+            sandbox_info = json.loads(sandbox_data) if sandbox_data else {}
+        elif isinstance(sandbox_data, dict):
+            sandbox_info = sandbox_data
+        else:
+            sandbox_info = {}
+            
         if not sandbox_info.get('id'):
             raise HTTPException(status_code=404, detail="No sandbox found for this project")
             
@@ -587,7 +605,16 @@ async def create_file_in_project(
         from core.agent_runs import _ensure_sandbox_for_thread
         
         # Check if sandbox existed before
-        existing_sandbox_id = project_data.get('sandbox', {}).get('id')
+        sandbox_data = project_data.get('sandbox')
+        # Handle both string (JSON) and dict types from database
+        if isinstance(sandbox_data, str):
+            import json
+            sandbox_info = json.loads(sandbox_data) if sandbox_data else {}
+        elif isinstance(sandbox_data, dict):
+            sandbox_info = sandbox_data
+        else:
+            sandbox_info = {}
+        existing_sandbox_id = sandbox_info.get('id')
         
         # Ensure sandbox exists (creates if needed)
         sandbox, sandbox_id = await _ensure_sandbox_for_thread(client, project_id, [file])

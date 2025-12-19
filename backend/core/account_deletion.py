@@ -337,10 +337,23 @@ async def delete_account_sandboxes(account_id: str, client) -> int:
         
         for project in projects_result.data:
             sandbox_data = project.get('sandbox')
-            if not sandbox_data or not isinstance(sandbox_data, dict):
+            
+            # Handle both string (JSON) and dict types from database
+            if isinstance(sandbox_data, str):
+                import json
+                try:
+                    sandbox_dict = json.loads(sandbox_data) if sandbox_data else None
+                except (json.JSONDecodeError, TypeError):
+                    sandbox_dict = None
+            elif isinstance(sandbox_data, dict):
+                sandbox_dict = sandbox_data
+            else:
+                sandbox_dict = None
+            
+            if not sandbox_dict:
                 continue
             
-            sandbox_id = sandbox_data.get('id')
+            sandbox_id = sandbox_dict.get('id')
             if not sandbox_id:
                 continue
             

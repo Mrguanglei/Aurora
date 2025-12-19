@@ -41,7 +41,8 @@ async def extract_memories_from_conversation(
         tier_name = "default"
         
         # Skip memory enabled check - billing removed
-        user_memory_result = await client.rpc('get_user_memory_enabled', {'p_account_id': account_id}).execute()
+        rpc_call = client.rpc('get_user_memory_enabled', {'p_account_id': account_id})
+        user_memory_result = await rpc_call.execute()
         user_memory_enabled = user_memory_result.data if user_memory_result.data is not None else True
         if not user_memory_enabled:
             logger.debug(f"Memory disabled by user {account_id}, skipping extraction")

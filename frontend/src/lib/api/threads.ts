@@ -80,6 +80,31 @@ export const getProject = async (projectId: string): Promise<Project> => {
 
   const projectData = response.data;
 
+  // Parse sandbox if it's a string (JSON from database)
+  let parsedSandbox;
+  if (typeof projectData.sandbox === 'string') {
+    try {
+      parsedSandbox = JSON.parse(projectData.sandbox);
+    } catch (e) {
+      console.error('Failed to parse sandbox JSON:', e);
+      parsedSandbox = {
+        id: '',
+        pass: '',
+        vnc_preview: '',
+        sandbox_url: '',
+      };
+    }
+  } else if (projectData.sandbox && typeof projectData.sandbox === 'object') {
+    parsedSandbox = projectData.sandbox;
+  } else {
+    parsedSandbox = {
+      id: '',
+      pass: '',
+      vnc_preview: '',
+      sandbox_url: '',
+    };
+  }
+
   // Map backend response to frontend Project type
   return {
     id: projectData.project_id,
@@ -88,12 +113,7 @@ export const getProject = async (projectId: string): Promise<Project> => {
     is_public: projectData.is_public || false,
     created_at: projectData.created_at,
     updated_at: projectData.updated_at || projectData.created_at,
-    sandbox: projectData.sandbox || {
-      id: '',
-      pass: '',
-      vnc_preview: '',
-      sandbox_url: '',
-    },
+    sandbox: parsedSandbox,
     icon_name: projectData.icon_name,
   };
 };

@@ -760,7 +760,18 @@ async def delete_thread(
                 cached_project = await get_cached_project_metadata(project_id)
                 if cached_project and cached_project.get('sandbox'):
                     sandbox_data = cached_project['sandbox']
-                    sandbox_id = sandbox_data.get('id') if isinstance(sandbox_data, dict) else None
+                    # Handle both string (JSON) and dict types
+                    if isinstance(sandbox_data, str):
+                        import json
+                        try:
+                            sandbox_dict = json.loads(sandbox_data) if sandbox_data else None
+                        except (json.JSONDecodeError, TypeError):
+                            sandbox_dict = None
+                    elif isinstance(sandbox_data, dict):
+                        sandbox_dict = sandbox_data
+                    else:
+                        sandbox_dict = None
+                    sandbox_id = sandbox_dict.get('id') if sandbox_dict else None
             except Exception as cache_error:
                 logger.debug(f"Could not get sandbox from cache for project {project_id}: {cache_error}")
                 # If cache fails, try to query database (for Supabase deployments)
@@ -768,7 +779,18 @@ async def delete_thread(
                     project_result = await client.table('projects').select('sandbox').eq('project_id', project_id).execute()
                     if project_result.data and project_result.data[0].get('sandbox'):
                         sandbox_data = project_result.data[0]['sandbox']
-                        sandbox_id = sandbox_data.get('id') if isinstance(sandbox_data, dict) else None
+                        # Handle both string (JSON) and dict types
+                        if isinstance(sandbox_data, str):
+                            import json
+                            try:
+                                sandbox_dict = json.loads(sandbox_data) if sandbox_data else None
+                            except (json.JSONDecodeError, TypeError):
+                                sandbox_dict = None
+                        elif isinstance(sandbox_data, dict):
+                            sandbox_dict = sandbox_data
+                        else:
+                            sandbox_dict = None
+                        sandbox_id = sandbox_dict.get('id') if sandbox_dict else None
                 except Exception as db_error:
                     # Column doesn't exist in local PostgreSQL, skip sandbox deletion
                     logger.debug(f"Could not get sandbox from database for project {project_id}: {db_error}")

@@ -48,7 +48,16 @@ async def get_stored_threshold(thread_id: str, model: str) -> Optional[Dict[str,
     try:
         result = await client.table('threads').select('metadata').eq('thread_id', thread_id).single().execute()
         if result.data:
-            metadata = result.data.get('metadata', {})
+            # Handle both string (JSON) and dict types from database
+            metadata_data = result.data.get('metadata')
+            if isinstance(metadata_data, str):
+                import json
+                metadata = json.loads(metadata_data) if metadata_data else {}
+            elif isinstance(metadata_data, dict):
+                metadata = metadata_data
+            else:
+                metadata = {}
+            
             cache_config = metadata.get('cache_config', {})
             
             # Validate it's for the same model
@@ -69,7 +78,18 @@ async def store_threshold(thread_id: str, threshold: int, model: str, reason: st
     try:
         # Get existing metadata
         result = await client.table('threads').select('metadata').eq('thread_id', thread_id).single().execute()
-        metadata = result.data.get('metadata', {}) if result.data else {}
+        # Handle both string (JSON) and dict types from database
+        if result.data:
+            metadata_data = result.data.get('metadata')
+            if isinstance(metadata_data, str):
+                import json
+                metadata = json.loads(metadata_data) if metadata_data else {}
+            elif isinstance(metadata_data, dict):
+                metadata = metadata_data
+            else:
+                metadata = {}
+        else:
+            metadata = {}
         
         # Update cache config
         metadata['cache_config'] = {

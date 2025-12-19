@@ -572,7 +572,16 @@ class ThreadManager:
                     client = await self.db.client
                     result = await client.table('threads').select('metadata').eq('thread_id', thread_id).single().execute()
                     if result.data:
-                        metadata = result.data.get('metadata', {})
+                        # Handle both string (JSON) and dict types from database
+                        metadata_data = result.data.get('metadata')
+                        if isinstance(metadata_data, str):
+                            import json
+                            metadata = json.loads(metadata_data) if metadata_data else {}
+                        elif isinstance(metadata_data, dict):
+                            metadata = metadata_data
+                        else:
+                            metadata = {}
+                        
                         if metadata.get('cache_needs_rebuild'):
                             force_rebuild = True
                             logger.info("🔄 Rebuilding cache due to compression/model change")
