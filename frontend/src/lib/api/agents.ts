@@ -353,6 +353,17 @@ export const optimisticAgentStart = async (options: {
   memory_enabled?: boolean;
 }): Promise<OptimisticAgentStartResponse> => {
   try {
+    console.log('🚀 [optimisticAgentStart] Starting with:', {
+      thread_id: options.thread_id,
+      project_id: options.project_id,
+      prompt_length: options.prompt?.length || 0,
+      files_count: options.files?.length || 0,
+      model_name: options.model_name,
+      agent_id: options.agent_id,
+      memory_enabled: options.memory_enabled,
+      API_URL
+    });
+
     if (!API_URL) {
       throw new Error(
         'Backend URL is not configured. Set NEXT_PUBLIC_BACKEND_URL in your environment.',
@@ -385,14 +396,28 @@ export const optimisticAgentStart = async (options: {
       formData.append('memory_enabled', String(options.memory_enabled));
     }
 
+    console.log('📤 [optimisticAgentStart] Sending request to:', `${API_URL}/agent/start-optimistic`);
+    console.log('📤 [optimisticAgentStart] FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      console.log(`  - ${key}: ${value instanceof File ? `File(${value.name})` : value}`);
+    }
+
     const response = await backendApi.upload<OptimisticAgentStartResponse>(
       '/agent/start-optimistic',
       formData,
       { showErrors: false, cache: 'no-store' }
     );
 
+    console.log('📥 [optimisticAgentStart] Response:', response);
+
     if (response.error) {
       const status = response.error.status || 500;
+      console.error('❌ [optimisticAgentStart] Request failed:', {
+        status,
+        message: response.error.message,
+        details: response.error.details,
+        full_error: response.error
+      });
       
       if (status === 402) {
         const parsedError = parseTierRestrictionError({

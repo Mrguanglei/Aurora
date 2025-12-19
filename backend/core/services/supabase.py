@@ -352,24 +352,22 @@ class PostgresQueryBuilder:
                 if isinstance(v, (dict, list)):
                     processed_values.append(json.dumps(v))
                 elif isinstance(v, datetime):
-                    # asyncpg 需要 offset-aware datetime；统一转换为 UTC aware 对象
+                    # asyncpg 需要 offset-aware datetime；统一确保使用 timezone.utc
                     if v.tzinfo is None:
-                        v = v.replace(tzinfo=timezone.utc)
+                        # Naive datetime - 添加 UTC timezone
+                        processed_values.append(v.replace(tzinfo=timezone.utc))
+                    elif v.tzinfo == timezone.utc:
+                        # 已经是 UTC timezone.utc,直接使用
+                        processed_values.append(v)
                     else:
-                        v = v.astimezone(timezone.utc)
-                        processed_values.append(v)
-                elif isinstance(v, str) and ('T' in v or v.endswith('Z') or '+' in v):
-                    # 处理 ISO datetime 字符串 -> datetime 对象（UTC aware）
-                    try:
-                        iso_str = v.replace('Z', '+00:00')
-                        parsed = datetime.fromisoformat(iso_str)
-                        if parsed.tzinfo is None:
-                            parsed = parsed.replace(tzinfo=timezone.utc)
-                        else:
-                            parsed = parsed.astimezone(timezone.utc)
-                        processed_values.append(parsed)
-                    except (ValueError, AttributeError):
-                        processed_values.append(v)
+                        # 其他 timezone - 转换为 UTC 并替换 tzinfo 为 timezone.utc
+                        utc_time = v.astimezone(timezone.utc)
+                        # 重新创建 datetime 对象,使用标准的 timezone.utc
+                        processed_values.append(datetime(
+                            utc_time.year, utc_time.month, utc_time.day,
+                            utc_time.hour, utc_time.minute, utc_time.second,
+                            utc_time.microsecond, tzinfo=timezone.utc
+                        ))
                 else:
                     processed_values.append(v)
             
@@ -380,6 +378,15 @@ class PostgresQueryBuilder:
             query = f'INSERT INTO {full_table_name} ({col_names}) VALUES ({placeholders})'
             if self._returning:
                 query += ' RETURNING *'
+            
+            # 调试日志: 输出所有参数的类型和值
+            for i, (col, val) in enumerate(zip(columns, processed_values)):
+                if isinstance(val, datetime):
+                    logger.debug(
+                        f"Param ${i+1} ({col}): type={type(val).__name__}, "
+                        f"value={val}, tzinfo={val.tzinfo}, "
+                        f"tzinfo_type={type(val.tzinfo).__name__ if val.tzinfo else 'None'}"
+                    )
             
             if self._returning:
                 result = await conn.fetchrow(query, *processed_values)
