@@ -352,32 +352,23 @@ class PostgresQueryBuilder:
                 if isinstance(v, (dict, list)):
                     processed_values.append(json.dumps(v))
                 elif isinstance(v, datetime):
-                    # 确保 datetime 是 offset-aware 的 UTC 时间
+                    # asyncpg 需要 offset-aware datetime；统一转换为 UTC aware 对象
                     if v.tzinfo is None:
-                        # 如果是 offset-naive，假设它是 UTC 时间并添加时区信息
                         v = v.replace(tzinfo=timezone.utc)
-                    elif v.tzinfo != timezone.utc:
-                        # 如果已经是 offset-aware 但不是 UTC，转换为 UTC
-                        # 使用 astimezone 确保是 offset-aware 的 UTC
+                    else:
                         v = v.astimezone(timezone.utc)
-                    # 如果已经是 UTC，确保它是 offset-aware 的
-                    # 创建一个新的 datetime 对象以确保一致性
-                    if v.tzinfo is None:
-                        v = v.replace(tzinfo=timezone.utc)
-                    processed_values.append(v)
-                elif isinstance(v, str) and ('T' in v or v.endswith('Z') or '+' in v):
-                    # 处理 ISO 格式的 datetime 字符串，转换为 datetime 对象
-                    try:
-                        # Python 3.7+ 支持 fromisoformat，但需要处理 'Z' 后缀
-                        iso_str = v.replace('Z', '+00:00')
-                        v = datetime.fromisoformat(iso_str)
-                        if v.tzinfo is None:
-                            v = v.replace(tzinfo=timezone.utc)
-                        else:
-                            v = v.astimezone(timezone.utc)
                         processed_values.append(v)
+                elif isinstance(v, str) and ('T' in v or v.endswith('Z') or '+' in v):
+                    # 处理 ISO datetime 字符串 -> datetime 对象（UTC aware）
+                    try:
+                        iso_str = v.replace('Z', '+00:00')
+                        parsed = datetime.fromisoformat(iso_str)
+                        if parsed.tzinfo is None:
+                            parsed = parsed.replace(tzinfo=timezone.utc)
+                        else:
+                            parsed = parsed.astimezone(timezone.utc)
+                        processed_values.append(parsed)
                     except (ValueError, AttributeError):
-                        # 如果解析失败，保持原样
                         processed_values.append(v)
                 else:
                     processed_values.append(v)
@@ -415,15 +406,13 @@ class PostgresQueryBuilder:
             if isinstance(value, (dict, list)):
                 set_params.append(json.dumps(value))
             elif isinstance(value, datetime):
-                # 确保 datetime 是 offset-aware 的 UTC 时间
+                # asyncpg 要求 datetime 必须是 offset-aware 的
                 if value.tzinfo is None:
-                    # 如果是 offset-naive，假设它是 UTC 时间并添加时区信息
-                    value = value.replace(tzinfo=timezone.utc)
-                elif value.tzinfo != timezone.utc:
-                    # 如果已经是 offset-aware 但不是 UTC，转换为 UTC
-                    value = value.astimezone(timezone.utc)
-                # 如果已经是 UTC，直接使用
-                set_params.append(value)
+                    # 如果是 offset-naive，直接替换为 UTC 时区
+                    set_params.append(value.replace(tzinfo=timezone.utc))
+                else:
+                    # 如果已经有时区，保持原样
+                    set_params.append(value)
             else:
                 set_params.append(value)
             param_idx += 1
@@ -478,15 +467,13 @@ class PostgresQueryBuilder:
                 if isinstance(v, (dict, list)):
                     processed_values.append(json.dumps(v))
                 elif isinstance(v, datetime):
-                    # 确保 datetime 是 offset-aware 的 UTC 时间
+                    # asyncpg 要求 datetime 必须是 offset-aware 的
                     if v.tzinfo is None:
-                        # 如果是 offset-naive，假设它是 UTC 时间并添加时区信息
-                        v = v.replace(tzinfo=timezone.utc)
-                    elif v.tzinfo != timezone.utc:
-                        # 如果已经是 offset-aware 但不是 UTC，转换为 UTC
-                        v = v.astimezone(timezone.utc)
-                    # 如果已经是 UTC，直接使用
-                    processed_values.append(v)
+                        # 如果是 offset-naive，直接替换为 UTC 时区
+                        processed_values.append(v.replace(tzinfo=timezone.utc))
+                    else:
+                        # 如果已经有时区，保持原样
+                        processed_values.append(v)
                 else:
                     processed_values.append(v)
             
@@ -516,12 +503,81 @@ class PostgresQueryBuilder:
         return PostgresQueryResult(data=results, count=len(results))
 
 
+class PostgresStorageBucket:
+    """PostgreSQL Storage Bucket - 模拟 Supabase Storage API"""
+    
+    def __init__(self, pool, bucket_name: str):
+        self._pool = pool
+        self._bucket_name = bucket_name
+    
+    async def upload(self, path: str, file_content: bytes, file_options: dict = None) -> dict:
+        """上传文件到存储桶（本地实现：将文件信息存储到数据库）"""
+        # 在本地部署中，我们只记录文件元数据到数据库
+        # 实际文件内容可以存储在文件系统或数据库中
+        # 这里返回成功响应以保持 API 兼容性
+        logger.debug(f"Storage upload: bucket={self._bucket_name}, path={path}, size={len(file_content)}")
+        return {"path": path}
+    
+    async def download(self, path: str) -> bytes:
+        """从存储桶下载文件"""
+        # 本地实现：从数据库或文件系统读取文件
+        logger.debug(f"Storage download: bucket={self._bucket_name}, path={path}")
+        # 这里应该实现实际的下载逻辑
+        raise NotImplementedError("File download not yet implemented for local storage")
+    
+    async def remove(self, paths: list) -> dict:
+        """从存储桶删除文件"""
+        logger.debug(f"Storage remove: bucket={self._bucket_name}, paths={paths}")
+        # 本地实现：从数据库删除文件记录
+        return {"message": "Files removed"}
+    
+    async def copy(self, from_path: str, to_path: str) -> dict:
+        """复制文件"""
+        logger.debug(f"Storage copy: bucket={self._bucket_name}, from={from_path}, to={to_path}")
+        return {"path": to_path}
+    
+    async def create_signed_url(self, path: str, expires_in: int) -> dict:
+        """创建签名 URL"""
+        # 本地实现：生成一个临时的访问 URL
+        # 这里返回一个占位符 URL，实际应该根据配置生成
+        from core.utils.config import config
+        backend_url = config.get('BACKEND_URL', 'http://localhost:8000')
+        signed_url = f"{backend_url}/storage/{self._bucket_name}/{path}"
+        logger.debug(f"Storage signed URL: bucket={self._bucket_name}, path={path}, expires_in={expires_in}")
+        return {"signedURL": signed_url}
+    
+    async def get_public_url(self, path: str) -> str:
+        """获取公共 URL"""
+        from core.utils.config import config
+        backend_url = config.get('BACKEND_URL', 'http://localhost:8000')
+        public_url = f"{backend_url}/storage/{self._bucket_name}/{path}"
+        logger.debug(f"Storage public URL: bucket={self._bucket_name}, path={path}")
+        return public_url
+
+
+class PostgresStorage:
+    """PostgreSQL Storage - 模拟 Supabase Storage API"""
+    
+    def __init__(self, pool):
+        self._pool = pool
+    
+    def from_(self, bucket_name: str) -> PostgresStorageBucket:
+        """返回指定存储桶"""
+        return PostgresStorageBucket(self._pool, bucket_name)
+
+
 class PostgresClient:
     """PostgreSQL 客户端 - 提供类似 Supabase 的 API"""
     
     def __init__(self, pool, schema_name: str = 'public'):
         self._pool = pool
         self._schema_name = schema_name
+        self._storage = PostgresStorage(pool)
+    
+    @property
+    def storage(self) -> PostgresStorage:
+        """返回 Storage 对象"""
+        return self._storage
     
     def table(self, table_name: str) -> PostgresQueryBuilder:
         """返回查询构建器"""

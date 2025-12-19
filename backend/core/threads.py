@@ -397,7 +397,7 @@ async def create_thread(
             "thread_id": str(uuid.uuid4()), 
             "project_id": project_id, 
             "account_id": account_id,
-            "created_at": datetime.now()  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
+            "created_at": datetime.now(timezone.utc).isoformat()  # 转换为 ISO 格式字符串
         }
 
         from core.utils.logger import structlog
@@ -438,7 +438,14 @@ async def get_thread_messages(
     from core.utils.auth_utils import get_optional_user_id
     user_id = await get_optional_user_id(request)
     
-    await verify_and_authorize_thread_access(client, thread_id, user_id)
+    try:
+        await verify_and_authorize_thread_access(client, thread_id, user_id)
+    except HTTPException as e:
+        if e.status_code == 404:
+            # Thread 不存在时返回空消息列表,避免前端报错
+            logger.debug(f"Thread {thread_id} not found, returning empty messages")
+            return {"messages": []}
+        raise
     try:
         from core.utils.message_migration import migrate_thread_messages, needs_migration
         
@@ -511,6 +518,8 @@ async def get_thread_messages(
         all_messages = optimize_messages(raw_messages)
         
         return {"messages": all_messages}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching messages for thread {thread_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch messages: {str(e)}")

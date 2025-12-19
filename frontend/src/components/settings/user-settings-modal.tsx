@@ -56,6 +56,7 @@ import {
     useDeleteAccountImmediately
 } from '@/hooks/account/use-account-deletion';
 import { useAuth } from '@/components/AuthProvider';
+import { useAccounts } from '@/hooks/account';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -282,6 +283,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const { data: accounts } = useAccounts();
 
     const { data: deletionStatus, isLoading: isCheckingStatus } = useAccountDeletionStatus();
     const requestDeletion = useRequestAccountDeletion();
@@ -289,21 +291,22 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
     const deleteImmediately = useDeleteAccountImmediately();
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            setIsLoading(true);
-            // In private deployment, user data comes from AuthProvider
-            if (user) {
-                setUserName(user.username || user.email?.split('@')[0] || '');
-                setUserEmail(user.email || '');
-                // Avatar URL would come from user object if backend supports it
-                setAvatarUrl('');
-            }
+        // Use accounts data from React Query (which auto-updates when invalidated)
+        // Use the same logic as sidebar-left.tsx to get personal account
+        if (accounts && accounts.length > 0) {
+            const personalAccount = (accounts.find((account: any) => account.personal_account) || accounts[0]) as any;
+            // Always update from accounts data when it's available
+            setUserName(personalAccount.username || personalAccount.email?.split('@')[0] || '');
+            setUserEmail(personalAccount.email || '');
+            setAvatarUrl(personalAccount.avatar_url || '');
             setIsLoading(false);
-        };
-
-        fetchUserData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        } else if (user && (!accounts || accounts.length === 0)) {
+            // Fallback to AuthProvider data if accounts not loaded yet or empty
+            setUserName(user.username || user.email?.split('@')[0] || '');
+            setUserEmail(user.email || '');
+            setIsLoading(false);
+        }
+    }, [accounts, user]);
 
     const getInitials = (name: string) => {
         return name
@@ -338,12 +341,35 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
 
         setIsUploadingAvatar(true);
         try {
-            // Avatar upload not supported in private deployment yet
-            toast.info('Avatar upload not yet available in private deployment');
-            return null;
+            const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+            const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
+            const authToken = token ? JSON.parse(token)?.access_token : null;
+
+            if (!authToken) {
+                throw new Error('No authentication token found');
+            }
+
+            const formData = new FormData();
+            formData.append('file', avatarFile);
+
+            const response = await fetch(`${API_URL}/account/avatar`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || 'Failed to upload avatar');
+            }
+
+            const result = await response.json();
+            return result.avatar_url || null;
         } catch (error) {
             console.error('Avatar upload failed:', error);
-            toast.error(t('profilePicture.uploadFailed'));
+            toast.error(error instanceof Error ? error.message : t('profilePicture.uploadFailed'));
             return null;
         } finally {
             setIsUploadingAvatar(false);
@@ -377,6 +403,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                 },
                 body: JSON.stringify({
                     username: userName,
+                    avatar_url: newAvatarUrl,  // 如果上传了新头像，更新 avatar_url
                 }),
             });
 
@@ -386,6 +413,9 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
             }
 
             const updatedUser = await response.json();
+            
+            // Invalidate accounts query to refresh avatar in sidebar
+            queryClient.invalidateQueries({ queryKey: ['accounts'] });
             
             // Update local state
             toast.success(t('profileUpdateSuccess'));

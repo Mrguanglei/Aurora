@@ -35,6 +35,14 @@ import { useIsMobile } from '@/hooks/utils';
 import { cn } from '@/lib/utils';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAdminRole } from '@/hooks/admin';
+import { useAccounts } from '@/hooks/account';
+import { GetAccountsResponse } from '@usebasejump/shared';
+
+// Extend GetAccountsResponse to include avatar_url and username which are returned by our backend
+type AccountWithAvatar = GetAccountsResponse[0] & { 
+  avatar_url?: string | null;
+  username?: string | null;
+};
 import posthog from 'posthog-js';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
 import { isLocalMode } from '@/lib/config';
@@ -132,17 +140,26 @@ export function SidebarLeft({
   // Use React Query hook for admin role instead of direct fetch
   const { data: adminRoleData } = useAdminRole();
   const isAdmin = adminRoleData?.isAdmin ?? false;
+  const { data: accounts } = useAccounts();
 
   useEffect(() => {
     if (authUser) {
+      // Get avatar_url and username from accounts data (which has the latest data)
+      // In local deployment, each user has one personal account
+      const personalAccount = (accounts?.find((account) => account.personal_account) || accounts?.[0]) as AccountWithAvatar | undefined;
+      const avatarUrl = personalAccount?.avatar_url || '';
+      // Use username from accounts data first (it's updated after profile changes)
+      // Fallback to authUser.username, then email, then 'User'
+      const displayName = personalAccount?.username || authUser.username || authUser.email?.split('@')[0] || 'User';
+      
       setUser({
-        name: authUser.username || authUser.email?.split('@')[0] || 'User',
+        name: displayName,
         email: authUser.email || '',
-        avatar: '',  // avatar_url not available in LocalUser
+        avatar: avatarUrl,
         isAdmin: isAdmin,
       });
     }
-  }, [isAdmin, authUser]);
+  }, [isAdmin, authUser, accounts]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

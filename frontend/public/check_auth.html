@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Aurora Auth Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Aurora Authentication Checker</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="checkAuth()">检查认证状态</button>
+    <button onclick="testAdminAPI()">测试管理员API</button>
+    <button onclick="clearAuth()">清除认证信息</button>
+
+    <script>
+        function checkAuth() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            
+            // Check localStorage
+            const authToken = localStorage.getItem('auth-token');
+            
+            if (!authToken) {
+                resultsDiv.innerHTML += `
+                    <div class="result error">
+                        <h3>❌ 未找到认证Token</h3>
+                        <p>localStorage 中没有 'auth-token'</p>
+                        <p><strong>解决方案：</strong>请先登录到 Aurora 应用</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML += `
+                <div class="result success">
+                    <h3>✅ 找到认证Token</h3>
+                    <p>localStorage 中存在 'auth-token'</p>
+                </div>
+            `;
+            
+            try {
+                const parsed = JSON.parse(authToken);
+                
+                if (parsed.access_token) {
+                    resultsDiv.innerHTML += `
+                        <div class="result success">
+                            <h3>✅ Access Token存在</h3>
+                        </div>
+                    `;
+                    
+                    // Decode JWT
+                    try {
+                        const payload = JSON.parse(atob(parsed.access_token.split('.')[1]));
+                        resultsDiv.innerHTML += `
+                            <div class="result success">
+                                <h3>✅ Token信息</h3>
+                                <pre>${JSON.stringify(payload, null, 2)}</pre>
+                            </div>
+                        `;
+                    } catch (e) {
+                        resultsDiv.innerHTML += `
+                            <div class="result error">
+                                <h3>❌ Token解析失败</h3>
+                                <p>${e.message}</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    resultsDiv.innerHTML += `
+                        <div class="result error">
+                            <h3>❌ Access Token不存在</h3>
+                            <p>auth-token对象中没有access_token字段</p>
+                        </div>
+                    `;
+                }
+                
+                if (parsed.refresh_token) {
+                    resultsDiv.innerHTML += `
+                        <div class="result success">
+                            <h3>✅ Refresh Token存在</h3>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                resultsDiv.innerHTML += `
+                    <div class="result error">
+                        <h3>❌ Token格式错误</h3>
+                        <p>${e.message}</p>
+                        <pre>${authToken}</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testAdminAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="result">测试中...</div>';
+            
+            const authToken = localStorage.getItem('auth-token');
+            if (!authToken) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ 无法测试</h3>
+                        <p>请先登录</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const parsed = JSON.parse(authToken);
+                const token = parsed.access_token;
+                
+                const response = await fetch('http://localhost:8011/v1/admin/analytics/summary', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ 管理员API测试成功</h3>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ 管理员API测试失败</h3>
+                            <p>状态码: ${response.status}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ 请求失败</h3>
+                        <p>${e.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('auth-token');
+            document.getElementById('results').innerHTML = `
+                <div class="result warning">
+                    <h3>⚠️ 认证信息已清除</h3>
+                    <p>请重新登录</p>
+                </div>
+            `;
+        }
+        
+        // Auto check on page load
+        window.onload = checkAuth;
+    </script>
+</body>
+</html>

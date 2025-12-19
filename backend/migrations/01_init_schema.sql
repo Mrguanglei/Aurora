@@ -42,6 +42,10 @@ CREATE INDEX IF NOT EXISTS idx_projects_account_id ON projects(account_id);
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
 
+-- 添加头像 URL 字段
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
 -- ============================================================================
 -- Agent 相关表
 -- ============================================================================
@@ -80,18 +84,31 @@ CREATE INDEX IF NOT EXISTS idx_agents_current_version ON agents(current_version_
 CREATE TABLE IF NOT EXISTS threads (
     thread_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(project_id) ON DELETE CASCADE,
     agent_id UUID REFERENCES agents(agent_id) ON DELETE SET NULL,
     title VARCHAR(255),
     status VARCHAR(50) DEFAULT 'pending',
-    initialization_started_at TIMESTAMP WITHOUT TIME ZONE,
+    initialization_started_at TIMESTAMP WITH TIME ZONE,
     initialization_error TEXT,
-    initialization_completed_at TIMESTAMP WITHOUT TIME ZONE,
+    initialization_completed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     archived_at TIMESTAMP WITH TIME ZONE
 );
 
+-- 修复现有表的列类型（如果表已存在）
+ALTER TABLE threads
+ALTER COLUMN initialization_started_at TYPE TIMESTAMP WITH TIME ZONE USING initialization_started_at AT TIME ZONE 'UTC';
+
+ALTER TABLE threads
+ALTER COLUMN initialization_completed_at TYPE TIMESTAMP WITH TIME ZONE USING initialization_completed_at AT TIME ZONE 'UTC';
+
+-- 为现有表添加 project_id 列（如果不存在）
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(project_id) ON DELETE CASCADE;
+
 CREATE INDEX IF NOT EXISTS idx_threads_account_id ON threads(account_id);
+CREATE INDEX IF NOT EXISTS idx_threads_project_id ON threads(project_id);
 CREATE INDEX IF NOT EXISTS idx_threads_agent_id ON threads(agent_id);
 CREATE INDEX IF NOT EXISTS idx_threads_created_at ON threads(created_at);
 

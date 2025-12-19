@@ -36,7 +36,7 @@ async def initialize_thread_background(
     try:
         await client.table('threads').update({
             "status": "initializing",
-            "initialization_started_at": datetime.now(timezone.utc)  # 保持 offset-aware
+            "initialization_started_at": datetime.now(timezone.utc).isoformat()
         }).eq('thread_id', thread_id).execute()
         
         logger.debug(f"Thread {thread_id} marked as initializing")
@@ -59,7 +59,7 @@ async def initialize_thread_background(
         
         await client.table('threads').update({
             "status": "ready",
-            "initialization_completed_at": datetime.now(timezone.utc)  # 保持 offset-aware
+            "initialization_completed_at": datetime.now(timezone.utc).isoformat()
         }).eq('thread_id', thread_id).execute()
         
         logger.info(f"Thread {thread_id} marked as ready, dispatching agent: {agent_run_id}")
@@ -85,7 +85,7 @@ async def initialize_thread_background(
             await client.table('threads').update({
                 "status": "error",
                 "initialization_error": str(e),
-                "initialization_completed_at": datetime.now(timezone.utc)  # 保持 offset-aware
+                "initialization_completed_at": datetime.now(timezone.utc).isoformat()
             }).eq('thread_id', thread_id).execute()
         except Exception as update_error:
             logger.error(f"Failed to update thread status to error: {str(update_error)}")
@@ -113,7 +113,7 @@ async def create_thread_optimistically(
             "project_id": project_id,
             "account_id": account_id,
             "name": placeholder_name,
-            "created_at": datetime.now()  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
+            "created_at": datetime.now(timezone.utc).isoformat()  # 使用 ISO 格式字符串
         }).execute()
         
         logger.debug(f"Created project {project_id} optimistically")
@@ -151,12 +151,14 @@ async def create_thread_optimistically(
             "project_id": project_id,
             "account_id": account_id,
             "status": "pending",
-            "created_at": datetime.now()  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
+            "created_at": datetime.now(timezone.utc).isoformat()  # 使用 ISO 格式字符串
         }
         if memory_enabled is not None:
             thread_data["memory_enabled"] = memory_enabled
         
-        await client.table('threads').insert(thread_data).execute()
+        logger.debug(f"Attempting to insert thread {thread_id} with data: {thread_data}")
+        result = await client.table('threads').insert(thread_data).execute()
+        logger.debug(f"Thread insert result: data={result.data}, count={result.count}")
         
         logger.debug(f"Created thread {thread_id} with status=pending, memory_enabled={memory_enabled}")
         
@@ -178,7 +180,7 @@ async def create_thread_optimistically(
         "type": "user",
         "is_llm_message": True,
         "content": {"role": "user", "content": message_content},
-        "created_at": datetime.now(timezone.utc)  # 保持 offset-aware
+        "created_at": datetime.now(timezone.utc).isoformat()
     }).execute()
     
     logger.debug(f"Created user message for thread {thread_id} with content length: {len(message_content)}")

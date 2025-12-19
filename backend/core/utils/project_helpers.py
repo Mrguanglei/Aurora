@@ -117,14 +117,14 @@ async def generate_and_update_project_name(project_id: str, prompt: str):
             logger.warning(f"Failed to get valid response from LLM for project {project_id} naming. Response: {response}")
 
         if generated_name:
-            # Store title, icon, and category in dedicated fields
+            # Store title and icon in dedicated fields
+            # Note: category column doesn't exist in local PostgreSQL schema
             update_data = {"name": generated_name}
             if selected_icon:
                 update_data["icon_name"] = selected_icon
-            if selected_category:
-                update_data["category"] = selected_category
+            # Skip category update as the column doesn't exist in local deployment
             
-            logger.info(f"Storing project {project_id} with title: '{generated_name}', icon: '{selected_icon}', category: '{selected_category}'")
+            logger.info(f"Storing project {project_id} with title: '{generated_name}', icon: '{selected_icon}'")
             
             update_result = await client.table('projects').update(update_data).eq("project_id", project_id).execute()
             if hasattr(update_result, 'data') and update_result.data:

@@ -349,7 +349,7 @@ async def _create_agent_run_record(
     agent_run = await client.table('agent_runs').insert({
         "thread_id": thread_id,
         "status": "running",
-        "started_at": datetime.now(),  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
+        "started_at": datetime.now(timezone.utc),  # 使用 offset-aware UTC datetime
         "agent_id": agent_config.get('agent_id') if agent_config else None,
         "agent_version_id": agent_config.get('current_version_id') if agent_config else None,
         "metadata": run_metadata
@@ -708,7 +708,7 @@ async def start_agent_run(
                 "thread_id": thread_id,
                 "project_id": project_id,
                 "account_id": account_id,
-                "created_at": datetime.now()  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
+                "created_at": datetime.now(timezone.utc)  # 使用 offset-aware UTC datetime
             }).execute()
             logger.debug(f"⏱️ [TIMING] Thread created: {(time.time() - t_thread) * 1000:.1f}ms")
         except Exception as thread_error:
@@ -1165,7 +1165,14 @@ async def get_agent_runs(thread_id: str, user_id: str = Depends(verify_and_get_u
     )
     logger.debug(f"Fetching agent runs for thread: {thread_id}")
     client = await utils.db.client
-    await verify_and_authorize_thread_access(client, thread_id, user_id)
+    try:
+        await verify_and_authorize_thread_access(client, thread_id, user_id)
+    except HTTPException as e:
+        if e.status_code == 404:
+            # Thread 不存在时返回空 agent_runs 列表,避免前端报错
+            logger.debug(f"Thread {thread_id} not found, returning empty agent_runs")
+            return {"agent_runs": []}
+        raise
     agent_runs = await client.table('agent_runs').select('id, thread_id, status, started_at, completed_at, error, created_at, updated_at').eq("thread_id", thread_id).order('created_at', desc=True).execute()
     logger.debug(f"Found {len(agent_runs.data)} agent runs for thread: {thread_id}")
     return {"agent_runs": agent_runs.data}
