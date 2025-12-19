@@ -2,7 +2,6 @@ import { toast } from 'sonner';
 import { saveAs } from 'file-saver';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
-import { createClient } from '@/lib/supabase/client';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 

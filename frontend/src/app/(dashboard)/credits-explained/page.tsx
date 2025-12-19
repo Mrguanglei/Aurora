@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import { Zap, Clock, Sparkles, Info, RotateCcw, Infinity } from 'lucide-react';
 import {
   Card,

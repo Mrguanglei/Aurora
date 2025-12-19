@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';

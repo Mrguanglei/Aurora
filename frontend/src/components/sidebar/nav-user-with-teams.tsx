@@ -86,7 +86,7 @@ export function NavUserWithTeams({
   const router = useRouter();
   const { isMobile } = useSidebar();
   const { data: accounts } = useAccounts();
-  const { logout } = useAuth();
+  const { signOut } = useAuth();
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [settingsTab, setSettingsTab] = React.useState<'general' | 'usage' | 'env-manager'>('general');
@@ -170,7 +170,7 @@ export function NavUserWithTeams({
   };
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     router.push('/auth');
   };
 

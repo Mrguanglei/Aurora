@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page may use client-side features
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';

@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import { useState, useRef, useEffect, Suspense, lazy } from 'react';
 import { MapPin } from 'lucide-react';
 import { AnimatedBg } from '@/components/ui/animated-bg';

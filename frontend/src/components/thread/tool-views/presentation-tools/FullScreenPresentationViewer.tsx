@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { downloadPresentation, DownloadFormat, handleGoogleSlidesUpload } from '../utils/presentation-utils';
+import { useAuth } from '@/components/AuthProvider';
 
 interface SlideMetadata {
   title: string;
@@ -55,6 +56,7 @@ export function FullScreenPresentationViewer({
   sandboxUrl,
   initialSlide = 1,
 }: FullScreenPresentationViewerProps) {
+  const { token } = useAuth();
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
   const [isLoading, setIsLoading] = useState(false);
@@ -290,7 +292,7 @@ export function FullScreenPresentationViewer({
     setDownloadState(true);
     try {
       if (format === DownloadFormat.GOOGLE_SLIDES) {
-        const result = await handleGoogleSlidesUpload(sandboxUrl, `/workspace/presentations/${presentationName}`);
+        const result = await handleGoogleSlidesUpload(sandboxUrl, `/workspace/presentations/${presentationName}`, token || '');
         // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
           return; // Don't set loading false, user is being redirected

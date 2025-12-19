@@ -349,7 +349,7 @@ async def _create_agent_run_record(
     agent_run = await client.table('agent_runs').insert({
         "thread_id": thread_id,
         "status": "running",
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": datetime.now(timezone.utc),  # 直接传递 datetime 对象，不要用 isoformat()
         "agent_id": agent_config.get('agent_id') if agent_config else None,
         "agent_version_id": agent_config.get('current_version_id') if agent_config else None,
         "metadata": run_metadata

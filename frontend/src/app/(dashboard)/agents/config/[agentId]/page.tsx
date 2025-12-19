@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAgent } from '@/hooks/agents/use-agents';

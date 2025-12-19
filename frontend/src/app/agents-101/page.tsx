@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Circle, ArrowRight, ArrowDown } from 'lucide-react';

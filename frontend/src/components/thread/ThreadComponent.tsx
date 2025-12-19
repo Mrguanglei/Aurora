@@ -73,7 +73,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const isAuthenticated = !!user;
   
   const isNewThread = searchParams.get('new') === 'true';
@@ -276,7 +276,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             (async () => {
               const uploadPromise = handleGoogleSlidesUpload(
                 sandbox_url,
-                presentation_path
+                presentation_path,
+                token || ''
               );
 
               const loadingToast = toast.loading('Google authentication successful! Uploading presentation...');

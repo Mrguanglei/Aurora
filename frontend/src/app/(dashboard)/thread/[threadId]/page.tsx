@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useThreadQuery } from '@/hooks/threads/use-threads';

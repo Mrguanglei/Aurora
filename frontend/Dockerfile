@@ -41,6 +41,8 @@ COPY . .
 # Learn more here: https://nextjs.org/telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_OUTPUT=standalone
+# Skip static page generation during build (prevents prerender errors with client-side auth)
+ENV NEXT_SKIP_STATIC_OPTIMIZATION=true
 
 # 接受並使用构建时的编辨伙变量
 ARG NEXT_PUBLIC_BACKEND_URL
@@ -49,9 +51,9 @@ ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:8011/v1}
 ENV NEXT_PUBLIC_ENV_MODE=${NEXT_PUBLIC_ENV_MODE}
 
 RUN \
-  if [ -f yarn.lock ]; then yarn run build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+  if [ -f yarn.lock ]; then SKIP_EXPORT=true yarn run build; \
+  elif [ -f package-lock.json ]; then SKIP_EXPORT=true npm run build; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && SKIP_EXPORT=true pnpm run build; \
   else echo "Lockfile not found." && exit 1; \
   fi
 

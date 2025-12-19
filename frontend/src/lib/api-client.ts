@@ -69,6 +69,9 @@ async function makeRequest<T = any>(
     const token = getAuthToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      // Debug: Log when token is missing
+      console.warn('⚠️ No auth token found in localStorage for request:', options.method || 'GET', url);
     }
 
     const response = await fetch(url, {

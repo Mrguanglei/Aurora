@@ -164,7 +164,19 @@ export const checkPendingGoogleDocsUpload = async () => {
         
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        await handleGoogleDocsUpload(intent.sandbox_url, intent.doc_path);
+        // Get token from localStorage
+        const token = (() => {
+          try {
+            const authData = localStorage.getItem('auth-token');
+            if (authData) {
+              const parsed = JSON.parse(authData);
+              return parsed?.access_token || null;
+            }
+          } catch {}
+          return null;
+        })();
+        
+        await handleGoogleDocsUpload(intent.sandbox_url, intent.doc_path, token);
         
         const url = new URL(window.location.href);
         url.searchParams.delete('google_auth');

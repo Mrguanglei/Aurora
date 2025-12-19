@@ -29,7 +29,8 @@ async def regenerate_signed_link(
         db = DBConnection()
         client = await db.client
         
-        account_result = await client.schema("basejump").table('account_user').select('account_id').eq('user_id', user_id).execute()
+        # Use public schema instead of basejump schema
+        account_result = await client.table('account_user').select('account_id').eq('user_id', user_id).execute()
         if not account_result.data:
             raise HTTPException(status_code=403, detail="User not found in any account")
         
@@ -110,7 +111,8 @@ async def get_file_upload(
         
         file_upload = file_upload_result.data[0]
         
-        account_result = await client.schema("basejump").table('account_user').select('account_id').eq('user_id', user_id).execute()
+        # Use public schema instead of basejump schema
+        account_result = await client.table('account_user').select('account_id').eq('user_id', user_id).execute()
         if not account_result.data:
             raise HTTPException(status_code=403, detail="User not found in any account")
         

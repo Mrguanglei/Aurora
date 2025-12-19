@@ -5,6 +5,7 @@
 """
 
 from typing import Optional, Any, List, Dict
+from datetime import datetime, timezone
 from core.utils.logger import logger
 from core.services.postgres import PostgresConnection
 import threading
@@ -16,6 +17,25 @@ class PostgresQueryResult:
     def __init__(self, data: List[Any] = None, count: int = 0):
         self.data = data or []
         self.count = count
+
+
+class PostgresNotBuilder:
+    """否定条件构建器 - 用于 not_.is_(), not_.in_() 等"""
+    def __init__(self, builder: 'PostgresQueryBuilder'):
+        self._builder = builder
+    
+    def is_(self, column: str, value: Any) -> 'PostgresQueryBuilder':
+        """IS NOT 条件"""
+        # 如果值是字符串 'null'，转换为 None，这样会生成 IS NOT NULL
+        if value == 'null' or value is None:
+            value = None
+        self._builder._filters.append(('is_not', column, value))
+        return self._builder
+    
+    def in_(self, column: str, values: List[Any]) -> 'PostgresQueryBuilder':
+        """NOT IN 条件"""
+        self._builder._filters.append(('not_in', column, values))
+        return self._builder
 
 
 class PostgresQueryBuilder:
@@ -142,6 +162,11 @@ class PostgresQueryBuilder:
         self._maybe_single = True
         self._limit_val = 1
         return self
+    
+    @property
+    def not_(self) -> 'PostgresNotBuilder':
+        """返回否定条件构建器"""
+        return PostgresNotBuilder(self)
 
     def _build_where_clause(self) -> tuple:
         """构建 WHERE 子句和参数"""
@@ -192,6 +217,21 @@ class PostgresQueryBuilder:
                     conditions.append(f'"{column}" IS ${param_idx}')
                     params.append(value)
                     param_idx += 1
+            elif op == 'is_not':
+                if value is None:
+                    conditions.append(f'"{column}" IS NOT NULL')
+                else:
+                    conditions.append(f'"{column}" IS NOT ${param_idx}')
+                    params.append(value)
+                    param_idx += 1
+            elif op == 'not_in':
+                if value:
+                    placeholders = ', '.join(f'${i}' for i in range(param_idx, param_idx + len(value)))
+                    conditions.append(f'"{column}" NOT IN ({placeholders})')
+                    params.extend(value)
+                    param_idx += len(value)
+                else:
+                    conditions.append('TRUE')  # Empty NOT IN clause
             elif op == 'in':
                 if value:
                     placeholders = ', '.join(f'${i}' for i in range(param_idx, param_idx + len(value)))
@@ -303,11 +343,19 @@ class PostgresQueryBuilder:
             columns = list(row.keys())
             values = list(row.values())
             
-            # 处理 JSON 字段
+            # 处理 JSON 字段和 datetime 对象
             processed_values = []
             for v in values:
                 if isinstance(v, (dict, list)):
                     processed_values.append(json.dumps(v))
+                elif isinstance(v, datetime):
+                    # 确保 datetime 是 offset-aware 的 UTC 时间
+                    if v.tzinfo is None:
+                        # 如果是 offset-naive，假设它是 UTC 时间
+                        v = v.replace(tzinfo=timezone.utc)
+                    # 转换为 UTC 时间（如果已经是 offset-aware）
+                    v = v.astimezone(timezone.utc)
+                    processed_values.append(v)
                 else:
                     processed_values.append(v)
             

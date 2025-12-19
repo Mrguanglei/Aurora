@@ -456,7 +456,8 @@ async def ensure_project_sandbox_active(
         account_id = project_data.get('account_id')
         
         if account_id:
-            account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+            # Use public schema instead of basejump schema
+            account_user_result = await client.table('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
             if not (account_user_result.data and len(account_user_result.data) > 0):
                 logger.error(f"User {user_id} not authorized to access project {project_id}")
                 raise HTTPException(status_code=403, detail="Not authorized to access this project")
@@ -511,7 +512,8 @@ async def get_project_sandbox_details(
         account_id = project_data.get('account_id')
         
         if account_id:
-            account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+            # Use public schema instead of basejump schema
+            account_user_result = await client.table('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
             if not (account_user_result.data and len(account_user_result.data) > 0):
                 logger.error(f"User {user_id} not authorized to access project {project_id}")
                 raise HTTPException(status_code=403, detail="Not authorized to access this project")
@@ -574,7 +576,8 @@ async def create_file_in_project(
     
     # Verify user has access to this project
     if account_id:
-        account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+        # Use public schema instead of basejump schema
+        account_user_result = await client.table('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
         if not (account_user_result.data and len(account_user_result.data) > 0):
             logger.error(f"User {user_id} not authorized to access project {project_id}")
             raise HTTPException(status_code=403, detail="Not authorized to access this project")

@@ -31,6 +31,7 @@ services:
       POSTGRES_DB: aurora_db
       POSTGRES_USER: aurora_user
       POSTGRES_PASSWORD: aurora_password_change_me
+      TZ: Asia/Shanghai
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
@@ -74,6 +75,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
+      - TZ=Asia/Shanghai
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,6 +101,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
+      - TZ=Asia/Shanghai
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,6 +124,7 @@ services:
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
       - NEXT_PUBLIC_ENV_MODE=staging
+      - TZ=Asia/Shanghai
     depends_on:
       backend:
         condition: service_started

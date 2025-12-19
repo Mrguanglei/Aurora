@@ -1,9 +1,15 @@
 import type { NextConfig } from 'next';
 
 const nextConfig = (): NextConfig => ({
-  output: (process.env.NEXT_OUTPUT as 'standalone') || undefined,
+  // Force standalone output (required for Docker deployment)
+  output: 'standalone',
   
-  // Performance optimizations
+  // Disable static page export to prevent prerender errors with client-side auth
+  // This forces all pages to be server-rendered at runtime
+  distDir: '.next',
+  
+  // Disable static page generation completely
+  // This prevents "useAuth must be used within an AuthProvider" errors during build
   experimental: {
     // Optimize package imports for faster builds and smaller bundles
     optimizePackageImports: [

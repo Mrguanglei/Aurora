@@ -39,6 +39,7 @@ import { DownloadFormat } from '../utils/presentation-utils';
 import { PresentationSlideCard } from './PresentationSlideCard';
 import { usePresentationViewerStore } from '@/stores/presentation-viewer-store';
 import { backendApi } from '@/lib/api-client';
+import { useAuth } from '@/components/AuthProvider';
 
 interface SlideMetadata {
   title: string;
@@ -72,6 +73,7 @@ export function PresentationViewer({
   project,
   showHeader = true,
 }: PresentationViewerProps) {
+  const { token } = useAuth();
   const [metadata, setMetadata] = useState<PresentationMetadata | null>(null);
 
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
@@ -538,7 +540,7 @@ export function PresentationViewer({
     setIsDownloading(true);
     try{
       if (format === DownloadFormat.GOOGLE_SLIDES){
-        const result = await handleGoogleSlidesUpload(project!.sandbox!.sandbox_url, `/workspace/presentations/${extractedPresentationName}`);
+        const result = await handleGoogleSlidesUpload(project!.sandbox!.sandbox_url, `/workspace/presentations/${extractedPresentationName}`, token || '');
         // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
           return; // Don't set loading false, user is being redirected

@@ -4,7 +4,6 @@ import { NextIntlClientProvider } from 'next-intl';
 import { ReactNode, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
 import { detectBestLocale } from '@/lib/utils/geo-detection';
-import { useAuth } from '@/components/AuthProvider';
 
 // Preload default translations synchronously for immediate render
 // This prevents the loading spinner from blocking FCP

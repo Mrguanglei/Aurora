@@ -13,6 +13,9 @@ import { roobertMono } from './fonts/roobert-mono';
 import { Suspense, lazy } from 'react';
 import { I18nProvider } from '@/components/i18n-provider';
 
+// Force all pages to be dynamically rendered (prevents AuthProvider prerender errors)
+export const dynamic = 'force-dynamic';
+
 const Analytics = lazy(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })));
 const SpeedInsights = lazy(() => import('@vercel/speed-insights/next').then(mod => ({ default: mod.SpeedInsights })));
 const GoogleAnalytics = lazy(() => import('@next/third-parties/google').then(mod => ({ default: mod.GoogleAnalytics })));
@@ -239,24 +242,24 @@ export default function RootLayout({
               <ReactQueryProvider>
                 {children}
                 <Toaster />
+                {/* Analytics - lazy loaded to not block FCP */}
+                <Suspense fallback={null}>
+                  <Analytics />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <GoogleAnalytics gaId="G-QSCBD7F1SD" />
+                  <GoogleAnalytics gaId="G-6ETJFB3PT3" />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <SpeedInsights />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <PostHogIdentify />
+                </Suspense>
               </ReactQueryProvider>
               </PresenceProvider>
             </AuthProvider>
           </I18nProvider>
-          {/* Analytics - lazy loaded to not block FCP */}
-          <Suspense fallback={null}>
-            <Analytics />
-          </Suspense>
-          <Suspense fallback={null}>
-            <GoogleAnalytics gaId="G-QSCBD7F1SD" />
-            <GoogleAnalytics gaId="G-6ETJFB3PT3" />
-          </Suspense>
-          <Suspense fallback={null}>
-            <SpeedInsights />
-          </Suspense>
-          <Suspense fallback={null}>
-            <PostHogIdentify />
-          </Suspense>
         </ThemeProvider>
       </body>
     </html>

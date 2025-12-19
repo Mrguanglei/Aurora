@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side auth and API calls
+export const dynamic = 'force-dynamic';
+
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

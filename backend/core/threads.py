@@ -452,7 +452,7 @@ async def get_thread_messages(
                 if optimized:
                     # Need content for migration check, will strip later
                     query = client.table('messages').select(
-                        'message_id,thread_id,type,is_llm_message,content,metadata,created_at,updated_at,agent_id'
+                        'message_id,thread_id,type,is_llm_message,content,metadata,created_at'
                     ).eq('thread_id', thread_id).in_('type', allowed_types)
                 else:
                     query = client.table('messages').select('*').eq('thread_id', thread_id)
@@ -481,7 +481,6 @@ async def get_thread_messages(
                     'is_llm_message': msg.get('is_llm_message'),
                     'metadata': msg.get('metadata', {}),
                     'created_at': msg.get('created_at'),
-                    'updated_at': msg.get('updated_at'),
                     'agent_id': msg.get('agent_id'),
                 }
                 # Only include content for user messages
@@ -732,10 +731,25 @@ async def delete_thread(
         sandbox_id = None
         
         if project_id:
-            project_result = await client.table('projects').select('sandbox').eq('project_id', project_id).execute()
-            if project_result.data and project_result.data[0].get('sandbox'):
-                sandbox_data = project_result.data[0]['sandbox']
-                sandbox_id = sandbox_data.get('id') if isinstance(sandbox_data, dict) else None
+            # Try to get sandbox info from cache first (for local PostgreSQL, sandbox is not in DB)
+            try:
+                from core.runtime_cache import get_cached_project_metadata
+                cached_project = await get_cached_project_metadata(project_id)
+                if cached_project and cached_project.get('sandbox'):
+                    sandbox_data = cached_project['sandbox']
+                    sandbox_id = sandbox_data.get('id') if isinstance(sandbox_data, dict) else None
+            except Exception as cache_error:
+                logger.debug(f"Could not get sandbox from cache for project {project_id}: {cache_error}")
+                # If cache fails, try to query database (for Supabase deployments)
+                try:
+                    project_result = await client.table('projects').select('sandbox').eq('project_id', project_id).execute()
+                    if project_result.data and project_result.data[0].get('sandbox'):
+                        sandbox_data = project_result.data[0]['sandbox']
+                        sandbox_id = sandbox_data.get('id') if isinstance(sandbox_data, dict) else None
+                except Exception as db_error:
+                    # Column doesn't exist in local PostgreSQL, skip sandbox deletion
+                    logger.debug(f"Could not get sandbox from database for project {project_id}: {db_error}")
+                    sandbox_id = None
         
         if sandbox_id:
             try:

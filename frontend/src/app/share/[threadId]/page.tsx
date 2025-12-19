@@ -1,6 +1,9 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
+import dynamicImport from 'next/dynamic';
 import { SharePageWrapper } from './_components/SharePageWrapper';
 import React from 'react';
 import {
@@ -8,7 +11,7 @@ import {
 } from '@/components/thread/types';
 
 // Dynamic import to avoid SSR issues with browser-only dependencies
-const ThreadComponent = dynamic(
+const ThreadComponent = dynamicImport(
   () => import('@/components/thread/ThreadComponent').then(mod => ({ default: mod.ThreadComponent })),
   { ssr: false }
 );

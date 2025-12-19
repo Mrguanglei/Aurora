@@ -397,13 +397,15 @@ async def verify_and_authorize_thread_access(client, thread_id: str, user_id: Op
                 return True
         
         # Check if user owns the thread
-        if thread_data['account_id'] == user_id:
+        # 在本地部署中，account_id 和 user_id 应该是相同的
+        account_id = thread_data.get('account_id')
+        if account_id and str(account_id) == str(user_id):
             return True
         
         # Check if user is a team member of the account
-        account_id = thread_data.get('account_id')
         if account_id:
-            account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+            # Use public schema instead of basejump schema
+            account_user_result = await client.table('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
             if account_user_result.data and len(account_user_result.data) > 0:
                 return True
         

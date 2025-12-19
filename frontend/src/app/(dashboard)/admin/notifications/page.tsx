@@ -1,5 +1,8 @@
 "use client";
 
+// Disable static generation since this page uses client-side auth and API calls
+export const dynamic = 'force-dynamic';
+
 import { useState } from "react";
 import { useTriggerWorkflow, useWorkflows } from "@/hooks/admin/use-notification-workflow";
 import { Button } from "@/components/ui/button";

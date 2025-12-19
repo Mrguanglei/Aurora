@@ -1,5 +1,8 @@
 'use client';
 
+// Disable static generation since this page uses client-side features
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { FooterSection } from '@/components/home/footer-section';
 import { motion } from 'framer-motion';

@@ -280,7 +280,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [deletionType, setDeletionType] = useState<'grace-period' | 'immediate'>('grace-period');
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const supabase = createClient();
+    const { user } = useAuth();
     const queryClient = useQueryClient();
 
     const { data: deletionStatus, isLoading: isCheckingStatus } = useAccountDeletionStatus();
@@ -291,11 +291,12 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
     useEffect(() => {
         const fetchUserData = async () => {
             setIsLoading(true);
-            const { data } = await supabase.auth.getUser();
-            if (data.user) {
-                setUserName(data.user.user_metadata?.name || data.user.email?.split('@')[0] || '');
-                setUserEmail(data.user.email || '');
-                setAvatarUrl(data.user.user_metadata?.avatar_url || '');
+            // In private deployment, user data comes from AuthProvider
+            if (user) {
+                setUserName(user.username || user.email?.split('@')[0] || '');
+                setUserEmail(user.email || '');
+                // Avatar URL would come from user object if backend supports it
+                setAvatarUrl('');
             }
             setIsLoading(false);
         };
@@ -337,28 +338,9 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
 
         setIsUploadingAvatar(true);
         try {
-            const fileExt = avatarFile.name.split('.').pop();
-            const fileName = `${userId}-${Date.now()}.${fileExt}`;
-
-            // Upload to Supabase Storage
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(fileName, avatarFile, {
-                    cacheControl: '3600',
-                    upsert: true,
-                });
-
-            if (uploadError) {
-                console.error('Upload error:', uploadError);
-                throw uploadError;
-            }
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(fileName);
-
-            return publicUrl;
+            // Avatar upload not supported in private deployment yet
+            toast.info('Avatar upload not yet available in private deployment');
+            return null;
         } catch (error) {
             console.error('Avatar upload failed:', error);
             toast.error(t('profilePicture.uploadFailed'));
@@ -371,28 +353,19 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const { data: userData } = await supabase.auth.getUser();
-            const userId = userData.user?.id;
-            
-            if (!userId) throw new Error('User not found');
+            if (!user?.id) throw new Error('User not found');
 
             // Upload avatar if a new one was selected
             let newAvatarUrl = avatarUrl;
             if (avatarFile) {
-                const uploadedUrl = await uploadAvatar(userId);
+                const uploadedUrl = await uploadAvatar(user.id);
                 if (uploadedUrl) {
                     newAvatarUrl = uploadedUrl;
                 }
             }
 
-            const { data, error } = await supabase.auth.updateUser({
-                data: { 
-                    name: userName,
-                    avatar_url: newAvatarUrl,
-                }
-            });
-
-            if (error) throw error;
+            // Profile update not yet implemented in private deployment
+            toast.info('Profile update not yet available in private deployment');
 
             // Clean up preview URL
             if (avatarPreview) {
@@ -402,11 +375,6 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
             setAvatarFile(null);
             setAvatarUrl(newAvatarUrl);
 
-            toast.success(t('profileUpdated'));
-
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
         } catch (error) {
             console.error('Error updating profile:', error);
             toast.error(t('profileUpdateFailed'));

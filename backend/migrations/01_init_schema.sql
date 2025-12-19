@@ -492,3 +492,128 @@ BEGIN
     RETURN context_text;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- Accounts 相关表（团队/组织管理）
+-- ============================================================================
+
+-- 账户角色枚举类型
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'account_role') THEN
+        CREATE TYPE account_role AS ENUM ('owner', 'member');
+    END IF;
+END$$;
+
+-- 账户表（支持个人账户和团队账户）
+CREATE TABLE IF NOT EXISTS accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- 主要拥有者（不能被移除，除非转移所有权）
+    primary_owner_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    -- 账户名称
+    name VARCHAR(255),
+    -- 账户slug（用于URL）
+    slug VARCHAR(255) UNIQUE,
+    -- 是否为个人账户
+    personal_account BOOLEAN DEFAULT false NOT NULL,
+    -- 元数据
+    public_metadata JSONB DEFAULT '{}'::jsonb,
+    private_metadata JSONB DEFAULT '{}'::jsonb,
+    -- 时间戳
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 约束：个人账户可以没有slug，团队账户必须有slug
+ALTER TABLE accounts
+    ADD CONSTRAINT accounts_slug_null_if_personal_account_true CHECK (
+        (personal_account = true AND slug is null)
+        OR (personal_account = false AND slug is not null)
+    );
+
+-- 索引
+CREATE INDEX IF NOT EXISTS idx_accounts_primary_owner ON accounts(primary_owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_slug ON accounts(slug) WHERE slug IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON accounts(created_at);
+
+-- 账户成员表
+CREATE TABLE IF NOT EXISTS account_user (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    account_role account_role NOT NULL DEFAULT 'member',
+    PRIMARY KEY (user_id, account_id)
+);
+
+-- 索引
+CREATE INDEX IF NOT EXISTS idx_account_user_account ON account_user(account_id);
+CREATE INDEX IF NOT EXISTS idx_account_user_user ON account_user(user_id);
+
+-- 触发器：slug自动转换为小写并替换特殊字符
+CREATE OR REPLACE FUNCTION slugify_account_slug()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.slug IS NOT NULL THEN
+        NEW.slug = lower(regexp_replace(NEW.slug, '[^a-zA-Z0-9-]+', '-', 'g'));
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_slugify_account_slug ON accounts;
+CREATE TRIGGER trigger_slugify_account_slug
+    BEFORE INSERT OR UPDATE ON accounts
+    FOR EACH ROW
+    EXECUTE FUNCTION slugify_account_slug();
+
+-- 触发器：更新 updated_at
+DROP TRIGGER IF EXISTS update_accounts_updated_at ON accounts;
+CREATE TRIGGER update_accounts_updated_at
+    BEFORE UPDATE ON accounts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- 触发器：创建账户时自动添加创建者为owner
+CREATE OR REPLACE FUNCTION add_creator_to_account()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 将创建者添加为账户的owner
+    INSERT INTO account_user (account_id, user_id, account_role)
+    VALUES (NEW.id, NEW.primary_owner_user_id, 'owner')
+    ON CONFLICT (user_id, account_id) DO NOTHING;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_add_creator_to_account ON accounts;
+CREATE TRIGGER trigger_add_creator_to_account
+    AFTER INSERT ON accounts
+    FOR EACH ROW
+    EXECUTE FUNCTION add_creator_to_account();
+
+-- 触发器：用户注册时自动创建个人账户
+CREATE OR REPLACE FUNCTION create_personal_account_for_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    generated_name TEXT;
+BEGIN
+    -- 从email生成用户名
+    IF NEW.email IS NOT NULL THEN
+        generated_name := split_part(NEW.email, '@', 1);
+    ELSE
+        generated_name := 'User';
+    END IF;
+    
+    -- 创建个人账户（ID与用户ID相同）
+    INSERT INTO accounts (id, name, primary_owner_user_id, personal_account)
+    VALUES (NEW.id, generated_name, NEW.id, true)
+    ON CONFLICT (id) DO NOTHING;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_create_personal_account ON users;
+CREATE TRIGGER trigger_create_personal_account
+    AFTER INSERT ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION create_personal_account_for_user();

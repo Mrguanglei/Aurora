@@ -1,7 +1,7 @@
 import { backendApi } from "@/lib/api-client";
 import { getProject, updateProject, type Project } from "@/lib/api/threads";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 // Re-export Project type for consistent imports
 export type { Project };
@@ -90,12 +90,28 @@ export const toggleThreadPublicStatus = async (
  */
 export const deleteThread = async (threadId: string, sandboxId?: string, token?: string | null): Promise<void> => {
     try {
+      // Get auth token from localStorage if not provided
+      let authToken = token;
+      if (!authToken && typeof window !== 'undefined') {
+        try {
+          const authData = localStorage.getItem('auth-token');
+          if (authData) {
+            const parsed = JSON.parse(authData);
+            authToken = parsed?.access_token || null;
+          }
+        } catch {
+          // Ignore errors
+        }
+      }
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      } else {
+        console.warn('⚠️ No auth token found for deleteThread request');
       }
 
       // Use the backend DELETE endpoint which handles everything

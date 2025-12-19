@@ -88,7 +88,7 @@ export function SidebarLeft({
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const { user: authUser, logout } = useAuth();
+  const { user: authUser, signOut } = useAuth();
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'starred'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
   const [user, setUser] = useState<{
@@ -118,7 +118,7 @@ export function SidebarLeft({
 
   // Logout handler
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     router.push('/login');
   };
 
@@ -136,9 +136,9 @@ export function SidebarLeft({
   useEffect(() => {
     if (authUser) {
       setUser({
-        name: authUser.name || authUser.email?.split('@')[0] || 'User',
+        name: authUser.username || authUser.email?.split('@')[0] || 'User',
         email: authUser.email || '',
-        avatar: authUser.avatar_url || '',
+        avatar: '',  // avatar_url not available in LocalUser
         isAdmin: isAdmin,
       });
     }

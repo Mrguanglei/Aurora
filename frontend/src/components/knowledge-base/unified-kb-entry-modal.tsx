@@ -242,7 +242,7 @@ export function UnifiedKbEntryModal({
 
                     const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/upload`, {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${session.access_token}` },
+                        headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
                     });
 
@@ -308,11 +308,8 @@ export function UnifiedKbEntryModal({
         setIsCreatingText(true);
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token');
             }
 
             const finalFilename = filename.includes('.') ? filename.trim() : `${filename.trim()}.txt`;
@@ -324,7 +321,7 @@ export function UnifiedKbEntryModal({
 
             const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/upload`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${session.access_token}` },
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
 
@@ -360,17 +357,14 @@ export function UnifiedKbEntryModal({
         setIsCloning(true);
 
         try {
-            const supabase = createClient();
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                throw new Error('No session found');
+            if (!token) {
+                throw new Error('No authentication token');
             }
 
             const response = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/clone-git-repo`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
