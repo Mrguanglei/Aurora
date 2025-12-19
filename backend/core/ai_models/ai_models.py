@@ -11,6 +11,7 @@ class ModelProvider(Enum):
     GOOGLE = "google"
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
+    DOUBAO = "doubao"  # ByteDance Doubao (豆包)
 
 class ModelCapability(Enum):
     CHAT = "chat"

@@ -4,11 +4,17 @@ Handles user account operations
 """
 
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, Field
+from typing import Optional
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.services.postgres import PostgresConnection
 from core.utils.logger import logger
 
 router = APIRouter(tags=["accounts"])
+
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = Field(None, min_length=1, max_length=255)
+    # 可以扩展其他字段，例如 avatar_url 等
 
 @router.get("/accounts", summary="Get User Accounts", operation_id="get_user_accounts")
 async def get_user_accounts(

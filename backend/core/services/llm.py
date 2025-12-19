@@ -112,6 +112,15 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
             },
         },
         # Chinese LLM Providers (国产模型)
+        # Doubao (ByteDance 豆包)
+        {
+            "model_name": "doubao/*",
+            "litellm_params": {
+                "model": "openai/*",
+                "api_key": getattr(config, 'DOUBAO_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'DOUBAO_API_BASE', None) if config else None,
+            },
+        },
         {
             "model_name": "qwen/*",
             "litellm_params": {

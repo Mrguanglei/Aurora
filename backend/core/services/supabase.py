@@ -41,9 +41,10 @@ class PostgresNotBuilder:
 class PostgresQueryBuilder:
     """PostgreSQL 查询构建器 - 模拟 Supabase API"""
     
-    def __init__(self, pool, table_name: str):
+    def __init__(self, pool, table_name: str, schema_name: str = 'public'):
         self._pool = pool
         self._table_name = table_name
+        self._schema_name = schema_name
         self._select_fields = '*'
         self._count_mode = None
         self._filters: List[tuple] = []
@@ -295,8 +296,9 @@ class PostgresQueryBuilder:
         fields = self._format_select_fields()
         where_clause, params = self._build_where_clause()
         
-        # 构建基础查询
-        query = f'SELECT {fields} FROM "{self._table_name}"{where_clause}'
+        # 构建基础查询 - 使用 schema.table 格式
+        full_table_name = f'"{self._schema_name}"."{self._table_name}"'
+        query = f'SELECT {fields} FROM {full_table_name}{where_clause}'
         
         # 添加排序
         if self._order_by:
@@ -319,7 +321,8 @@ class PostgresQueryBuilder:
         # 如果需要计数
         count = len(data)
         if self._count_mode == 'exact':
-            count_query = f'SELECT COUNT(*) FROM "{self._table_name}"{where_clause}'
+            full_table_name = f'"{self._schema_name}"."{self._table_name}"'
+            count_query = f'SELECT COUNT(*) FROM {full_table_name}{where_clause}'
             count_result = await conn.fetchval(count_query, *params)
             count = count_result or 0
         
@@ -351,18 +354,39 @@ class PostgresQueryBuilder:
                 elif isinstance(v, datetime):
                     # 确保 datetime 是 offset-aware 的 UTC 时间
                     if v.tzinfo is None:
-                        # 如果是 offset-naive，假设它是 UTC 时间
+                        # 如果是 offset-naive，假设它是 UTC 时间并添加时区信息
                         v = v.replace(tzinfo=timezone.utc)
-                    # 转换为 UTC 时间（如果已经是 offset-aware）
-                    v = v.astimezone(timezone.utc)
+                    elif v.tzinfo != timezone.utc:
+                        # 如果已经是 offset-aware 但不是 UTC，转换为 UTC
+                        # 使用 astimezone 确保是 offset-aware 的 UTC
+                        v = v.astimezone(timezone.utc)
+                    # 如果已经是 UTC，确保它是 offset-aware 的
+                    # 创建一个新的 datetime 对象以确保一致性
+                    if v.tzinfo is None:
+                        v = v.replace(tzinfo=timezone.utc)
                     processed_values.append(v)
+                elif isinstance(v, str) and ('T' in v or v.endswith('Z') or '+' in v):
+                    # 处理 ISO 格式的 datetime 字符串，转换为 datetime 对象
+                    try:
+                        # Python 3.7+ 支持 fromisoformat，但需要处理 'Z' 后缀
+                        iso_str = v.replace('Z', '+00:00')
+                        v = datetime.fromisoformat(iso_str)
+                        if v.tzinfo is None:
+                            v = v.replace(tzinfo=timezone.utc)
+                        else:
+                            v = v.astimezone(timezone.utc)
+                        processed_values.append(v)
+                    except (ValueError, AttributeError):
+                        # 如果解析失败，保持原样
+                        processed_values.append(v)
                 else:
                     processed_values.append(v)
             
             col_names = ', '.join(f'"{c}"' for c in columns)
             placeholders = ', '.join(f'${i+1}' for i in range(len(columns)))
             
-            query = f'INSERT INTO "{self._table_name}" ({col_names}) VALUES ({placeholders})'
+            full_table_name = f'"{self._schema_name}"."{self._table_name}"'
+            query = f'INSERT INTO {full_table_name} ({col_names}) VALUES ({placeholders})'
             if self._returning:
                 query += ' RETURNING *'
             
@@ -390,11 +414,22 @@ class PostgresQueryBuilder:
             set_parts.append(f'"{key}" = ${param_idx}')
             if isinstance(value, (dict, list)):
                 set_params.append(json.dumps(value))
+            elif isinstance(value, datetime):
+                # 确保 datetime 是 offset-aware 的 UTC 时间
+                if value.tzinfo is None:
+                    # 如果是 offset-naive，假设它是 UTC 时间并添加时区信息
+                    value = value.replace(tzinfo=timezone.utc)
+                elif value.tzinfo != timezone.utc:
+                    # 如果已经是 offset-aware 但不是 UTC，转换为 UTC
+                    value = value.astimezone(timezone.utc)
+                # 如果已经是 UTC，直接使用
+                set_params.append(value)
             else:
                 set_params.append(value)
             param_idx += 1
         
-        query = f'UPDATE "{self._table_name}" SET {", ".join(set_parts)}{where_clause}'
+        full_table_name = f'"{self._schema_name}"."{self._table_name}"'
+        query = f'UPDATE {full_table_name} SET {", ".join(set_parts)}{where_clause}'
         if self._returning:
             query += ' RETURNING *'
         
@@ -413,7 +448,8 @@ class PostgresQueryBuilder:
         """执行 DELETE 查询"""
         where_clause, params = self._build_where_clause()
         
-        query = f'DELETE FROM "{self._table_name}"{where_clause}'
+        full_table_name = f'"{self._schema_name}"."{self._table_name}"'
+        query = f'DELETE FROM {full_table_name}{where_clause}'
         if self._returning:
             query += ' RETURNING *'
         
@@ -436,11 +472,21 @@ class PostgresQueryBuilder:
             columns = list(row.keys())
             values = list(row.values())
             
-            # 处理 JSON 字段
+            # 处理 JSON 字段和 datetime 对象
             processed_values = []
             for v in values:
                 if isinstance(v, (dict, list)):
                     processed_values.append(json.dumps(v))
+                elif isinstance(v, datetime):
+                    # 确保 datetime 是 offset-aware 的 UTC 时间
+                    if v.tzinfo is None:
+                        # 如果是 offset-naive，假设它是 UTC 时间并添加时区信息
+                        v = v.replace(tzinfo=timezone.utc)
+                    elif v.tzinfo != timezone.utc:
+                        # 如果已经是 offset-aware 但不是 UTC，转换为 UTC
+                        v = v.astimezone(timezone.utc)
+                    # 如果已经是 UTC，直接使用
+                    processed_values.append(v)
                 else:
                     processed_values.append(v)
             
@@ -451,8 +497,9 @@ class PostgresQueryBuilder:
             pk = columns[0]
             update_parts = ', '.join(f'"{c}" = EXCLUDED."{c}"' for c in columns[1:])
             
+            full_table_name = f'"{self._schema_name}"."{self._table_name}"'
             query = f'''
-                INSERT INTO "{self._table_name}" ({col_names}) 
+                INSERT INTO {full_table_name} ({col_names}) 
                 VALUES ({placeholders})
                 ON CONFLICT ("{pk}") DO UPDATE SET {update_parts}
             '''
@@ -472,12 +519,21 @@ class PostgresQueryBuilder:
 class PostgresClient:
     """PostgreSQL 客户端 - 提供类似 Supabase 的 API"""
     
-    def __init__(self, pool):
+    def __init__(self, pool, schema_name: str = 'public'):
         self._pool = pool
+        self._schema_name = schema_name
     
     def table(self, table_name: str) -> PostgresQueryBuilder:
         """返回查询构建器"""
-        return PostgresQueryBuilder(self._pool, table_name)
+        return PostgresQueryBuilder(self._pool, table_name, schema_name=self._schema_name)
+    
+    def from_(self, table_name: str) -> PostgresQueryBuilder:
+        """返回查询构建器（与 table() 方法相同，用于兼容性）"""
+        return self.table(table_name)
+    
+    def schema(self, schema_name: str) -> 'PostgresClient':
+        """返回指定 schema 的客户端"""
+        return PostgresClient(self._pool, schema_name=schema_name)
     
     async def rpc(self, function_name: str, params: dict = None) -> PostgresQueryResult:
         """执行存储过程"""

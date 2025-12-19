@@ -306,6 +306,12 @@ class Configuration:
     OR_APP_NAME: Optional[str] = "Kortix AI"
     
     # Chinese LLM Providers (国产模型)
+    # Doubao (ByteDance 豆包/字节跳动)
+    DOUBAO_API_KEY: Optional[str] = None
+    DOUBAO_API_BASE: Optional[str] = "https://ark.cn-beijing.volces.com/api/v3"
+    DOUBAO_MODEL_NAME: Optional[str] = "doubao-seed-1-6-251015"
+    
+    # Qwen (Alibaba 通义千问)
     QWEN_API_KEY: Optional[str] = None
     QWEN_API_BASE: Optional[str] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     QWEN_MODEL_NAME: Optional[str] = "qwen-plus"

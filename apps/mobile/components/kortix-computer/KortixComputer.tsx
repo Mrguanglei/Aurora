@@ -162,7 +162,7 @@ export function KortixComputer({
         >
           <View className="flex-row items-center gap-3">
             <Text className="text-lg font-roobert-semibold text-primary">
-              Kortix Computer
+              Aurora
             </Text>
             {isStreaming && activeView === 'tools' && (
               <View className="px-2.5 py-0.5 rounded-full bg-card border border-border flex-row items-center gap-1.5">

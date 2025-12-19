@@ -397,7 +397,7 @@ async def create_thread(
             "thread_id": str(uuid.uuid4()), 
             "project_id": project_id, 
             "account_id": account_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now()  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
         }
 
         from core.utils.logger import structlog

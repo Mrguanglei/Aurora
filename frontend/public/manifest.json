@@ -9,7 +9,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "/logo.png",
       "sizes": "32x32",
       "type": "image/png",
       "purpose": "any"
@@ -21,7 +21,7 @@
       "purpose": "any"
     },
     {
-      "src": "/logo_black.png",
+      "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

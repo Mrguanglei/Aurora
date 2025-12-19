@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, BackgroundTasks
 from pydantic import BaseModel, Field, validator
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, require_agent_access, AuthorizedAgentAccess
@@ -113,11 +114,11 @@ async def get_folders(user_id: str = Depends(verify_and_get_user_id_from_jwt)):
             ).eq('folder_id', folder_data['folder_id']).execute()
             
             folders.append(FolderResponse(
-                folder_id=folder_data['folder_id'],
+                folder_id=str(folder_data['folder_id']),
                 name=folder_data['name'],
                 description=folder_data['description'],
                 entry_count=count_result.count or 0,
-                created_at=folder_data['created_at']
+                created_at=folder_data['created_at'].isoformat() if isinstance(folder_data['created_at'], datetime) else str(folder_data['created_at'])
             ))
         
         return folders
@@ -157,11 +158,11 @@ async def create_folder(
         created_folder = result.data[0]
         
         return FolderResponse(
-            folder_id=created_folder['folder_id'],
+            folder_id=str(created_folder['folder_id']),
             name=created_folder['name'],
             description=created_folder['description'],
             entry_count=0,
-            created_at=created_folder['created_at']
+            created_at=created_folder['created_at'].isoformat() if isinstance(created_folder['created_at'], datetime) else str(created_folder['created_at'])
         )
         
     except ValidationError:
@@ -210,11 +211,11 @@ async def update_folder(
             ).eq('folder_id', folder_id).execute()
             
             return FolderResponse(
-                folder_id=current_folder['folder_id'],
+                folder_id=str(current_folder['folder_id']),
                 name=current_folder['name'],
                 description=current_folder['description'],
                 entry_count=count_result.count or 0,
-                created_at=current_folder['created_at']
+                created_at=current_folder['created_at'].isoformat() if isinstance(current_folder['created_at'], datetime) else str(current_folder['created_at'])
             )
         
         # Update folder
@@ -233,11 +234,11 @@ async def update_folder(
         ).eq('folder_id', folder_id).execute()
         
         return FolderResponse(
-            folder_id=updated_folder['folder_id'],
+            folder_id=str(updated_folder['folder_id']),
             name=updated_folder['name'],
             description=updated_folder['description'],
             entry_count=count_result.count or 0,
-            created_at=updated_folder['created_at']
+            created_at=updated_folder['created_at'].isoformat() if isinstance(updated_folder['created_at'], datetime) else str(updated_folder['created_at'])
         )
         
     except ValidationError:
@@ -400,11 +401,11 @@ async def get_folder_entries(
         
         return [
             EntryResponse(
-                entry_id=entry['entry_id'],
+                entry_id=str(entry['entry_id']),
                 filename=entry['filename'],
                 summary=entry['summary'],
                 file_size=entry['file_size'],
-                created_at=entry['created_at']
+                created_at=entry['created_at'].isoformat() if isinstance(entry['created_at'], datetime) else str(entry['created_at'])
             )
             for entry in result.data
         ]
@@ -482,11 +483,11 @@ async def update_entry(
         # Return the updated entry
         updated_entry = update_result.data[0]
         return EntryResponse(
-            entry_id=updated_entry['entry_id'],
+            entry_id=str(updated_entry['entry_id']),
             filename=updated_entry['filename'],
             summary=updated_entry['summary'],
             file_size=updated_entry['file_size'],
-            created_at=updated_entry['created_at']
+            created_at=updated_entry['created_at'].isoformat() if isinstance(updated_entry['created_at'], datetime) else str(updated_entry['created_at'])
         )
         
     except HTTPException:

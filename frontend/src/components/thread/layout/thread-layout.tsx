@@ -80,7 +80,7 @@ export const ThreadLayout = memo(function ThreadLayout({
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
 
-  // Kortix Computer Store - for handling file open requests
+  // Aurora Computer Store - for handling file open requests
   const { shouldOpenPanel, clearShouldOpenPanel, openFileInComputer, openFileBrowser } = useKortixComputerStore();
 
   // Track when panel should be visible
@@ -110,7 +110,7 @@ export const ThreadLayout = memo(function ThreadLayout({
   const mainPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
   const sidePanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
 
-  // Handle file click - now opens in Kortix Computer instead of modal
+  // Handle file click - now opens in Aurora Computer instead of modal
   const handleFileClick = React.useCallback((filePath?: string, filePathList?: string[]) => {
     if (filePath) {
       // If a specific file is provided, open it in the file viewer

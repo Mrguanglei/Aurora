@@ -364,8 +364,31 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                 }
             }
 
-            // Profile update not yet implemented in private deployment
-            toast.info('Profile update not yet available in private deployment');
+            // Update user profile via backend API
+            const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+            const token = typeof window !== 'undefined' ? localStorage.getItem('auth-token') : null;
+            const authToken = token ? JSON.parse(token)?.access_token : null;
+
+            const response = await fetch(`${API_URL}/account/profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+                },
+                body: JSON.stringify({
+                    username: userName,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || 'Failed to update profile');
+            }
+
+            const updatedUser = await response.json();
+            
+            // Update local state
+            toast.success(t('profileUpdateSuccess'));
 
             // Clean up preview URL
             if (avatarPreview) {
@@ -377,7 +400,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
 
         } catch (error) {
             console.error('Error updating profile:', error);
-            toast.error(t('profileUpdateFailed'));
+            toast.error(error instanceof Error ? error.message : t('profileUpdateFailed'));
         } finally {
             setIsSaving(false);
         }

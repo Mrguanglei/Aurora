@@ -1,5 +1,5 @@
 {
-  "name": "kortix-desktop",
+  "name": "Aurora-desktop",
   "version": "1.0.0",
   "description": "Aurora Desktop",
   "author": {
@@ -24,11 +24,11 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.kortix.desktop",
+    "appId": "com.Aurora.desktop",
     "productName": "Aurora",
     "protocols": {
       "name": "Aurora",
-      "schemes": ["kortix"]
+      "schemes": ["Aurora"]
     },
     "mac": {
       "target": "dmg",

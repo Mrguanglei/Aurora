@@ -65,7 +65,7 @@ export function FileBrowserView({
 }: FileBrowserViewProps) {
   const { session } = useAuth();
   
-  // Kortix Computer Store
+  // Aurora Computer Store
   const { 
     currentPath, 
     navigateToPath,

@@ -44,7 +44,8 @@ async def generate_agent_name_and_prompt(description: str) -> dict:
         Dict with keys: name, system_prompt
     """
     try:
-        model_name = "openai/gpt-5-nano-2025-08-07"
+        # Use a lightweight model for agent setup
+        model_name = "doubao/doubao-seed-1-6-251015"
         
         system_prompt = """你是一个AI工作者配置专家。为AI工作者生成名称和系统提示。
 

@@ -146,7 +146,7 @@ export function FileViewerView({
 }: FileViewerViewProps) {
   const { session } = useAuth();
 
-  // Kortix Computer Store
+  // Aurora Computer Store
   const {
     filePathList,
     currentFileIndex,

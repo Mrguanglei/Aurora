@@ -34,7 +34,7 @@ async def request_account_deletion(
         db = DBConnection()
         client = await db.client
         
-        personal_account_response = await client.schema('basejump').table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
+        personal_account_response = await client.table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
         
         if not personal_account_response.data or len(personal_account_response.data) == 0:
             raise HTTPException(status_code=404, detail="Personal account not found")
@@ -90,7 +90,7 @@ async def cancel_account_deletion(
         db = DBConnection()
         client = await db.client
         
-        personal_account_response = await client.schema('basejump').table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
+        personal_account_response = await client.table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
         
         if not personal_account_response.data or len(personal_account_response.data) == 0:
             raise HTTPException(status_code=404, detail="Personal account not found")
@@ -133,7 +133,7 @@ async def get_account_deletion_status(
         db = DBConnection()
         client = await db.client
         
-        personal_account_response = await client.schema('basejump').table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
+        personal_account_response = await client.table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
         
         if not personal_account_response.data or len(personal_account_response.data) == 0:
             return AccountDeletionStatusResponse(
@@ -367,7 +367,7 @@ async def delete_account_immediately(
         db = DBConnection()
         client = await db.client
         
-        personal_account_response = await client.schema('basejump').table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
+        personal_account_response = await client.table('accounts').select('id').eq('primary_owner_user_id', user_id).eq('personal_account', True).execute()
         
         if not personal_account_response.data or len(personal_account_response.data) == 0:
             raise HTTPException(status_code=404, detail="Personal account not found")

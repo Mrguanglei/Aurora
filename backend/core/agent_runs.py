@@ -349,7 +349,7 @@ async def _create_agent_run_record(
     agent_run = await client.table('agent_runs').insert({
         "thread_id": thread_id,
         "status": "running",
-        "started_at": datetime.now(timezone.utc),  # 直接传递 datetime 对象，不要用 isoformat()
+        "started_at": datetime.now(),  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
         "agent_id": agent_config.get('agent_id') if agent_config else None,
         "agent_version_id": agent_config.get('current_version_id') if agent_config else None,
         "metadata": run_metadata
@@ -708,7 +708,7 @@ async def start_agent_run(
                 "thread_id": thread_id,
                 "project_id": project_id,
                 "account_id": account_id,
-                "created_at": datetime.now(timezone.utc).isoformat()
+                "created_at": datetime.now()  # Use naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE
             }).execute()
             logger.debug(f"⏱️ [TIMING] Thread created: {(time.time() - t_thread) * 1000:.1f}ms")
         except Exception as thread_error:

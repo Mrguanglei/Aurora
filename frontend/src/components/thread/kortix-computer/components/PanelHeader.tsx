@@ -41,7 +41,7 @@ export const PanelHeader = memo(function PanelHeader({
   isMaximized = false,
   hideViewToggle = false,
 }: PanelHeaderProps) {
-  const title = "Kortix Computer";
+  const title = "Aurora Computer";
 
   if (variant === 'drawer') {
     return (
