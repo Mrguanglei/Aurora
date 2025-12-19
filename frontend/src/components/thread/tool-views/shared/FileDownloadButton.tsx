@@ -12,6 +12,7 @@ import {
 import { exportDocument, type ExportFormat } from '@/lib/utils/document-export';
 import { toast } from 'sonner';
 import { marked } from 'marked';
+import { useAuth } from '@/components/AuthProvider';
 
 interface FileDownloadButtonProps {
   /** The file content to download/export */
@@ -42,6 +43,7 @@ export function FileDownloadButton({
   getHtmlContent,
 }: FileDownloadButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const { token } = useAuth();
 
   // Check if file is markdown
   const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
@@ -100,6 +102,7 @@ export function FileDownloadButton({
           content: htmlContent,
           fileName: baseFileName,
           format,
+          token,
         });
       }
     } catch (error) {
@@ -108,7 +111,7 @@ export function FileDownloadButton({
     } finally {
       setIsExporting(false);
     }
-  }, [content, fileName, getHtmlContent]);
+  }, [content, fileName, getHtmlContent, token]);
 
   // For markdown files, show dropdown with export options
   if (isMarkdown) {

@@ -162,7 +162,7 @@ async def get_sandbox_by_id_safely(client, sandbox_id: str):
         HTTPException: If the sandbox doesn't exist or can't be retrieved
     """
     # Find the project that owns this sandbox
-    project_result = await client.table('projects').select('project_id').filter('sandbox->>id', 'eq', sandbox_id).execute()
+    project_result = await client.table('projects').select('project_id').jsonb_eq('sandbox', 'id', sandbox_id).execute()
     
     if not project_result.data or len(project_result.data) == 0:
         logger.error(f"No project found for sandbox ID: {sandbox_id}")

@@ -231,6 +231,9 @@ async def get_thread(
                 # 使用 ensure_dict 安全处理 sandbox 字段（可能是字符串或 dict）
                 sandbox_info = ensure_dict(project.get('sandbox'), {})
                 
+                
+
+
                 project_data = {
                     "project_id": project['project_id'],
                     "name": project.get('name', ''),

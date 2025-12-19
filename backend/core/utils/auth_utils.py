@@ -586,7 +586,7 @@ async def verify_sandbox_access(client, sandbox_id: str, user_id: str):
         HTTPException: If the user doesn't have access to the project/sandbox or sandbox doesn't exist
     """
     # Find the project that owns this sandbox
-    project_result = await client.table('projects').select('*').filter('sandbox->>id', 'eq', sandbox_id).execute()
+    project_result = await client.table('projects').select('*').jsonb_eq('sandbox', 'id', sandbox_id).execute()
     
     if not project_result.data or len(project_result.data) == 0:
         raise HTTPException(status_code=404, detail="Sandbox not found - no project owns this sandbox")
@@ -663,7 +663,7 @@ async def verify_sandbox_access_optional(client, sandbox_id: str, user_id: Optio
         HTTPException: If the user doesn't have access to the project/sandbox or sandbox doesn't exist
     """
     # Find the project that owns this sandbox
-    project_result = await client.table('projects').select('*').filter('sandbox->>id', 'eq', sandbox_id).execute()
+    project_result = await client.table('projects').select('*').jsonb_eq('sandbox', 'id', sandbox_id).execute()
     
     if not project_result.data or len(project_result.data) == 0:
         raise HTTPException(status_code=404, detail="Sandbox not found - no project owns this sandbox")

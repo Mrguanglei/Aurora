@@ -404,14 +404,15 @@ async def _trigger_agent_background(
     logger.info(f"🚀 Sending agent run {agent_run_id} to Dramatiq queue (thread: {thread_id}, model: {effective_model})")
     
     try:
+        # Convert UUID objects to strings for Dramatiq serialization
         message = run_agent_background.send(
-            agent_run_id=agent_run_id,
-            thread_id=thread_id,
+            agent_run_id=str(agent_run_id),
+            thread_id=str(thread_id),
             instance_id=utils.instance_id,
-            project_id=project_id,
+            project_id=str(project_id),
             model_name=effective_model,
-            agent_id=agent_id,  # Pass agent_id instead of full agent_config
-            account_id=account_id,  # Pass account_id for worker authorization
+            agent_id=str(agent_id) if agent_id else None,  # Pass agent_id instead of full agent_config
+            account_id=str(account_id) if account_id else None,  # Pass account_id for worker authorization
             request_id=request_id,
         )
         message_id = message.message_id if hasattr(message, 'message_id') else 'N/A'
@@ -785,10 +786,11 @@ async def start_agent_run(
     
     logger.info(f"⏱️ [TIMING] start_agent_run total: {(time.time() - t_start) * 1000:.1f}ms")
     
+    # Convert UUID objects to strings for API response
     return {
-        "thread_id": thread_id,
-        "agent_run_id": agent_run_id,
-        "project_id": project_id,
+        "thread_id": str(thread_id),
+        "agent_run_id": str(agent_run_id),
+        "project_id": str(project_id),
         "status": "running"
     }
 

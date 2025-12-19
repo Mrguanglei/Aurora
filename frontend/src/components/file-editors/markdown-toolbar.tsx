@@ -254,13 +254,14 @@ export function MarkdownToolbar({
         content,
         fileName: fileName.replace(/\.(md|markdown)$/i, ''),
         format,
+        token,
       });
     } catch (error) {
       console.error('Export error:', error);
     } finally {
       setIsExporting(false);
     }
-  }, [editor, fileName]);
+  }, [editor, fileName, token]);
 
   const ToolbarButton = ({
     onClick,

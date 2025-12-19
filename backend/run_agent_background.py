@@ -7,6 +7,7 @@ import json
 import traceback
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Tuple
+from uuid import UUID
 from core.services import redis_worker as redis
 from core.run import run_agent
 from core.utils.logger import logger, structlog
@@ -49,6 +50,16 @@ instance_id = ""
 REDIS_RESPONSE_LIST_TTL = 3600
 
 _STATIC_CORE_PROMPT = None
+
+
+class UUIDEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles UUID objects"""
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            return str(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 def check_terminating_tool_call(response: Dict[str, Any]) -> Optional[str]:
@@ -327,7 +338,7 @@ async def process_agent_responses(
             trace.span(name="agent_run_stopped").end(status_message=f"agent_run_stopped: {stop_reason}", level="WARNING")
             break
 
-        response_json = json.dumps(response)
+        response_json = json.dumps(response, cls=UUIDEncoder)
         
         if redis_streaming_enabled and redis.is_redis_healthy():
             pending_redis_operations.append(
@@ -395,7 +406,7 @@ async def handle_normal_completion(
     logger.info(f"Agent run {agent_run_id} completed normally (duration: {duration:.2f}s, responses: {total_responses})")
     completion_message = {"type": "status", "status": "completed", "message": "Agent run completed successfully"}
     trace.span(name="agent_run_completed").end(status_message="agent_run_completed")
-    completion_json = json.dumps(completion_message)
+    completion_json = json.dumps(completion_message, cls=UUIDEncoder)
     try:
         await asyncio.wait_for(
             asyncio.gather(
@@ -707,10 +718,11 @@ async def run_agent_background(
                 from core.memory.background_jobs import extract_memories_from_conversation
                 messages_result = await client.table('messages').select('message_id').eq('thread_id', thread_id).order('created_at', desc=False).execute()
                 if messages_result.data:
-                    message_ids = [m['message_id'] for m in messages_result.data]
+                    # Convert UUID objects to strings for Dramatiq serialization
+                    message_ids = [str(m['message_id']) for m in messages_result.data]
                     extract_memories_from_conversation.send(
-                        thread_id=thread_id,
-                        account_id=account_id,
+                        thread_id=str(thread_id),
+                        account_id=str(account_id),
                         message_ids=message_ids
                     )
                     logger.debug(f"Queued memory extraction for thread {thread_id}")

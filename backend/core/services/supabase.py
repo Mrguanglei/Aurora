@@ -6,6 +6,7 @@
 
 from typing import Optional, Any, List, Dict
 from datetime import datetime, timezone
+from uuid import UUID
 from core.utils.logger import logger
 from core.services.postgres import PostgresConnection
 import threading
@@ -17,6 +18,16 @@ class PostgresQueryResult:
     def __init__(self, data: List[Any] = None, count: int = 0):
         self.data = data or []
         self.count = count
+
+
+class UUIDEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles UUID and datetime objects"""
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            return str(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class PostgresNotBuilder:
@@ -137,6 +148,20 @@ class PostgresQueryBuilder:
         self._filters.append(('contained_by', column, value))
         return self
     
+    def jsonb_eq(self, jsonb_column: str, jsonb_path: str, value: Any) -> 'PostgresQueryBuilder':
+        """JSONB 字段相等查询
+        
+        Args:
+            jsonb_column: JSONB 列名 (如 'sandbox')
+            jsonb_path: JSONB 路径 (如 'id')
+            value: 要匹配的值
+        
+        Examples:
+            .jsonb_eq('sandbox', 'id', 'abc123')  # sandbox->>'id' = 'abc123'
+        """
+        self._filters.append(('jsonb_eq', jsonb_column, jsonb_path, value))
+        return self
+    
     def order(self, column: str, desc: bool = False, **kwargs) -> 'PostgresQueryBuilder':
         self._order_by.append((column, desc))
         return self
@@ -178,40 +203,51 @@ class PostgresQueryBuilder:
         params = []
         param_idx = 1
         
-        for op, column, value in self._filters:
+        for filter_item in self._filters:
+            op = filter_item[0]
+            
             if op == 'eq':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" = ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'neq':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" != ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'gt':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" > ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'gte':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" >= ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'lt':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" < ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'lte':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" <= ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'like':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" LIKE ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'ilike':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" ILIKE ${param_idx}')
                 params.append(value)
                 param_idx += 1
             elif op == 'is':
+                column, value = filter_item[1], filter_item[2]
                 if value is None:
                     conditions.append(f'"{column}" IS NULL')
                 else:
@@ -219,6 +255,7 @@ class PostgresQueryBuilder:
                     params.append(value)
                     param_idx += 1
             elif op == 'is_not':
+                column, value = filter_item[1], filter_item[2]
                 if value is None:
                     conditions.append(f'"{column}" IS NOT NULL')
                 else:
@@ -226,6 +263,7 @@ class PostgresQueryBuilder:
                     params.append(value)
                     param_idx += 1
             elif op == 'not_in':
+                column, value = filter_item[1], filter_item[2]
                 if value:
                     placeholders = ', '.join(f'${i}' for i in range(param_idx, param_idx + len(value)))
                     conditions.append(f'"{column}" NOT IN ({placeholders})')
@@ -234,6 +272,7 @@ class PostgresQueryBuilder:
                 else:
                     conditions.append('TRUE')  # Empty NOT IN clause
             elif op == 'in':
+                column, value = filter_item[1], filter_item[2]
                 if value:
                     placeholders = ', '.join(f'${i}' for i in range(param_idx, param_idx + len(value)))
                     conditions.append(f'"{column}" IN ({placeholders})')
@@ -242,12 +281,21 @@ class PostgresQueryBuilder:
                 else:
                     conditions.append('FALSE')  # Empty IN clause
             elif op == 'contains':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" @> ${param_idx}')
                 params.append(json.dumps(value) if not isinstance(value, str) else value)
                 param_idx += 1
             elif op == 'contained_by':
+                column, value = filter_item[1], filter_item[2]
                 conditions.append(f'"{column}" <@ ${param_idx}')
                 params.append(json.dumps(value) if not isinstance(value, str) else value)
+                param_idx += 1
+            elif op == 'jsonb_eq':
+                # filter_item: ('jsonb_eq', 'sandbox', 'id', 'abc123')
+                # 生成: "sandbox"->>'id' = $1
+                jsonb_column, jsonb_path, actual_value = filter_item[1], filter_item[2], filter_item[3]
+                conditions.append(f'"{jsonb_column}"->>\'{jsonb_path}\' = ${param_idx}')
+                params.append(actual_value)
                 param_idx += 1
         
         return ' WHERE ' + ' AND '.join(conditions), params
@@ -350,7 +398,8 @@ class PostgresQueryBuilder:
             processed_values = []
             for v in values:
                 if isinstance(v, (dict, list)):
-                    processed_values.append(json.dumps(v))
+                    # Use custom encoder to handle UUID objects in dicts/lists
+                    processed_values.append(json.dumps(v, cls=UUIDEncoder))
                 elif isinstance(v, datetime):
                     # asyncpg 需要 offset-aware datetime；统一确保使用 timezone.utc
                     if v.tzinfo is None:
@@ -409,9 +458,10 @@ class PostgresQueryBuilder:
         param_idx = len(where_params) + 1
         
         for key, value in self._data.items():
-            set_parts.append(f'"{key}" = ${param_idx}')
+            set_parts.append(f'"{ key}" = ${param_idx}')
             if isinstance(value, (dict, list)):
-                set_params.append(json.dumps(value))
+                # Use custom encoder to handle UUID objects in dicts/lists
+                set_params.append(json.dumps(value, cls=UUIDEncoder))
             elif isinstance(value, datetime):
                 # asyncpg 要求 datetime 必须是 offset-aware 的
                 if value.tzinfo is None:
@@ -472,7 +522,8 @@ class PostgresQueryBuilder:
             processed_values = []
             for v in values:
                 if isinstance(v, (dict, list)):
-                    processed_values.append(json.dumps(v))
+                    # Use custom encoder to handle UUID objects in dicts/lists
+                    processed_values.append(json.dumps(v, cls=UUIDEncoder))
                 elif isinstance(v, datetime):
                     # asyncpg 要求 datetime 必须是 offset-aware 的
                     if v.tzinfo is None:
