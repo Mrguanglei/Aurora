@@ -194,10 +194,10 @@ export function TaskCompletedFeedback({
 
       {/* Rating Modal */}
       <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby="rating-dialog-description">
           <DialogHeader>
             <DialogTitle>{t('thread.rateThisResult')}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="rating-dialog-description">
               {t('thread.feedbackHelpsImprove')}
             </DialogDescription>
           </DialogHeader>
