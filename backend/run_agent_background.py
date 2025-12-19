@@ -761,7 +761,7 @@ async def update_agent_run_status(
     try:
         update_data = {
             "status": status,
-            "completed_at": datetime.now(timezone.utc).isoformat()
+            "completed_at": datetime.now(timezone.utc)  # 使用 datetime 对象，不是字符串
         }
 
         if error:

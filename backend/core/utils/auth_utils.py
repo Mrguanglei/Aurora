@@ -319,6 +319,7 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
     auth_header = request.headers.get('Authorization')
     
     if not auth_header or not auth_header.startswith('Bearer '):
+        structlog.get_logger().debug("get_optional_user_id: No Authorization header or not Bearer")
         return None
     
     token = auth_header.split(' ')[1]
@@ -332,11 +333,16 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
             structlog.contextvars.bind_contextvars(
                 user_id=user_id
             )
+            structlog.get_logger().debug(f"get_optional_user_id: Successfully got user_id={user_id}")
+        else:
+            structlog.get_logger().debug("get_optional_user_id: Token valid but no 'sub' claim")
         
         return user_id
-    except HTTPException:
+    except HTTPException as e:
+        structlog.get_logger().debug(f"get_optional_user_id: HTTPException - {e.detail}")
         return None
-    except Exception:
+    except Exception as e:
+        structlog.get_logger().debug(f"get_optional_user_id: Exception - {str(e)}")
         return None
 
 get_optional_current_user_id_from_jwt = get_optional_user_id

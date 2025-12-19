@@ -7,9 +7,21 @@ from core.utils.logger import logger
 # CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
 SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
 
+
+# 使用豆包模型作为默认 LLM
 # Actual model IDs for LiteLLM
-_BASIC_MODEL_ID = "anthropic/claude-haiku-4-5-20251001" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
-_POWER_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
+SHOULD_USE_DOUBAO = bool(getattr(config, 'DOUBAO_API_KEY', None))
+if SHOULD_USE_DOUBAO:
+    # 使用豆包模型
+    _BASIC_MODEL_ID = f"doubao/{getattr(config, 'DOUBAO_MODEL_NAME', 'doubao-seed-1-6-251015')}"
+    _POWER_MODEL_ID = f"doubao/{getattr(config, 'DOUBAO_MODEL_NAME', 'doubao-seed-1-6-251015')}"
+elif SHOULD_USE_ANTHROPIC:
+    _BASIC_MODEL_ID = "anthropic/claude-haiku-4-5-20251001"
+    _POWER_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929"
+else:
+    # 回退到 Bedrock
+    _BASIC_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
+    _POWER_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"
 
 # Default model IDs (these are aliases that resolve to actual IDs)
 FREE_MODEL_ID = "Aurora/basic"

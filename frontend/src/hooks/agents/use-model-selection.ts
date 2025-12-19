@@ -18,11 +18,14 @@ export interface ModelOption {
 
 const getDefaultModel = (accessibleModels: ModelOption[]): string => {
   // Pick the first accessible model (sorted by priority)
-  // Aurora/basic should be first for free users since power is not accessible
-  const basicModel = accessibleModels.find(m => m.id === 'Aurora/basic');
+  // doubao should be first as default model
+  const doubaoModel = accessibleModels.find(m => m.id === 'doubao/doubao-seed-1-6-251015');
+  if (doubaoModel) return doubaoModel.id;
+
+  const basicModel = accessibleModels.find(m => m.id === 'doubao/doubao-seed-1-6-251015');
   if (basicModel) return basicModel.id;
 
-  const powerModel = accessibleModels.find(m => m.id === 'kortix/power');
+  const powerModel = accessibleModels.find(m => m.id === 'doubao/doubao-seed-1-6-251015');
   if (powerModel) return powerModel.id;
 
   // Fallback: pick from accessible models sorted by priority
@@ -40,8 +43,9 @@ export const useModelSelection = () => {
   const availableModels = useMemo<ModelOption[]>(() => {
     // Default models - billing removed
     return [
-      { id: 'Aurora/basic', label: 'Kortix Basic', requiresSubscription: false, priority: 1, recommended: true },
-      { id: 'kortix/power', label: 'Kortix Advanced Mode', requiresSubscription: false, priority: 2, recommended: true },
+      { id: 'doubao/doubao-seed-1-6-251015', label: 'Doubao (豆包)', requiresSubscription: false, priority: 1, recommended: true },
+      { id: 'Aurora/basic', label: 'Kortix Basic', requiresSubscription: false, priority: 2, recommended: false },
+      { id: 'kortix/power', label: 'Kortix Advanced Mode', requiresSubscription: false, priority: 3, recommended: false },
     ];
   }, []);
 

@@ -272,7 +272,8 @@ class ThreadManager:
                 if isinstance(content, str):
                     try:
                         parsed_item = json.loads(content)
-                        parsed_item['message_id'] = item['message_id']
+                        # 将 UUID 转换为字符串，避免 JSON 序列化错误
+                        parsed_item['message_id'] = str(item['message_id'])
                         
                         # Skip empty user messages (defensive filter for legacy data)
                         if parsed_item.get('role') == 'user':
@@ -288,12 +289,13 @@ class ThreadManager:
                             messages.append({
                                 'role': 'user',
                                 'content': content,
-                                'message_id': item['message_id']
+                                'message_id': str(item['message_id'])  # 转换 UUID 为字符串
                             })
                         else:
                             logger.error(f"Failed to parse message: {content[:100]}")
                 elif isinstance(content, dict):
-                    content['message_id'] = item['message_id']
+                    # 将 UUID 转换为字符串，避免 JSON 序列化错误
+                    content['message_id'] = str(item['message_id'])
                     
                     if content.get('role') == 'user':
                         msg_content = content.get('content', '')
@@ -310,7 +312,7 @@ class ThreadManager:
                     messages.append({
                         'role': 'user',
                         'content': str(content),
-                        'message_id': item['message_id']
+                        'message_id': str(item['message_id'])  # 转换 UUID 为字符串
                     })
 
             return messages

@@ -200,8 +200,15 @@ async def get_thread(
     logger.debug(f"Fetching thread: {thread_id}")
     client = await utils.db.client
     
-    from core.utils.auth_utils import get_optional_user_id
-    user_id = await get_optional_user_id(request)
+    # 使用强制认证,确保用户已登录
+    from core.utils.auth_utils import verify_and_get_user_id_from_jwt
+    try:
+        user_id = await verify_and_get_user_id_from_jwt(request)
+        logger.debug(f"Authenticated user: user_id={user_id}")
+    except HTTPException as e:
+        # 如果认证失败,仍然尝试作为匿名用户访问公开 thread
+        logger.debug(f"Authentication failed: {e.detail}. Trying as anonymous user.")
+        user_id = None
     
     try:
         await verify_and_authorize_thread_access(client, thread_id, user_id)
@@ -218,12 +225,17 @@ async def get_thread(
             project_result = await client.table('projects').select('*').eq('project_id', thread['project_id']).execute()
             
             if project_result.data:
+                from core.utils.json_helpers import ensure_dict
+                
                 project = project_result.data[0]
+                # 使用 ensure_dict 安全处理 sandbox 字段（可能是字符串或 dict）
+                sandbox_info = ensure_dict(project.get('sandbox'), {})
+                
                 project_data = {
                     "project_id": project['project_id'],
                     "name": project.get('name', ''),
                     "description": project.get('description', ''),
-                    "sandbox": project.get('sandbox', {}),
+                    "sandbox": sandbox_info,
                     "is_public": project.get('is_public', False),
                     "icon_name": project.get('icon_name'),
                     "created_at": project['created_at'],
@@ -231,7 +243,6 @@ async def get_thread(
                 }
                 
                 # If thread has an existing sandbox, start it proactively in background
-                sandbox_info = project.get('sandbox', {})
                 if sandbox_info and sandbox_info.get('id'):
                     sandbox_id = sandbox_info.get('id')
                     logger.info(f"Thread {thread_id} has existing sandbox {sandbox_id}, starting it in background...")

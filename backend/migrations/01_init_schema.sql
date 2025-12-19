@@ -112,12 +112,13 @@ CREATE INDEX IF NOT EXISTS idx_threads_project_id ON threads(project_id);
 CREATE INDEX IF NOT EXISTS idx_threads_agent_id ON threads(agent_id);
 CREATE INDEX IF NOT EXISTS idx_threads_created_at ON threads(created_at);
 
+
 -- 消息表
 CREATE TABLE IF NOT EXISTS messages (
     message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     thread_id UUID NOT NULL REFERENCES threads(thread_id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    role VARCHAR(50) NOT NULL, -- 'user', 'assistant', 'system'
+    role VARCHAR(50), -- 'user', 'assistant', 'system' (允许为 NULL，因为 status/llm_response 类型消息不需要 role)
     content TEXT NOT NULL,
     message_type VARCHAR(50) DEFAULT 'text', -- 'text', 'tool_call', 'tool_result'
     metadata JSONB DEFAULT '{}',

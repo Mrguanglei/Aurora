@@ -37,17 +37,26 @@ async def _get_agent_run_with_access_check(client, agent_run_id: str, user_id: s
     Internal helper for this module only.
     """
     from core.utils.auth_utils import verify_and_authorize_thread_access
+    from core.utils.json_helpers import ensure_dict
     
-    agent_run = await client.table('agent_runs').select('*, threads(account_id)').eq('id', agent_run_id).execute()
+    # 获取 agent run
+    agent_run = await client.table('agent_runs').select('*').eq('id', agent_run_id).execute()
     if not agent_run.data:
         raise HTTPException(status_code=404, detail="Agent run not found")
 
     agent_run_data = agent_run.data[0]
     thread_id = agent_run_data['thread_id']
-    account_id = agent_run_data['threads']['account_id']
+    
+    # 单独查询 thread 获取 account_id（兼容本地 PostgreSQL）
+    thread = await client.table('threads').select('account_id').eq('thread_id', thread_id).execute()
+    if not thread.data:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    
+    account_id = thread.data[0]['account_id']
     
     # Check metadata for actual_user_id (used for team members who share an account_id)
-    metadata = agent_run_data.get('metadata', {})
+    # 使用 ensure_dict 安全处理 metadata 字段（可能是字符串或 dict）
+    metadata = ensure_dict(agent_run_data.get('metadata'), {})
     actual_user_id = metadata.get('actual_user_id')
     
     # If metadata has actual_user_id, use that for access check (handles team members)

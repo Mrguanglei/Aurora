@@ -67,7 +67,7 @@ async def initialize_thread_background(
         worker_instance_id = str(uuid.uuid4())[:8]
         
         run_agent_background.send(
-            agent_run_id=agent_run_id,
+            agent_run_id=str(agent_run_id),  # 转换 UUID 为字符串
             thread_id=thread_id,
             instance_id=worker_instance_id,
             project_id=project_id,

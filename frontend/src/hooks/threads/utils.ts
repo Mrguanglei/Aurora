@@ -22,13 +22,29 @@ export type Thread = {
   
 
   export const getThread = async (threadId: string, token?: string | null): Promise<Thread> => {
+    // Get auth token from localStorage if not provided
+    let authToken = token;
+    if (!authToken && typeof window !== 'undefined') {
+      try {
+        const authData = localStorage.getItem('auth-token');
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          authToken = parsed?.access_token || null;
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+
     // Build headers with optional auth token
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    } else {
+      console.warn('⚠️ No auth token found for getThread request');
     }
 
     // Use backend API endpoint with auth handling
@@ -51,7 +67,21 @@ export const updateThread = async (
     data: Partial<Thread>,
     token?: string | null,
   ): Promise<Thread> => {
-    if (!token) {
+    // Get auth token from localStorage if not provided
+    let authToken = token;
+    if (!authToken && typeof window !== 'undefined') {
+      try {
+        const authData = localStorage.getItem('auth-token');
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          authToken = parsed?.access_token || null;
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+
+    if (!authToken) {
       throw new Error('You must be logged in to update a thread');
     }
 
@@ -60,7 +90,7 @@ export const updateThread = async (
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${authToken}`,
       },
       body: JSON.stringify(data),
       cache: 'no-store',
