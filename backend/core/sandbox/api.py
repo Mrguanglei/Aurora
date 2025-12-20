@@ -351,6 +351,35 @@ async def read_file(
         # Get sandbox using the safer method
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
         
+        # Check if the path is a directory
+        is_dir = await sandbox.fs.is_directory(path)
+        if is_dir:
+            # If it's a directory, return the directory listing as JSON
+            async def list_files_operation():
+                return await sandbox.fs.list_files(path)
+            
+            files = await retry_with_backoff(
+                operation=list_files_operation,
+                operation_name=f"list_files({path}) in sandbox {sandbox_id}"
+            )
+            result = []
+            
+            for file in files:
+                # Convert file information to our model
+                full_path = f"{path.rstrip('/')}/{file.name}" if path != '/' else f"/{file.name}"
+                file_info = FileInfo(
+                    name=file.name,
+                    path=full_path,
+                    is_dir=file.is_dir,
+                    size=file.size,
+                    mod_time=str(file.mod_time),
+                    permissions=getattr(file, 'permissions', None)
+                )
+                result.append(file_info)
+            
+            logger.debug(f"Returning directory listing for {path} in sandbox {sandbox_id}")
+            return {"files": [file.dict() for file in result], "is_directory": True}
+        
         # Read file with retry logic for transient errors (502, 503, 504)
         try:
             content = await retry_with_backoff(

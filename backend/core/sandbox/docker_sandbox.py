@@ -10,6 +10,7 @@ import os
 import shlex
 import tarfile
 import io
+import time
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 from core.utils.logger import logger
@@ -93,6 +94,9 @@ class DockerFilesystem:
                 tarinfo.size = len(content)
                 tarinfo.mode = 0o644  # Default file permissions
                 
+                # Set current time for the file
+                tarinfo.mtime = time.time()
+                
                 # Add the file to the tar archive
                 tar.addfile(tarinfo, io.BytesIO(content))
             
@@ -133,9 +137,37 @@ class DockerFilesystem:
             logger.error(f"Error uploading file {container_path}: {e}", exc_info=True)
             raise e
     
+    async def is_directory(self, container_path: str) -> bool:
+        """Check if the path is a directory."""
+        try:
+            result = self.sandbox.container.exec_run(
+                ['test', '-d', container_path],
+                demux=False
+            )
+            return result.exit_code == 0
+        except Exception as e:
+            logger.warning(f"Error checking if {container_path} is a directory: {e}")
+            return False
+    
+    async def is_file(self, container_path: str) -> bool:
+        """Check if the path is a file."""
+        try:
+            result = self.sandbox.container.exec_run(
+                ['test', '-f', container_path],
+                demux=False
+            )
+            return result.exit_code == 0
+        except Exception as e:
+            logger.warning(f"Error checking if {container_path} is a file: {e}")
+            return False
+    
     async def download_file(self, container_path: str) -> bytes:
         """Download file content from the container."""
         try:
+            # Check if it's a directory first
+            if await self.is_directory(container_path):
+                raise Exception(f"Path is a directory, not a file: {container_path}")
+            
             result = self.sandbox.container.exec_run(
                 ['cat', container_path],
                 demux=False
