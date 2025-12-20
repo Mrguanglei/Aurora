@@ -431,19 +431,45 @@ class ModelRegistry:
         
         Resolves Aurora/basic and kortix/power to actual provider model IDs.
         """
-        # Map kortix model IDs to actual LiteLLM model IDs
+        # Map kortix model IDs to actual LiteLLM model IDs (legacy support)
         if model_id == "Aurora/basic":
             return _BASIC_MODEL_ID  # Uses HAIKU 4.5
-        elif model_id == "kortix/power":
+        if model_id == "kortix/power":
             return _POWER_MODEL_ID  # Uses Sonnet 4.5
         
+        # Special-case OpenAI default mapping: allow "openai/default" to resolve to the
+        # configured OPENAI model name (OPENAI_MODEL_NAME) so that switching model is
+        # done via environment variables.
+        if model_id == "openai/default" or model_id.startswith("openai/"):
+            actual = getattr(config, 'OPENAI_MODEL_NAME', None)
+            if actual:
+                return actual
+            # fallback: if registry contains a model with this id, return its id
+            model = self.get(model_id)
+            if model:
+                # If the model has aliases, prefer the first alias as the actual model string
+                if model.aliases:
+                    return model.aliases[0]
+                return model.id
+
+        # Special-case DeepSeek (openrouter/deepseek/*): map to provider-expected model string.
+        # Many OpenRouter-hosted models expect a provider-prefixed model name like "deepseek/<model>".
+        if model_id.startswith("openrouter/deepseek/") or "deepseek" in model_id:
+            deep_name = getattr(config, 'DEEPSEEK_MODEL_NAME', None) or "deepseek-chat"
+            return f"deepseek/{deep_name}"
+
+        # Special-case Doubao: map to configured Doubao model name if present
+        if model_id.startswith("doubao/") or model_id == "doubao":
+            doubao_name = getattr(config, 'DOUBAO_MODEL_NAME', None) or "doubao-seed-1-6-251015"
+            return f"doubao/{doubao_name}"
+
         # For other models, check if it's an alias and resolve
         model = self.get(model_id)
         if model:
             # Check if this model's ID needs resolution
             if model.id == "Aurora/basic":
                 return _BASIC_MODEL_ID
-            elif model.id == "kortix/power":
+            if model.id == "kortix/power":
                 return _POWER_MODEL_ID
             return model.id
         

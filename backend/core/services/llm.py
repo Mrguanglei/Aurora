@@ -40,60 +40,22 @@ class LLMError(Exception):
     pass
 
 def setup_api_keys() -> None:
-    """Set up API keys from environment variables."""
+    """Set up only OpenAI-compatible API keys from environment variables."""
     if not config:
         logger.warning("Config not loaded - skipping API key setup")
         return
         
-    providers = [
-        "OPENAI",
-        "ANTHROPIC",
-        "GROQ",
-        "OPENROUTER",
-        "XAI",
-        "MORPH",
-        "GEMINI",
-        "OPENAI_COMPATIBLE",
-        "QWEN",
-        "YI",
-        "DEEPSEEK",
-        "MOONSHOT",
-        "BAICHUAN",
-        "ZHIPU",
-        "SILICON_FLOW",
-        "SUNOAI",
-        "JINA_AI",
-        "MINIMAX",
-        "ERNIE",
-        "SPARK",
-        "TONGYI",
-    ]
-    
-    for provider in providers:
-        try:
-            key = getattr(config, f"{provider}_API_KEY", None)
-            if key:
-                # logger.debug(f"API key set for provider: {provider}")
-                pass
-            else:
-                logger.debug(f"No API key found for provider: {provider} (this is normal if not using this provider)")
-        except AttributeError as e:
-            logger.debug(f"Could not access {provider}_API_KEY: {e}")
-
-    # Set up OpenRouter API base if not already set
-    if hasattr(config, 'OPENROUTER_API_KEY') and hasattr(config, 'OPENROUTER_API_BASE'):
-        if config.OPENROUTER_API_KEY and config.OPENROUTER_API_BASE:
-            os.environ["OPENROUTER_API_BASE"] = config.OPENROUTER_API_BASE
-            # logger.debug(f"Set OPENROUTER_API_BASE to {config.OPENROUTER_API_BASE}")
-
-    # Set up AWS Bedrock bearer token authentication
-    if hasattr(config, 'AWS_BEARER_TOKEN_BEDROCK'):
-        bedrock_token = config.AWS_BEARER_TOKEN_BEDROCK
-        if bedrock_token:
-            os.environ["AWS_BEARER_TOKEN_BEDROCK"] = bedrock_token
-            logger.debug("AWS Bedrock bearer token configured")
-        else:
-            logger.debug("AWS_BEARER_TOKEN_BEDROCK not configured - Bedrock models will not be available")
+    # Only care about OpenAI / OpenAI-compatible configuration per current project policy.
+    try:
+        openai_key = getattr(config, "OPENAI_COMPATIBLE_API_KEY", None) or getattr(config, "OPENAI_API_KEY", None)
+        openai_base = getattr(config, "OPENAI_COMPATIBLE_API_BASE", None) or getattr(config, "OPENAI_API_BASE", None)
+        if openai_key:
+            # expose to environment for downstream libraries if needed
+            os.environ["OPENAI_API_KEY"] = openai_key
+        if openai_base:
+            os.environ["OPENAI_API_BASE"] = openai_base
+    except Exception as e:
+        logger.debug(f"setup_api_keys skipped non-essential keys: {e}")
 
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router
@@ -101,18 +63,17 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
     # Get config values safely
     config_openai_key = getattr(config, 'OPENAI_COMPATIBLE_API_KEY', None) if config else None
     config_openai_base = getattr(config, 'OPENAI_COMPATIBLE_API_BASE', None) if config else None
-    
+    # Only include an OpenAI-compatible mapping. The user will provide API base/key/model in env.
     model_list = [
         {
-            "model_name": "openai-compatible/*", # support OpenAI-Compatible LLM provider
+            "model_name": "openai-compatible/*",
             "litellm_params": {
                 "model": "openai/*",
                 "api_key": openai_compatible_api_key or config_openai_key,
                 "api_base": openai_compatible_api_base or config_openai_base,
             },
         },
-        # Chinese LLM Providers (国产模型)
-        # Doubao (ByteDance 豆包)
+        # Doubao (ByteDance 豆包) - OpenAI-compatible wrapper
         {
             "model_name": "doubao/*",
             "litellm_params": {
@@ -121,183 +82,30 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
                 "api_base": getattr(config, 'DOUBAO_API_BASE', None) if config else None,
             },
         },
+        # DeepSeek via OpenRouter / OpenAI-compatible endpoint
         {
-            "model_name": "qwen/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'QWEN_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'QWEN_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "yi/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'YI_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'YI_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "deepseek/*",
+            "model_name": "openrouter/deepseek/*",
             "litellm_params": {
                 "model": "openai/*",
                 "api_key": getattr(config, 'DEEPSEEK_API_KEY', None) if config else None,
                 "api_base": getattr(config, 'DEEPSEEK_API_BASE', None) if config else None,
             },
         },
+        # Generic fallback entry for any model string passed through
         {
-            "model_name": "moonshot/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'MOONSHOT_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'MOONSHOT_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "baichuan/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'BAICHUAN_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'BAICHUAN_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "zhipu/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'ZHIPU_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'ZHIPU_API_BASE', None) if config else None,
-            },
-        },
-        # Additional Chinese LLM Providers
-        {
-            "model_name": "siliconflow/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'SILICON_FLOW_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'SILICON_FLOW_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "sunoai/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'SUNOAI_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'SUNOAI_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "jinaai/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'JINA_AI_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'JINA_AI_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "minimax/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'MINIMAX_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'MINIMAX_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "ernie/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'ERNIE_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'ERNIE_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "spark/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'SPARK_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'SPARK_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "tongyi/*",
-            "litellm_params": {
-                "model": "openai/*",
-                "api_key": getattr(config, 'TONGYI_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'TONGYI_API_BASE', None) if config else None,
-            },
-        },
-        {
-            "model_name": "*", # supported LLM provider by LiteLLM
+            "model_name": "*",
             "litellm_params": {
                 "model": "*",
             },
         },
     ]
     
-    fallbacks = [
-        # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-            ]
-        },
-        # MAP-tagged Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            ]
-        },
-        # MAP-tagged Sonnet 4 -> Haiku 4.5
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            ]
-        }
-    ]
-    
-    # Context window fallbacks: When context window is exceeded, fallback to models with larger context windows
-    # Order: Smaller context models -> Larger context models
-    # Note: All Bedrock models here have 1M context, but this allows LiteLLM to handle the error gracefully
-    context_window_fallbacks = [
-        # Haiku 4.5 (200k) -> Sonnet 4 (1M) -> Sonnet 4.5 (1M)
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-            ]
-        },
-        # Sonnet 4.5 (1M) -> Sonnet 4 (1M) - both have same context, but allows retry
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-            ]
-        },
-        # Sonnet 4 (1M) -> Sonnet 4.5 (1M) - both have same context, but allows retry
-        {
-            "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf": [
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-            ]
-        }
-    ]
-    
-    # Configure Router with specific retry settings:
-    # - num_retries=0: Disable router-level retries - we handle errors at our layer
-    # - fallbacks: ONLY for rate limits and overloaded errors, NOT for 400 errors
-    # - context_window_fallbacks: Automatically fallback to models with larger context windows when context is exceeded
-    # CRITICAL: 400 Bad Request errors must NOT retry or fallback - they're permanent failures
-    # EXCEPTION: ContextWindowExceededError is a special case where fallback to larger context models is appropriate
+    # Configure Router with minimal, OpenAI-focused settings.
     provider_router = Router(
         model_list=model_list,
-        num_retries=3,  # Retry transient errors (rate limits, server errors)
-        fallbacks=fallbacks,
-        context_window_fallbacks=context_window_fallbacks,  # Handle context window exceeded errors
-        # Only use fallbacks for rate limits (429) and server errors (5xx), NOT client errors (4xx)
-        # context_window_fallbacks are separate and only triggered by context length issues
+        num_retries=3,
     )
-    
-    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} Bedrock-only fallback rules")
+    logger.info("Configured LiteLLM Router for OpenAI-compatible provider only")
 
 def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_key: Optional[str], api_base: Optional[str]) -> None:
     """Configure OpenAI-compatible provider setup."""

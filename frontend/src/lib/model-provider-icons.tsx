@@ -5,13 +5,14 @@ import { cn } from '@/lib/utils';
 
 export type ModelProvider =
   | 'openai'
+  | 'doubao'
+  | 'deepseek'
   | 'anthropic'
   | 'google'
   | 'xai'
   | 'moonshotai'
   | 'bedrock'
-  | 'openrouter'
-  | 'kortix';
+  | 'openrouter';
 
 /**
  * Check if a model ID corresponds to a Kortix mode (Basic or Advanced)
@@ -38,14 +39,18 @@ export function isKortixMode(modelId: string): boolean {
  */
 export function getModelProvider(modelId: string): ModelProvider {
   // Check for Kortix modes first
-  if (isKortixMode(modelId)) {
-    return 'kortix';
-  }
+
   if (modelId.includes('anthropic') || modelId.includes('claude')) {
     return 'anthropic';
   }
   if (modelId.includes('openai') || modelId.includes('gpt')) {
     return 'openai';
+  }
+  if (modelId.includes('doubao')) {
+    return 'doubao';
+  }
+  if (modelId.includes('deepseek')) {
+    return 'deepseek';
   }
   if (modelId.includes('google') || modelId.includes('gemini')) {
     return 'google';
@@ -94,7 +99,6 @@ export function ModelProviderIcon({
   const provider = getModelProvider(modelId);
 
   const iconMap: Record<ModelProvider, string> = {
-    kortix: '/kortix-symbol.svg', // Kortix modes use the Kortix symbol
     anthropic: '/images/models/Anthropic.svg',
     openai: '/images/models/OAI.svg',
     google: '/images/models/Gemini.svg',
@@ -102,10 +106,11 @@ export function ModelProviderIcon({
     moonshotai: '/images/models/Moonshot.svg',
     bedrock: '/images/models/Anthropic.svg', // Bedrock uses Anthropic models primarily
     openrouter: '/images/models/OAI.svg', // Default to OpenAI icon for OpenRouter
+    doubao: '/images/models/DouBao.svg',
+    deepseek: '/images/models/DeepSeek.svg',
   };
 
   // Special handling for Kortix symbol - needs different invert behavior
-  const isKortix = provider === 'kortix';
 
   const iconSrc = iconMap[provider];
 
@@ -145,7 +150,7 @@ export function ModelProviderIcon({
           "object-contain",
           // Kortix symbol: invert in dark mode (black symbol → white)
           // Other icons: invert in dark mode (black icons → white)
-          isKortix ? "dark:invert" : "dark:brightness-0 dark:invert"
+          "dark:brightness-0 dark:invert"
         )}
         style={{ width: size * 0.6, height: size * 0.6 }}
       />
@@ -160,7 +165,6 @@ export function getModelProviderName(modelId: string): string {
   const provider = getModelProvider(modelId);
 
   const nameMap: Record<ModelProvider, string> = {
-    kortix: 'Kortix',
     anthropic: 'Anthropic',
     openai: 'OpenAI',
     google: 'Google',
@@ -168,6 +172,8 @@ export function getModelProviderName(modelId: string): string {
     moonshotai: 'Moonshot AI',
     bedrock: 'AWS Bedrock',
     openrouter: 'OpenRouter',
+    doubao: 'DouBao',
+    deepseek: 'DeepSeek',
   };
 
   return nameMap[provider] || 'Unknown';

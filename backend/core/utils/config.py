@@ -289,6 +289,16 @@ class Configuration:
     # LLM API keys
     ANTHROPIC_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_BASE: Optional[str] = None
+    OPENAI_MODEL_NAME: Optional[str] = "gpt-4"
+    
+    # Optional provider configs for Doubao and DeepSeek (OpenAI-compatible)
+    DOUBAO_API_KEY: Optional[str] = None
+    DOUBAO_API_BASE: Optional[str] = None
+    DOUBAO_MODEL_NAME: Optional[str] = "doubao-seed-1-6-251015"
+    DEEPSEEK_API_KEY: Optional[str] = None
+    DEEPSEEK_API_BASE: Optional[str] = None
+    DEEPSEEK_MODEL_NAME: Optional[str] = "deepseek-chat"
     
     MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openai"
     MEMORY_EMBEDDING_MODEL: Optional[str] = "text-embedding-3-small"
@@ -304,73 +314,11 @@ class Configuration:
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
     OR_SITE_URL: Optional[str] = "https://www.kortix.com"
     OR_APP_NAME: Optional[str] = "Kortix AI"
-    
-    # Chinese LLM Providers (国产模型)
-    # Doubao (ByteDance 豆包/字节跳动)
-    DOUBAO_API_KEY: Optional[str] = None
-    DOUBAO_API_BASE: Optional[str] = "https://ark.cn-beijing.volces.com/api/v3"
-    DOUBAO_MODEL_NAME: Optional[str] = "doubao-seed-1-6-251015"
-    
-    # Qwen (Alibaba 通义千问)
-    QWEN_API_KEY: Optional[str] = None
-    QWEN_API_BASE: Optional[str] = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    QWEN_MODEL_NAME: Optional[str] = "qwen-plus"
-    
-    YI_API_KEY: Optional[str] = None
-    YI_API_BASE: Optional[str] = "https://api.01.ai/v1"
-    YI_MODEL_NAME: Optional[str] = "yi-large"
-    
-    DEEPSEEK_API_KEY: Optional[str] = None
-    DEEPSEEK_API_BASE: Optional[str] = "https://api.deepseek.com"
-    DEEPSEEK_MODEL_NAME: Optional[str] = "deepseek-chat"
-    
-    MOONSHOT_API_KEY: Optional[str] = None
-    MOONSHOT_API_BASE: Optional[str] = "https://api.moonshot.cn/v1"
-    MOONSHOT_MODEL_NAME: Optional[str] = "moonshot-v1-8k"
-    
-    BAICHUAN_API_KEY: Optional[str] = None
-    BAICHUAN_API_BASE: Optional[str] = "https://api.baichuan-ai.com/v1"
-    BAICHUAN_MODEL_NAME: Optional[str] = "Baichuan2-Turbo"
-    
-    ZHIPU_API_KEY: Optional[str] = None
-    ZHIPU_API_BASE: Optional[str] = "https://open.bigmodel.cn/api/paas/v4"
-    ZHIPU_MODEL_NAME: Optional[str] = "glm-4"
-    
-    # Silicon Flow (硅基流动)
-    SILICON_FLOW_API_KEY: Optional[str] = None
-    SILICON_FLOW_API_BASE: Optional[str] = "https://api.siliconflow.cn/v1"
-    SILICON_FLOW_MODEL_NAME: Optional[str] = "meta-llama/Llama-3.3-70B-Instruct"
-    
-    # Sunoai (算能)
-    SUNOAI_API_KEY: Optional[str] = None
-    SUNOAI_API_BASE: Optional[str] = "https://api.sunoai.io/v1"
-    SUNOAI_MODEL_NAME: Optional[str] = "GPT-4-Turbo"
-    
-    # Jina AI (管流技术)
-    JINA_AI_API_KEY: Optional[str] = None
-    JINA_AI_API_BASE: Optional[str] = "https://api.jina.ai/v1"
-    JINA_AI_MODEL_NAME: Optional[str] = "jina-embeddings-v3"
-    
-    # MiniMax (汉海)
-    MINIMAX_API_KEY: Optional[str] = None
-    MINIMAX_API_BASE: Optional[str] = "https://api.minimax.chat/v1"
-    MINIMAX_MODEL_NAME: Optional[str] = "MiniMax-Text-01"
-    
-    # Ernie (Baidu 爱东)
-    ERNIE_API_KEY: Optional[str] = None
-    ERNIE_API_BASE: Optional[str] = "https://aip.baidubce.com/rpc/2.0"
-    ERNIE_MODEL_NAME: Optional[str] = "ernie-4.0-8k"
-    
-    # Spark (親流)
-    SPARK_API_KEY: Optional[str] = None
-    SPARK_API_BASE: Optional[str] = "https://api.spark.xf-yun.com/v1"
-    SPARK_MODEL_NAME: Optional[str] = "spark-max"
-    
-    # Tongyi (掿蛊)
-    TONGYI_API_KEY: Optional[str] = None
-    TONGYI_API_BASE: Optional[str] = "https://dashscope.aliyuncs.com/api/v1"
-    TONGYI_MODEL_NAME: Optional[str] = "tongyiwork-v1"
-    
+    # LLM provider config simplified: only OpenAI-compatible settings are used.
+    # Set these in your .env:
+    # - OPENAI_API_KEY
+    # - OPENAI_API_BASE (or OPENAI_COMPATIBLE_API_BASE)
+    # - OPENAI_MODEL_NAME
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
     

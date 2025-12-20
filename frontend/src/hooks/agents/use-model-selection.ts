@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useModelStore } from '@/stores/model-store';
 import { useCallback, useEffect, useMemo } from 'react';
 
@@ -16,60 +17,57 @@ export interface ModelOption {
 
 // Billing removed - all models are free
 
-const getDefaultModel = (accessibleModels: ModelOption[]): string => {
-  // Pick the first accessible model (sorted by priority)
-  // doubao should be first as default model
-  const doubaoModel = accessibleModels.find(m => m.id === 'doubao/doubao-seed-1-6-251015');
-  if (doubaoModel) return doubaoModel.id;
-
-  const basicModel = accessibleModels.find(m => m.id === 'doubao/doubao-seed-1-6-251015');
-  if (basicModel) return basicModel.id;
-
-  const powerModel = accessibleModels.find(m => m.id === 'doubao/doubao-seed-1-6-251015');
-  if (powerModel) return powerModel.id;
-
-  // Fallback: pick from accessible models sorted by priority
-  if (accessibleModels.length > 0) {
-    return accessibleModels[0].id;
-  }
-
-  return '';
-};
+// No automatic default model selection — frontend fetches available models from backend
 
 export const useModelSelection = () => {
   const { selectedModel, setSelectedModel } = useModelStore();
 
-  // Billing removed - use default models
-  const availableModels = useMemo<ModelOption[]>(() => {
-    // Default models - billing removed
-    return [
-      { id: 'doubao/doubao-seed-1-6-251015', label: 'Doubao (豆包)', requiresSubscription: false, priority: 1, recommended: true },
-      { id: 'Aurora/basic', label: 'Kortix Basic', requiresSubscription: false, priority: 2, recommended: false },
-      { id: 'kortix/power', label: 'Kortix Advanced Mode', requiresSubscription: false, priority: 3, recommended: false },
-    ];
+  // Fetch available models from backend to reflect configured providers.
+  const [availableModels, setAvailableModels] = React.useState<ModelOption[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = React.useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchModels = async () => {
+      try {
+        setIsLoadingModels(true);
+        const res = await fetch('/models');
+        if (!res.ok) throw new Error('Failed to fetch models');
+        const data = await res.json();
+        if (!mounted) return;
+        const mapped: ModelOption[] = (data || []).map((m: any) => ({
+          id: m.id,
+          label: m.label,
+          requiresSubscription: false,
+          priority: 1,
+          recommended: false,
+          capabilities: m.capabilities || ['chat'],
+          contextWindow: m.contextWindow || 128000,
+          // include configured flag for UI
+          ...(m.configured === false ? { recommended: false } : {})
+        }));
+        setAvailableModels(mapped);
+      } catch (e) {
+        console.error('Failed to load models', e);
+        // Fallback to default two models if fetch fails
+        setAvailableModels([
+          { id: 'doubao/doubao-seed-1-6-251015', label: 'Doubao (豆包)', requiresSubscription: false, priority: 1, recommended: true, capabilities: ['chat'], contextWindow: 200000 },
+          { id: 'openrouter/deepseek/deepseek-chat', label: 'DeepSeek Chat', requiresSubscription: false, priority: 2, recommended: false, capabilities: ['chat'], contextWindow: 128000 },
+        ]);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    };
+    fetchModels();
+    return () => { mounted = false; };
   }, []);
 
   // All models are accessible - billing removed
-  const accessibleModels = useMemo(() => {
-    return availableModels;
-  }, [availableModels]);
+  const accessibleModels = useMemo(() => availableModels, [availableModels]);
 
   // Initialize selected model when data loads
-  useEffect(() => {
-    if (!accessibleModels.length) return;
-
-    // If no model selected or selected model is not accessible, set a default
-    const needsUpdate = !selectedModel ||
-                        !accessibleModels.some(m => m.id === selectedModel);
-
-    if (needsUpdate) {
-      const defaultModelId = getDefaultModel(accessibleModels);
-      if (defaultModelId && defaultModelId !== selectedModel) {
-        console.log('🔧 useModelSelection: Setting default model:', defaultModelId);
-        setSelectedModel(defaultModelId);
-      }
-    }
-  }, [selectedModel, accessibleModels, setSelectedModel]);
+  // Note: do NOT auto-select a model. User must pick a model explicitly in the UI.
+  // This keeps selection manual (no automatic defaulting).
 
   const handleModelChange = useCallback((modelId: string) => {
     const model = accessibleModels.find(m => m.id === modelId);
@@ -108,7 +106,7 @@ export const useModelSelection = () => {
     setSelectedModel: handleModelChange,
     availableModels: accessibleModels,
     allModels: availableModels,
-    isLoading: false,
+    isLoading: isLoadingModels,
     modelsData: undefined,
     subscriptionStatus,
     canAccessModel,

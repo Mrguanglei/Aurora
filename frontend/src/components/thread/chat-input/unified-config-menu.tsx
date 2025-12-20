@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Search, Check, ChevronDown, Plus, Loader2, Plug, Brain, LibraryBig, Zap, Lock, Sparkles, ChevronLeft } from 'lucide-react';
 import { useAgents } from '@/hooks/agents/use-agents';
 import { AuroraLogo } from '@/components/sidebar/aurora-logo';
+import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import type { ModelOption } from '@/hooks/agents';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
@@ -347,61 +348,60 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     ), []);
 
     const ModeToggle = useCallback(({ compact = false }: { compact?: boolean }) => {
-        const basicModel = modelOptions.find(m => m.id === 'Aurora/basic' || m.label === 'Kortix Basic');
-        const powerModel = modelOptions.find(m => m.id === 'kortix/power' || m.label === 'Kortix Advanced Mode');
+        const doubaoModel = modelOptions.find(m => m.id === 'doubao/doubao-seed-1-6-251015' || m.label?.includes('Doubao'));
+        const deepseekModel = modelOptions.find(m => m.id === 'openrouter/deepseek/deepseek-chat' || m.label?.includes('DeepSeek'));
 
-        // Billing removed - all models accessible
-        const isPowerSelected = powerModel && selectedModel === powerModel.id;
-        const isBasicSelected = basicModel && selectedModel === basicModel.id;
+        // Manual selection: user chooses which provider to use
+        const isDoubaoSelected = doubaoModel && selectedModel === doubaoModel.id;
+        const isDeepseekSelected = deepseekModel && selectedModel === deepseekModel.id;
 
         return (
             <div className={cn(
                 "flex items-center gap-1.5 p-1 bg-muted/50 rounded-xl",
                 compact ? "" : ""
             )}>
-                {/* Basic Mode */}
+                {/* Doubao */}
                 <button
                     onClick={() => {
-                        if (basicModel) {
-                            onModelChange(basicModel.id);
+                        if (doubaoModel) {
+                            onModelChange(doubaoModel.id);
                         }
                     }}
                     className={cn(
-                        "flex-1 flex items-center justify-center gap-1.5 rounded-lg transition-all",
+                        "flex-1 flex items-center justify-center gap-2 rounded-lg transition-all",
                         compact ? "px-3 py-1.5" : "px-4 py-2",
-                        isBasicSelected
+                        isDoubaoSelected
                             ? "bg-background shadow-sm text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                     )}
                 >
+                    <ModelProviderIcon modelId={doubaoModel?.id || 'doubao/doubao-seed-1-6-251015'} size={compact ? 14 : 18} />
                     <span className={cn(
                         "font-medium",
                         compact ? "text-xs" : "text-sm"
-                    )}>Basic</span>
+                    )}>Doubao</span>
                 </button>
 
-                {/* Advanced Mode */}
+                {/* DeepSeek */}
                 <button
                     onClick={() => {
-                        if (powerModel) {
-                            // Billing removed - all models accessible
-                            onModelChange(powerModel.id);
+                        if (deepseekModel) {
+                            onModelChange(deepseekModel.id);
                         }
                     }}
                     className={cn(
-                        "flex-1 flex items-center justify-center gap-1.5 rounded-lg transition-all",
+                        "flex-1 flex items-center justify-center gap-2 rounded-lg transition-all",
                         compact ? "px-3 py-1.5" : "px-4 py-2",
-                        isPowerSelected
-                            ? "bg-background shadow-sm"
+                        isDeepseekSelected
+                            ? "bg-background shadow-sm text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    <AuroraLogo size={compact ? 10 : 12} variant="symbol" />
+                    <ModelProviderIcon modelId={deepseekModel?.id || 'openrouter/deepseek/deepseek-chat'} size={compact ? 14 : 18} />
                     <span className={cn(
                         "font-medium",
-                        compact ? "text-xs" : "text-sm",
-                        isPowerSelected ? "text-primary" : "text-muted-foreground"
-                    )}>Advanced</span>
+                        compact ? "text-xs" : "text-sm"
+                    )}>DeepSeek</span>
                 </button>
             </div>
         );
