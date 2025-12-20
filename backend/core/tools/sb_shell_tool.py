@@ -234,9 +234,8 @@ class SandboxShellTool(SandboxToolsBase):
         )
         
         response = await self.sandbox.process.execute_session_command(
-            session_id=session_id,
-            req=req,
-            timeout=30  # Short timeout for utility commands
+            session_id,
+            req
         )
         
         logs = await self.sandbox.process.get_session_command_logs(

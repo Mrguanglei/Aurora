@@ -8,6 +8,8 @@ import asyncio
 import uuid
 import os
 import shlex
+import tarfile
+import io
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 from core.utils.logger import logger
@@ -61,29 +63,74 @@ class DockerFilesystem:
         self.sandbox = sandbox
     
     async def upload_file(self, content: bytes, container_path: str) -> bool:
-        """Upload file content to the container."""
+        """Upload file content to the container using Docker put_archive API."""
         try:
+            logger.debug(f"Starting upload_file: path={container_path}, size={len(content)} bytes")
+            
             # Create directory if needed
             dirname = os.path.dirname(container_path)
             if dirname and dirname != '/':
-                self.sandbox.container.exec_run(
+                logger.debug(f"Creating directory: {dirname}")
+                result = self.sandbox.container.exec_run(
                     ['mkdir', '-p', dirname],
                     demux=False
                 )
+                if result.exit_code != 0:
+                    error_output = result.output.decode('utf-8', errors='ignore') if isinstance(result.output, bytes) else str(result.output)
+                    logger.warning(f"Failed to create directory {dirname}: {error_output}")
             
-            # Write content to file
-            result = self.sandbox.container.exec_run(
-                ['bash', '-c', f'cat > {shlex.quote(container_path)}'],
-                stdin=content,
+            # Get the filename from the path
+            filename = os.path.basename(container_path)
+            logger.debug(f"Filename: {filename}, dirname: {dirname}")
+            
+            # Always use put_archive - it's the most reliable method
+            # Create a tar archive in memory
+            tar_stream = io.BytesIO()
+            with tarfile.open(fileobj=tar_stream, mode='w') as tar:
+                # Create a TarInfo object for the file
+                # The name should be just the filename, not the full path
+                tarinfo = tarfile.TarInfo(name=filename)
+                tarinfo.size = len(content)
+                tarinfo.mode = 0o644  # Default file permissions
+                
+                # Add the file to the tar archive
+                tar.addfile(tarinfo, io.BytesIO(content))
+            
+            # Reset the stream position
+            tar_stream.seek(0)
+            tar_data = tar_stream.read()
+            logger.debug(f"Created tar archive: {len(tar_data)} bytes")
+            
+            # Upload the tar archive to the container
+            # put_archive extracts the tar to the specified directory
+            # Since our tar contains just "filename", it will be extracted as "dirname/filename"
+            target_dir = dirname if dirname else '/'
+            logger.debug(f"Calling put_archive: target_dir={target_dir}, container_path={container_path}")
+            put_result = self.sandbox.container.put_archive(target_dir, tar_data)
+            logger.debug(f"put_archive result: {put_result}")
+            
+            if not put_result:
+                raise Exception(f"put_archive returned False for {container_path}")
+            
+            # Verify file was created
+            logger.debug(f"Verifying file exists: {container_path}")
+            verify_result = self.sandbox.container.exec_run(
+                ['test', '-f', container_path],
                 demux=False
             )
+            if verify_result.exit_code != 0:
+                # Try to list files in the directory to debug
+                list_result = self.sandbox.container.exec_run(
+                    ['ls', '-la', dirname if dirname else '/'],
+                    demux=False
+                )
+                list_output = list_result.output.decode('utf-8', errors='ignore') if isinstance(list_result.output, bytes) else str(list_result.output)
+                raise Exception(f"File was not created at {container_path}. Directory contents: {list_output}")
             
-            if result.exit_code != 0:
-                raise Exception(f"Failed to upload file: {result.output}")
-            
+            logger.info(f"Successfully uploaded file to {container_path} ({len(content)} bytes)")
             return True
         except Exception as e:
-            logger.error(f"Error uploading file {container_path}: {e}")
+            logger.error(f"Error uploading file {container_path}: {e}", exc_info=True)
             raise e
     
     async def download_file(self, container_path: str) -> bytes:
@@ -105,18 +152,43 @@ class DockerFilesystem:
     async def list_files(self, path: str) -> list:
         """List files in a directory."""
         try:
+            # Check if container exists and is running
+            if not self.sandbox.container:
+                logger.error(f"Container not available for listing files in {path}")
+                return []
+            
+            # Reload container to get latest status
+            try:
+                self.sandbox.container.reload()
+            except docker.errors.NotFound:
+                logger.error(f"Container {self.sandbox.container.id} not found")
+                return []
+            except Exception as e:
+                logger.warning(f"Could not reload container: {e}")
+            
+            # Check if container is running
+            if self.sandbox.container.status != 'running':
+                logger.error(f"Container {self.sandbox.container.id} is not running (status: {self.sandbox.container.status})")
+                return []
+            
             result = self.sandbox.container.exec_run(
                 ['ls', '-la', path],
                 demux=False
             )
             
             if result.exit_code != 0:
+                logger.warning(f"ls command failed with exit code {result.exit_code} for path {path}")
                 return []
             
             output = result.output.decode('utf-8', errors='ignore') if isinstance(result.output, bytes) else result.output
             files = []
             
-            for line in output.split('\n')[1:]:  # Skip first line (total)
+            lines = output.split('\n')
+            if len(lines) <= 1:
+                # Empty directory or only "total" line
+                return []
+            
+            for line in lines[1:]:  # Skip first line (total)
                 if not line.strip():
                     continue
                 
@@ -124,8 +196,12 @@ class DockerFilesystem:
                 if len(parts) < 9:
                     continue
                 
-                is_dir = parts[0].startswith('d')
+                # Skip . and .. entries
                 filename = ' '.join(parts[8:])  # Handle filenames with spaces
+                if filename in ['.', '..']:
+                    continue
+                
+                is_dir = parts[0].startswith('d')
                 size = int(parts[4]) if parts[4].isdigit() else 0
                 mod_time = ' '.join(parts[5:8])
                 
@@ -138,8 +214,14 @@ class DockerFilesystem:
                 })())
             
             return files
+        except docker.errors.NotFound as e:
+            logger.error(f"Container not found when listing files {path}: {e}")
+            return []
+        except docker.errors.APIError as e:
+            logger.error(f"Docker API error when listing files {path}: {e}")
+            return []
         except Exception as e:
-            logger.error(f"Error listing files {path}: {e}")
+            logger.error(f"Error listing files {path}: {e}", exc_info=True)
             return []
     
     async def delete_file(self, container_path: str) -> bool:
@@ -153,6 +235,49 @@ class DockerFilesystem:
         except Exception as e:
             logger.error(f"Error deleting file {container_path}: {e}")
             raise e
+    
+    async def create_folder(self, folder_path: str, permissions: str = "755") -> bool:
+        """Create a folder (directory) in the container."""
+        try:
+            logger.debug(f"Creating folder: {folder_path} with permissions {permissions}")
+            result = self.sandbox.container.exec_run(
+                ['mkdir', '-p', folder_path],
+                demux=False
+            )
+            if result.exit_code != 0:
+                error_output = result.output.decode('utf-8', errors='ignore') if isinstance(result.output, bytes) else str(result.output)
+                raise Exception(f"Failed to create folder {folder_path}: {error_output}")
+            
+            # Set permissions if specified
+            if permissions:
+                chmod_result = self.sandbox.container.exec_run(
+                    ['chmod', permissions, folder_path],
+                    demux=False
+                )
+                if chmod_result.exit_code != 0:
+                    logger.warning(f"Failed to set permissions {permissions} on folder {folder_path}")
+            
+            logger.debug(f"Successfully created folder: {folder_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating folder {folder_path}: {e}")
+            raise e
+    
+    async def set_file_permissions(self, file_path: str, permissions: str) -> bool:
+        """Set file permissions."""
+        try:
+            result = self.sandbox.container.exec_run(
+                ['chmod', permissions, file_path],
+                demux=False
+            )
+            if result.exit_code != 0:
+                error_output = result.output.decode('utf-8', errors='ignore') if isinstance(result.output, bytes) else str(result.output)
+                logger.warning(f"Failed to set permissions {permissions} on file {file_path}: {error_output}")
+                return False
+            return True
+        except Exception as e:
+            logger.error(f"Error setting permissions on file {file_path}: {e}")
+            return False
 
 
 class DockerProcess:

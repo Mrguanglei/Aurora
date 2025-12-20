@@ -72,6 +72,7 @@ services:
       - "8011:8011"
     volumes:
       - ./backend/.env:/app/.env:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket for sandbox access
     environment:
       - DATABASE_URL=postgresql://aurora_user:aurora_password_change_me@postgres:5432/aurora_db
       - REDIS_HOST=redis

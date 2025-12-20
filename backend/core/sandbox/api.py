@@ -287,9 +287,18 @@ async def list_files(
         # Get sandbox using the safer method
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
         
+        # Check if container exists and is accessible
+        if not sandbox.container:
+            logger.error(f"Container not available for sandbox {sandbox_id}")
+            raise HTTPException(status_code=503, detail="Sandbox container is not available. Please try again in a moment.")
+        
         # List files with retry logic for transient errors
+        # Note: list_files is async, so we need to await it in the lambda
+        async def list_files_operation():
+            return await sandbox.fs.list_files(path)
+        
         files = await retry_with_backoff(
-            operation=lambda: sandbox.fs.list_files(path),
+            operation=list_files_operation,
             operation_name=f"list_files({path}) in sandbox {sandbox_id}"
         )
         result = []
@@ -310,9 +319,12 @@ async def list_files(
         
         logger.debug(f"Successfully listed {len(result)} files in sandbox {sandbox_id}")
         return {"files": [file.dict() for file in result]}
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404, 503)
+        raise
     except Exception as e:
-        logger.error(f"Error listing files in sandbox {sandbox_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing files in sandbox {sandbox_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")
 
 @router.get("/sandboxes/{sandbox_id}/files/content")
 async def read_file(

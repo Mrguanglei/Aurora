@@ -256,7 +256,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
         
         if not self.firecrawl_api_key:
             logging.warning("FIRECRAWL_API_KEY not configured - Web Scraping Tool will not be available")
-        
+
         logging.info(f"Web Search Tool initialized with QuarkSearch at {quark_base_url}")
 
     @openapi_schema({
