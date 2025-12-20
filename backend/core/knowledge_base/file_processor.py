@@ -299,7 +299,7 @@ Keep it under 200 words and make it actionable for context injection."""
                         messages=messages,
                         model_name=model_name,
                         temperature=0.1,
-                        max_tokens=300
+                        max_tokens=16000
                     )
                     
                     summary = response.choices[0].message.content.strip()

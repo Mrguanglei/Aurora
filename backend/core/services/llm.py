@@ -181,6 +181,9 @@ async def make_llm_api_call(
     resolved_model_name = model_manager.resolve_model_id(model_name) or model_name
     
     # Only pass headers/extra_headers if they are not None to avoid overriding model config
+    # Determine effective max_tokens: prefer explicit arg, then config fallback
+    effective_max_tokens = max_tokens if max_tokens is not None else getattr(config, "OPENAI_MAX_TOKENS", None)
+
     override_params = {
         "messages": messages,
         "temperature": temperature,
@@ -189,8 +192,10 @@ async def make_llm_api_call(
         "stream": stream,
         "api_key": api_key,
         "api_base": api_base,
-        "stop": stop
+        "stop": stop,
     }
+    if effective_max_tokens is not None:
+        override_params["max_tokens"] = effective_max_tokens
     
     # Only add headers if they are provided (not None)
     if headers is not None:
