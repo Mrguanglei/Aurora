@@ -404,7 +404,7 @@ class Configuration:
     DOCKER_NETWORK: Optional[str] = "bridge"  # Docker network mode
     
     # Sandbox image configuration
-    SANDBOX_IMAGE_NAME = "kortix/aurora:0.1.3.25"
+    SANDBOX_IMAGE_NAME = "swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/ubuntu:22.04"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
     
     # Sandbox container limits

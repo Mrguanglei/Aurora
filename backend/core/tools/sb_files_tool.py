@@ -174,13 +174,13 @@ class SandboxFilesTool(SandboxToolsBase):
             
             if file_path.lower().endswith('.html'):
                 try:
-                    website_link = await self.sandbox.get_preview_link(8080)
+                    website_link = await self.sandbox.get_preview_link(8888)
                     website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
                     if not website_url.endswith('/'):
                         website_url += '/'
                     full_preview_url = f"{website_url}{file_path}"
                     message += f"\n\n✓ HTML file preview available at: {full_preview_url}"
-                    message += "\n[Note: Port 8080 is auto-exposed. Just share this URL with the user - no need to start servers or expose ports manually]"
+                    message += "\n[Note: Port 8888 is auto-exposed. Just share this URL with the user - no need to start servers or expose ports manually]"
                 except Exception as e:
                     logger.warning(f"Failed to get preview URL for HTML file: {str(e)}")
             
@@ -290,13 +290,13 @@ class SandboxFilesTool(SandboxToolsBase):
             
             if file_path.lower().endswith('.html'):
                 try:
-                    website_link = await self.sandbox.get_preview_link(8080)
+                    website_link = await self.sandbox.get_preview_link(8888)
                     website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
                     if not website_url.endswith('/'):
                         website_url += '/'
                     full_preview_url = f"{website_url}{file_path}"
                     message += f"\n\n✓ HTML file preview available at: {full_preview_url}"
-                    message += "\n[Note: Port 8080 is auto-exposed. Just share this URL with the user - no need to start servers or expose ports manually]"
+                    message += "\n[Note: Port 8888 is auto-exposed. Just share this URL with the user - no need to start servers or expose ports manually]"
                 except Exception as e:
                     logger.warning(f"Failed to get preview URL for HTML file: {str(e)}")
             

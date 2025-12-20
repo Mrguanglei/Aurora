@@ -558,7 +558,7 @@ async def _ensure_sandbox_for_thread(client, project_id: str, files: List[Upload
 
         # Get preview links
         vnc_link = await sandbox.get_preview_link(6080)
-        website_link = await sandbox.get_preview_link(8080)
+        website_link = await sandbox.get_preview_link(8888)
         vnc_url = vnc_link.url if hasattr(vnc_link, 'url') else str(vnc_link).split("url='")[1].split("'")[0]
         website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
         token = None

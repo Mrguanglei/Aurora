@@ -47,7 +47,7 @@ class DockerSandboxInfo:
     project_id: Optional[str]
     password: str
     port_6080: int  # VNC web interface
-    port_8080: int  # HTTP server
+    port_8080: int  # HTTP server (actually uses 8888 to avoid conflicts)
     port_9222: int  # Chrome debugging
     port_8004: int  # Browser API server
     vnc_url: Optional[str] = None
@@ -316,42 +316,75 @@ async def create_sandbox(password: str, project_id: Optional[str] = None) -> Tup
         try:
             logger.info(f"Checking for Docker image: {image_name}")
             client.images.get(image_name)
+            logger.info(f"Docker image {image_name} found locally")
         except docker.errors.ImageNotFound:
-            logger.info(f"Image not found, pulling {image_name}")
-            client.images.pull(image_name)
+            logger.info(f"Image not found locally, attempting to pull {image_name}")
+            try:
+                # Pull with timeout and better error handling
+                import time
+                pull_start = time.time()
+                pull_timeout = 300  # 5 minutes timeout
+                
+                # Use low-level API for better control
+                pull_result = client.api.pull(
+                    image_name,
+                    stream=True,
+                    decode=True
+                )
+                
+                # Process pull stream
+                last_error = None
+                for line in pull_result:
+                    if time.time() - pull_start > pull_timeout:
+                        raise TimeoutError(f"Image pull timeout after {pull_timeout} seconds")
+                    
+                    if 'error' in line:
+                        last_error = line.get('error', 'Unknown error')
+                        logger.warning(f"Pull error: {last_error}")
+                    elif 'status' in line:
+                        status = line.get('status', '')
+                        if 'Downloading' in status or 'Extracting' in status:
+                            progress = line.get('progress', '')
+                            logger.debug(f"Pull progress: {status} {progress}")
+                
+                if last_error:
+                    raise Exception(f"Image pull failed: {last_error}")
+                
+                pull_duration = time.time() - pull_start
+                logger.info(f"Successfully pulled {image_name} in {pull_duration:.2f} seconds")
+                
+            except TimeoutError as e:
+                error_msg = f"Timeout pulling Docker image {image_name}. This may be due to network issues. Please try: docker pull {image_name} on the host machine first."
+                logger.error(error_msg)
+                raise Exception(error_msg) from e
+            except Exception as e:
+                error_msg = f"Failed to pull Docker image {image_name}: {e}. Please ensure the image is available or pull it manually: docker pull {image_name}"
+                logger.error(error_msg)
+                raise Exception(error_msg) from e
         
         # Find available ports
         port_6080 = _find_available_port(6080)
-        port_8080 = _find_available_port(8080)
+        port_8080 = _find_available_port(8888)  # Changed from 8080 to 8888 to avoid conflicts
         port_9222 = _find_available_port(9222)
-        port_8004 = _find_available_port(8004)
+        port_8004 = _find_available_port(9004)  # Changed from 8004 to 9004 to avoid conflicts with peec_search_model
         
         # Create container with port mappings
+        # For Ubuntu base image, use a simple keep-alive command and create workspace
         container = client.containers.run(
             image_name,
             name=container_name,
             detach=True,
+            command=['sh', '-c', 'mkdir -p /workspace && tail -f /dev/null'],  # Create workspace and keep container running
+            working_dir='/workspace',
             ports={
                 '6080/tcp': port_6080,
-                '8080/tcp': port_8080,
+                '8888/tcp': port_8080,  # Changed container port from 8080 to 8888 to avoid conflicts
                 '9222/tcp': port_9222,
                 '8004/tcp': port_8004,
                 '5901/tcp': None,  # VNC port (not exposed to host)
             },
             environment={
-                'CHROME_PERSISTENT_SESSION': 'true',
-                'RESOLUTION': '1048x768x24',
-                'RESOLUTION_WIDTH': '1048',
-                'RESOLUTION_HEIGHT': '768',
-                'VNC_PASSWORD': password,
-                'ANONYMIZED_TELEMETRY': 'false',
-                'CHROME_PATH': '/usr/bin/google-chrome',
-                'CHROME_USER_DATA': '/app/data/chrome_data',
-                'CHROME_DEBUGGING_PORT': '9222',
-                'CHROME_DEBUGGING_HOST': 'localhost',
-                'CHROME_CDP': f'http://localhost:{port_9222}',
-                'DISPLAY': ':99',
-                'PLAYWRIGHT_BROWSERS_PATH': '/ms-playwright',
+                'TZ': 'Asia/Shanghai',
             },
             volumes={
                 '/tmp/.X11-unix': {'bind': '/tmp/.X11-unix', 'mode': 'rw'},
@@ -365,7 +398,7 @@ async def create_sandbox(password: str, project_id: Optional[str] = None) -> Tup
             },
             restart_policy={'Name': 'unless-stopped'},
             healthcheck={
-                'Test': ['CMD', 'nc', '-z', 'localhost', '5901'],
+                'Test': ['CMD', 'test', '-d', '/workspace'],
                 'Interval': 10000000000,  # 10 seconds in nanoseconds
                 'Timeout': 5000000000,    # 5 seconds
                 'Retries': 3,
@@ -465,19 +498,61 @@ async def delete_sandbox(container_id: str) -> bool:
 
 
 def _find_available_port(start_port: int, max_attempts: int = 100) -> int:
-    """Find an available port starting from start_port."""
+    """Find an available port starting from start_port.
+    
+    Checks both 127.0.0.1 and 0.0.0.0 to ensure the port is truly available
+    for Docker port mapping. Also checks Docker containers for port conflicts.
+    """
     import socket
     
+    # First, get list of all ports currently in use by Docker
+    docker_ports = set()
+    try:
+        client = get_docker_client()
+        containers = client.containers.list(all=True, filters={'status': ['running', 'created', 'restarting']})
+        for container in containers:
+            try:
+                container.reload()  # Ensure we have latest container state
+                ports = container.attrs.get('NetworkSettings', {}).get('Ports', {})
+                for container_port, host_bindings in ports.items():
+                    if host_bindings:
+                        for binding in host_bindings:
+                            host_port = binding.get('HostPort')
+                            if host_port:
+                                docker_ports.add(int(host_port))
+            except Exception as e:
+                logger.debug(f"Error checking container {container.name} ports: {e}")
+                continue
+    except Exception as e:
+        logger.warning(f"Failed to check Docker containers for port conflicts: {e}")
+    
+    # Now find an available port
     for port in range(start_port, start_port + max_attempts):
+        # Skip if Docker is already using this port
+        if port in docker_ports:
+            logger.debug(f"Port {port} is in use by Docker container, skipping")
+            continue
+        
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('127.0.0.1', port))
-            sock.close()
+            # Check 127.0.0.1
+            sock1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock1.bind(('127.0.0.1', port))
+            sock1.close()
+            
+            # Check 0.0.0.0 (required for Docker port mapping)
+            sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock2.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock2.bind(('0.0.0.0', port))
+            sock2.close()
+            
+            logger.debug(f"Found available port: {port}")
             return port
-        except OSError:
+        except OSError as e:
+            logger.debug(f"Port {port} is not available: {e}")
             continue
     
-    raise Exception(f"Could not find available port starting from {start_port}")
+    raise Exception(f"Could not find available port starting from {start_port} after {max_attempts} attempts")
 
 
 async def _wait_for_container_ready(container, max_retries: int = 30) -> bool:

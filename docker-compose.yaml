@@ -32,6 +32,7 @@ services:
       POSTGRES_USER: aurora_user
       POSTGRES_PASSWORD: aurora_password_change_me
       TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai  # PostgreSQL specific timezone setting
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
@@ -50,6 +51,8 @@ services:
     volumes:
       - redis_data:/data
       - ./backend/services/docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    environment:
+      - TZ=Asia/Shanghai
     command: redis-server /usr/local/etc/redis/redis.conf --save 60 1 --loglevel warning
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -95,6 +98,7 @@ services:
     command: uv run dramatiq --skip-logging --processes 4 --threads 4 run_agent_background
     volumes:
       - ./backend/.env:/app/.env:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket for sandbox creation (needs write access)
     environment:
       - DATABASE_URL=postgresql://aurora_user:aurora_password_change_me@postgres:5432/aurora_db
       - REDIS_HOST=redis

@@ -1,4 +1,3 @@
-from tavily import AsyncTavilyClient
 import httpx
 from dotenv import load_dotenv
 from core.agentpress.tool import Tool, ToolResult, openapi_schema, tool_metadata
@@ -10,8 +9,160 @@ import datetime
 import asyncio
 import logging
 import time
+from typing import Optional
+from urllib.parse import urlparse
+import re
 
 # TODO: add subpages, etc... in filters as sometimes its necessary 
+
+class QuarkSearch:
+    """Local Quark search engine implementation"""
+    
+    # 需要过滤的域名列表
+    FILTERED_DOMAINS = {
+        'baijiahao.baidu.com',  # 百家号 - 内容质量不稳定
+        # 'zhihu.com',         # 知乎需要登录
+        # 'zhuanlan.zhihu.com',# 知乎专栏
+        # 'juejin.cn',         # 掘金需要登录
+        # 'jianshu.com',       # 简书需要登录
+        # 'csdn.net',          # CSDN需要登录
+        # 'blog.csdn.net',     # CSDN博客
+        # 'weibo.com',         # 微博需要登录
+        # 'douban.com',        # 豆瓣需要登录
+        # 'segmentfault.com',  # 思否需要登录
+    }
+    
+    def __init__(self, base_url: str = "http://192.168.1.204:9018/search"):
+        if not base_url:
+            raise ValueError("base_url cannot be None or empty")
+        self.base_url = base_url
+        logging.info(f"QuarkSearch initialized with base_url: {self.base_url}")
+    
+    def _clean_text(self, text: str) -> str:
+        """Clean text by removing problematic characters and normalizing whitespace"""
+        if not text:
+            return ""
+        # 移除HTML标签
+        text = re.sub(r'<[^>]+>', '', text)
+        # 移除多余的空白字符
+        text = re.sub(r'\s+', ' ', text)
+        # 保留 Markdown 相关字符，同时移除其他特殊字符
+        text = re.sub(r'[^\w\s\-.,?!()[\]{}\'\"#*`~>+=/@|]+', '', text)
+        # 移除控制字符，但保留换行和制表符
+        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\t')
+        # 规范化 Markdown 语法
+        text = re.sub(r'(\*{2,})', '**', text)  # 规范化加粗
+        text = re.sub(r'(_{2,})', '__', text)   # 规范化下划线
+        text = re.sub(r'(`{3,})', '```', text)  # 规范化代码块
+        return text.strip()
+    
+    def _is_allowed_domain(self, url: str) -> bool:
+        """Check if the domain is allowed (not in filtered list)"""
+        try:
+            domain = urlparse(url).netloc.lower()
+            # 移除www.前缀再判断
+            if domain.startswith('www.'):
+                domain = domain[4:]
+            return not any(filtered_domain in domain for filtered_domain in self.FILTERED_DOMAINS)
+        except:
+            return False
+    
+    async def search(
+        self, 
+        query: str, 
+        date_range: Optional[str] = None,
+        max_results: int = 5,
+        snippet_length: int = 1000
+    ) -> dict:
+        """Search using Quark API and return results in Tavily-compatible format"""
+        if not self.base_url:
+            error_msg = "QuarkSearch base_url is not configured"
+            logging.error(error_msg)
+            return {
+                "success": False,
+                "results": [],
+                "answer": "",
+                "images": [],
+                "response": {},
+                "error": error_msg
+            }
+        
+        params = {
+            "query": query,
+            "category": "finance"
+        }
+        
+        try:
+            # Double-check base_url is valid before making request
+            if not self.base_url or not isinstance(self.base_url, str) or not self.base_url.strip():
+                error_msg = f"Invalid base_url: {repr(self.base_url)}"
+                logging.error(f"QuarkSearch: {error_msg}")
+                raise ValueError(error_msg)
+            
+            # Ensure base_url is a valid string
+            url_str = str(self.base_url).strip()
+            if not url_str:
+                error_msg = "base_url is empty after stripping"
+                logging.error(f"QuarkSearch: {error_msg}")
+                raise ValueError(error_msg)
+            
+            logging.info(f"QuarkSearch: Searching for '{query}' at {url_str}")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url_str, json=params)
+                response.raise_for_status()
+                result = response.json()  # Use .json() instead of json.loads(response.text)
+                search_output = result.get("result", [])
+                
+                search_results = []
+                for content in search_output:
+                    title = content.get("title", "")
+                    link = content.get("link", "")
+                    snippet = content.get("snippet", "")
+                    
+                    # 应用域名过滤
+                    if not self._is_allowed_domain(link):
+                        logging.info(f"Filtered out domain: {link}")
+                        continue
+                    
+                    # 清理文本
+                    title = self._clean_text(title)
+                    snippet = self._clean_text(snippet)
+                    
+                    # 转换为 Tavily 兼容格式
+                    search_results.append({
+                        "title": title,
+                        "url": link,
+                        "content": snippet,
+                        "published_date": None,  # QuarkSearch 不提供日期
+                        "score": None
+                    })
+                    
+                    # 限制结果数量
+                    if len(search_results) >= max_results:
+                        break
+                
+                return {
+                    "success": len(search_results) > 0,
+                    "results": search_results,
+                    "answer": "",  # QuarkSearch 不提供直接答案
+                    "images": [],  # QuarkSearch 不提供图片
+                    "response": {
+                        "query": query,
+                        "results": search_results,
+                        "total_results": len(search_results)
+                    }
+                }
+                
+        except Exception as e:
+            logging.error(f"QuarkSearch failed: {e}")
+            return {
+                "success": False,
+                "results": [],
+                "answer": "",
+                "images": [],
+                "response": {},
+                "error": str(e)
+            }
 
 @tool_metadata(
     display_name="Web Search",
@@ -80,30 +231,39 @@ import time
 """
 )
 class SandboxWebSearchTool(SandboxToolsBase):
-    """Tool for performing web searches using Tavily API and web scraping using Firecrawl."""
+    """Tool for performing web searches using local QuarkSearch API and web scraping using Firecrawl."""
 
     def __init__(self, project_id: str, thread_manager: ThreadManager):
         super().__init__(project_id, thread_manager)
         # Load environment variables
         load_dotenv()
         # Use API keys from config
-        self.tavily_api_key = config.TAVILY_API_KEY
         self.firecrawl_api_key = config.FIRECRAWL_API_KEY
         self.firecrawl_url = config.FIRECRAWL_URL
         
-        if not self.tavily_api_key:
-            logging.warning("TAVILY_API_KEY not configured - Web Search Tool will not be available")
+        # Get QuarkSearch base URL from config or use default
+        quark_base_url = getattr(config, 'QUARK_SEARCH_URL', None)
+        # Ensure we have a valid URL (not None, not empty string)
+        if not quark_base_url or not isinstance(quark_base_url, str) or not quark_base_url.strip():
+            quark_base_url = 'http://192.168.1.204:9018/search'
+        
+        logging.info(f"Initializing QuarkSearch with URL: {quark_base_url}")
+        try:
+            self.quark_search = QuarkSearch(base_url=quark_base_url)
+        except Exception as e:
+            logging.error(f"Failed to initialize QuarkSearch: {e}")
+            raise
+        
         if not self.firecrawl_api_key:
             logging.warning("FIRECRAWL_API_KEY not configured - Web Scraping Tool will not be available")
-
-        # Tavily asynchronous search client
-        self.tavily_client = AsyncTavilyClient(api_key=self.tavily_api_key)
+        
+        logging.info(f"Web Search Tool initialized with QuarkSearch at {quark_base_url}")
 
     @openapi_schema({
         "type": "function",
         "function": {
             "name": "web_search",
-            "description": "Search the web for up-to-date information using the Tavily API. IMPORTANT: For batch searches, pass query as a native array like [\"query1\", \"query2\"], NOT as a JSON string. For num_results, pass an integer like 5, NOT a string like \"5\". This tool supports both single and batch queries for efficient research. You can search for multiple topics simultaneously by providing an array of queries, which executes searches concurrently for faster results. Use batch mode when researching multiple related topics, gathering comprehensive information, or performing parallel searches. Results include titles, URLs, publication dates, direct answers, and images.",
+            "description": "Search the web for up-to-date information using local QuarkSearch API. IMPORTANT: For batch searches, pass query as a native array like [\"query1\", \"query2\"], NOT as a JSON string. For num_results, pass an integer like 5, NOT a string like \"5\". This tool supports both single and batch queries for efficient research. You can search for multiple topics simultaneously by providing an array of queries, which executes searches concurrently for faster results. Use batch mode when researching multiple related topics, gathering comprehensive information, or performing parallel searches. Results include titles, URLs, and snippets.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -139,13 +299,10 @@ class SandboxWebSearchTool(SandboxToolsBase):
         num_results: int = 5
     ) -> ToolResult:
         """
-        Search the web using the Tavily API to find relevant and up-to-date information.
+        Search the web using local QuarkSearch API to find relevant and up-to-date information.
         Supports both single queries and batch queries for concurrent execution.
         """
         try:
-            # Check if Tavily API key is configured
-            if not self.tavily_api_key:
-                return self.fail_response("Web Search is not available. TAVILY_API_KEY is not configured.")
             
             # Normalize num_results
             if num_results is None:
@@ -263,7 +420,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
     
     async def _execute_single_search(self, query: str, num_results: int) -> dict:
         """
-        Helper function to execute a single search query.
+        Helper function to execute a single search query using QuarkSearch.
         
         Parameters:
         - query: The search query string
@@ -273,30 +430,28 @@ class SandboxWebSearchTool(SandboxToolsBase):
         - dict with success status, results, answer, images, and full response
         """
         try:
-            search_response = await self.tavily_client.search(
+            # Use QuarkSearch instead of Tavily
+            search_result = await self.quark_search.search(
                 query=query,
                 max_results=num_results,
-                include_images=True,
-                include_answer="advanced",
-                search_depth="advanced",
+                snippet_length=1000
             )
             
-            # Extract results and answer
-            results = search_response.get('results', [])
-            answer = search_response.get('answer', '')
-            images = search_response.get('images', [])
+            # Extract results
+            results = search_result.get('results', [])
+            answer = search_result.get('answer', '')
+            images = search_result.get('images', [])
+            success = search_result.get('success', False)
+            response = search_result.get('response', {})
             
-            # Consider search successful if we have either results OR an answer
-            success = len(results) > 0 or (answer and answer.strip())
-            
-            logging.info(f"Retrieved search results for query: '{query}' - {len(results)} results, answer: {'yes' if answer else 'no'}")
+            logging.info(f"Retrieved search results for query: '{query}' - {len(results)} results")
             
             return {
                 "success": success,
                 "results": results,
                 "answer": answer,
                 "images": images,
-                "response": search_response
+                "response": response
             }
         
         except Exception as e:

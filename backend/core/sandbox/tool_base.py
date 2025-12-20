@@ -66,7 +66,7 @@ class SandboxToolsBase(Tool):
                     # Gather preview links and token (best-effort parsing)
                     try:
                         vnc_link = await sandbox_obj.get_preview_link(6080)
-                        website_link = await sandbox_obj.get_preview_link(8080)
+                        website_link = await sandbox_obj.get_preview_link(8888)
                         vnc_url = vnc_link.url if hasattr(vnc_link, 'url') else str(vnc_link).split("url='")[1].split("'")[0]
                         website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
                         token = vnc_link.token if hasattr(vnc_link, 'token') else (str(vnc_link).split("token='")[1].split("'")[0] if "token='" in str(vnc_link) else None)
