@@ -109,8 +109,8 @@ export default function SunaPage() {
               {/* Kortix Symbol with grain texture */}
               <div className="relative mb-8 sm:mb-12" style={{ width: '80px', height: '80px' }}>
                 <Image
-                  src="/kortix-symbol.svg"
-                  alt="Kortix"
+                  src="/logo.svg"
+                  alt="Aurora"
                   fill
                   className="object-contain dark:invert"
                   priority

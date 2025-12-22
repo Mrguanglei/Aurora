@@ -291,17 +291,17 @@ class Configuration:
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_API_BASE: Optional[str] = None
     OPENAI_MODEL_NAME: Optional[str] = "gpt-4"
-    OPENAI_MAX_TOKENS: Optional[int] = 160000
+    OPENAI_MAX_TOKENS: Optional[int] = 8192
     
     # Optional provider configs for Doubao and DeepSeek (OpenAI-compatible)
     DOUBAO_API_KEY: Optional[str] = None
     DOUBAO_API_BASE: Optional[str] = None
     DOUBAO_MODEL_NAME: Optional[str] = "doubao-seed-1-6-251015"
-    DOUBAO_MAX_TOKENS: Optional[int] = 160000
+    DOUBAO_MAX_TOKENS: Optional[int] = 32768 
     DEEPSEEK_API_KEY: Optional[str] = None
     DEEPSEEK_API_BASE: Optional[str] = None
     DEEPSEEK_MODEL_NAME: Optional[str] = "deepseek-chat"
-    DEEPSEEK_MAX_TOKENS: Optional[int] = 160000
+    DEEPSEEK_MAX_TOKENS: Optional[int] = 65536 
     
     MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openai"
     MEMORY_EMBEDDING_MODEL: Optional[str] = "text-embedding-3-small"

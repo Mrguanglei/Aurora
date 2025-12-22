@@ -65,8 +65,8 @@ export function WordmarkFooter() {
                             {/* Base wordmark - symbol for mobile, wordmark for desktop */}
                             <div className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ width: '280px', height: '280px' }}>
                                 <Image
-                                    src="/kortix-symbol.svg"
-                                    alt="Kortix"
+                                    src="/logo.svg"
+                                    alt="Aurora"
                                     fill
                                     className="object-contain invert dark:invert-0 opacity-15"
                                     priority
@@ -126,8 +126,8 @@ export function WordmarkFooter() {
                     <div className="relative w-full h-full opacity-0">
                         <div className="relative w-full h-full md:hidden">
                             <Image
-                                src="/kortix-symbol.svg"
-                                alt="Kortix"
+                                src="/logo.svg"
+                                alt="Aurora"
                                 fill
                                 className="object-contain"
                                 priority
