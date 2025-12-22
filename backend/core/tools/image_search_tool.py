@@ -8,6 +8,8 @@ import json
 import logging
 from typing import Union, List
 
+logger = logging.getLogger(__name__)
+
 @tool_metadata(
     display_name="Image Search",
     description="Find images on the internet for any topic or subject",
@@ -54,7 +56,7 @@ class SandboxImageSearchTool(SandboxToolsBase):
         self.serper_api_key = config.SERPER_API_KEY
         
         if not self.serper_api_key:
-            logger.warning("SERPER_API_KEY not configured - Image Search Tool will not be available")
+            logging.warning("SERPER_API_KEY not configured - Image Search Tool will not be available")
 
     @openapi_schema({
         "type": "function",

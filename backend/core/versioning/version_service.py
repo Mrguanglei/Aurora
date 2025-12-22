@@ -140,6 +140,20 @@ class VersionService:
     
     def _version_from_db_row(self, row: Dict[str, Any]) -> AgentVersion:
         config = row.get('config', {})
+        
+        # Handle config being a JSON string
+        if isinstance(config, str):
+            try:
+                import json
+                config = json.loads(config)
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(f"Failed to parse config JSON for version {row.get('version_id')}, using empty dict")
+                config = {}
+        
+        if not isinstance(config, dict):
+            logger.warning(f"Config is not a dict for version {row.get('version_id')}, type: {type(config)}, using empty dict")
+            config = {}
+        
         tools = config.get('tools', {})
         # Normalize UUID/datetime fields to the types expected by AgentVersion
         version_id = str(row.get('version_id')) if row.get('version_id') is not None else None

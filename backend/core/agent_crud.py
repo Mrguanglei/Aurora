@@ -41,6 +41,20 @@ async def update_agent(
         existing_data = existing_agent.data
 
         agent_metadata = existing_data.get('metadata', {})
+        
+        # Handle metadata being a JSON string
+        if isinstance(agent_metadata, str):
+            try:
+                import json
+                agent_metadata = json.loads(agent_metadata)
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(f"Failed to parse metadata JSON for agent {agent_id}, using empty dict")
+                agent_metadata = {}
+        
+        if not isinstance(agent_metadata, dict):
+            logger.warning(f"Metadata is not a dict for agent {agent_id}, type: {type(agent_metadata)}, using empty dict")
+            agent_metadata = {}
+        
         is_aurora_agent = agent_metadata.get('is_aurora_default', False)
         restrictions = agent_metadata.get('restrictions', {})
         
@@ -98,6 +112,7 @@ async def update_agent(
                 # 如果获取版本失败，使用 existing_data 作为预备
                 current_version_data = None
         
+        # 确保 current_version_data 永远不会是 None,至少有一个备用默认值
         if current_version_data is None:
             logger.debug(f"Agent {agent_id} has no version data, creating initial version")
             try:
@@ -167,6 +182,17 @@ async def update_agent(
                     'custom_mcps': existing_data.get('custom_mcps', []),
                     'agentpress_tools': existing_data.get('agentpress_tools', {})
                 }
+        
+        # 最终安全检查:确保 current_version_data 是一个字典
+        if not isinstance(current_version_data, dict):
+            logger.error(f"current_version_data is not a dict for agent {agent_id}, type: {type(current_version_data)}")
+            current_version_data = {
+                'system_prompt': existing_data.get('system_prompt', ''),
+                'model': existing_data.get('model'),
+                'configured_mcps': existing_data.get('configured_mcps', []),
+                'custom_mcps': existing_data.get('custom_mcps', []),
+                'agentpress_tools': existing_data.get('agentpress_tools', {})
+            }
         
         needs_new_version = False
         version_changes = {}
@@ -376,7 +402,9 @@ async def update_agent(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
         logger.error(f"Error updating agent {agent_id} for user {user_id}: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to update agent: {str(e)}")
 
 @router.delete("/agents/{agent_id}", summary="Delete Agent", operation_id="delete_agent")
