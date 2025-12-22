@@ -226,7 +226,9 @@ export const useDeleteAgent = () => {
           queryClient.setQueryData(queryKey, data);
         });
       }
-      toast.error('Failed to delete Worker. Please try again.');
+      // Display specific error message from backend or fallback to generic message
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete Worker. Please try again.';
+      toast.error(errorMessage);
     },
     onSuccess: (_, agentId) => {
       // Remove the individual agent query

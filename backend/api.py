@@ -252,6 +252,7 @@ allowed_origins = [
 ]
 allow_origin_regex = None
 
+
 # 如果是 STAGING 环境，可以额外允许线上域名（可选）
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.aurora.so")

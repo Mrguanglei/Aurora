@@ -23,10 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librsvg2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN \
+RUN --mount=type=cache,id=yarn-cache,target=/root/.cache/yarn \
+    --mount=type=cache,id=npm-cache,target=/root/.npm \
+    --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci --cache /root/.npm; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile --store=/root/.pnpm-store; \
   else echo "Lockfile not found." && exit 1; \
   fi
 

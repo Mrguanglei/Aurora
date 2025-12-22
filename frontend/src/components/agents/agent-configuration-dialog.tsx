@@ -644,7 +644,7 @@ export function AgentConfigurationDialog({
                       <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Kortix, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Aurora, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -665,7 +665,7 @@ export function AgentConfigurationDialog({
                       <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900">
                         <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <AlertDescription className="text-sm text-blue-800 dark:text-blue-300">
-                          You can't edit the main Kortix, but you can create a new AI Worker that you can modify as you wish.
+                          You can't edit the main Aurora, but you can create a new AI Worker that you can modify as you wish.
                         </AlertDescription>
                       </Alert>
                     )}
