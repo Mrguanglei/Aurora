@@ -84,6 +84,8 @@ export function PresentationViewer({
   const hasLoadedRef = useRef(false);
   const sandboxCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isEnsuringSandboxRef = useRef(false);
+  const loadingStartTimeRef = useRef<number | null>(null);
+  const [isLoadingTimeout, setIsLoadingTimeout] = useState(false);
   
   // Cache metadata by presentation name to avoid re-loading when switching between tool calls
   const metadataCacheRef = useRef<Map<string, PresentationMetadata>>(new Map());
@@ -218,6 +220,10 @@ export function PresentationViewer({
     // Only show loading if we don't have any cached data
     if (!cachedMetadata) {
       setIsLoadingMetadata(true);
+      // Record loading start time
+      if (!loadingStartTimeRef.current) {
+        loadingStartTimeRef.current = Date.now();
+      }
     }
     setError(null);
     setRetryAttempt(retryCount);
@@ -253,6 +259,8 @@ export function PresentationViewer({
         setMetadata(data);
         hasLoadedRef.current = true;
         setIsLoadingMetadata(false);
+        setIsLoadingTimeout(false);
+        loadingStartTimeRef.current = null;
         
         // Clear any pending retry timeout on success
         if (retryTimeoutRef.current) {
@@ -401,6 +409,23 @@ export function PresentationViewer({
       }
     };
   }, []);
+
+  // Add timeout detection for loading state
+  useEffect(() => {
+    if (isLoadingMetadata && loadingStartTimeRef.current) {
+      const timeoutId = setTimeout(() => {
+        const elapsed = Date.now() - (loadingStartTimeRef.current || 0);
+        if (elapsed > 15000) { // 15 seconds timeout
+          console.warn('[PresentationViewer] Loading timeout detected after 15s');
+          setIsLoadingTimeout(true);
+          setIsLoadingMetadata(false);
+          loadingStartTimeRef.current = null;
+        }
+      }, 15000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoadingMetadata]);
 
   // Create a unique key for this tool call to track scroll state
   const toolCallKey = useMemo(() => {
@@ -662,7 +687,7 @@ export function PresentationViewer({
 
 
       <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
-        {(isStreaming || (isLoadingMetadata && !metadata) || (!metadata && !toolExecutionError && extractedPresentationName)) ? (
+        {(isStreaming || (isLoadingMetadata && !metadata && !isLoadingTimeout) || (!metadata && !toolExecutionError && extractedPresentationName && !isLoadingTimeout)) ? (
           <LoadingState
             icon={Presentation}
             iconColor="text-blue-500 dark:text-blue-400"
@@ -671,24 +696,28 @@ export function PresentationViewer({
             filePath={retryAttempt > 0 ? `Retrying... (attempt ${retryAttempt + 1})` : "Loading slides..."}
             showProgress={true}
           />
-        ) : toolExecutionError ? (
+        ) : toolExecutionError || isLoadingTimeout ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-rose-100 to-rose-50 shadow-inner dark:from-rose-800/40 dark:to-rose-900/60">
               <AlertTriangle className="h-10 w-10 text-rose-400 dark:text-rose-600" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-              Tool Execution Error
+              {isLoadingTimeout ? 'Loading Timeout' : 'Tool Execution Error'}
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-md mb-4">
-              The presentation tool encountered an error during execution:
+              {isLoadingTimeout 
+                ? 'The presentation is taking longer than expected to load. The presentation may have been created successfully. Try refreshing the page or check the sandbox files.' 
+                : 'The presentation tool encountered an error during execution:'}
             </p>
-            <div className="w-full max-w-2xl">
-              <CodeBlockCode 
-                code={toolExecutionError} 
-                language="text"
-                className="text-xs bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md border"
-              />
-            </div>
+            {toolExecutionError && (
+              <div className="w-full max-w-2xl">
+                <CodeBlockCode 
+                  code={toolExecutionError} 
+                  language="text"
+                  className="text-xs bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md border"
+                />
+              </div>
+            )}
           </div>
         ) : slides.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">

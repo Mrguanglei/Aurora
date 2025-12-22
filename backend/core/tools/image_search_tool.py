@@ -6,7 +6,7 @@ from core.sandbox.tool_base import SandboxToolsBase
 from core.agentpress.thread_manager import ThreadManager
 import json
 import logging
-from typing import Union, List
+from typing import Union, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +52,25 @@ class SandboxImageSearchTool(SandboxToolsBase):
         super().__init__(project_id, thread_manager)
         # Load environment variables
         load_dotenv()
-        # Use API keys from config
+        
+        # Get QuarkSearch base URL from config (priority: QUARK_SEARCH_URL > default)
+        quark_base_url = getattr(config, 'QUARK_SEARCH_URL', None)
+        if not quark_base_url or not isinstance(quark_base_url, str) or not quark_base_url.strip():
+            quark_base_url = 'http://192.168.1.204:9018'
+        
+        # Remove trailing /search if present, we'll add specific endpoints
+        if quark_base_url.endswith('/search'):
+            quark_base_url = quark_base_url[:-7]
+        
+        self.quark_base_url = quark_base_url.rstrip('/')
+        
+        # Use API keys from config (fallback to SERPER)
         self.serper_api_key = config.SERPER_API_KEY
         
+        logging.info(f"Image Search Tool initialized with QuarkSearch at {self.quark_base_url}")
+        
         if not self.serper_api_key:
-            logging.warning("SERPER_API_KEY not configured - Image Search Tool will not be available")
+            logging.warning("SERPER_API_KEY not configured - will use QuarkSearch for image search")
 
     @openapi_schema({
         "type": "function",
@@ -92,13 +106,110 @@ class SandboxImageSearchTool(SandboxToolsBase):
             }
         }
     })
+    async def _search_images_quark(self, query: str, num_results: int = 12) -> dict:
+        """Search images using QuarkSearch API"""
+        try:
+            url = f"{self.quark_base_url}/image_search"
+            params = {
+                "query": query,
+                "num_results": num_results
+            }
+            
+            logging.info(f"Searching images via QuarkSearch: {query}")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, json=params)
+                response.raise_for_status()
+                data = response.json()
+                
+                # QuarkSearch 返回格式: {"images": [{"url": "...", "title": "..."}]}
+                images = data.get("images", [])
+                image_urls = []
+                
+                for img in images:
+                    if isinstance(img, dict):
+                        img_url = img.get("url") or img.get("imageUrl")
+                    elif isinstance(img, str):
+                        img_url = img
+                    else:
+                        continue
+                    
+                    if img_url:
+                        image_urls.append(img_url)
+                
+                return {
+                    "success": True,
+                    "images": image_urls,
+                    "total_found": len(image_urls)
+                }
+        except httpx.HTTPStatusError as e:
+            logging.error(f"QuarkSearch HTTP error: {e.response.status_code}")
+            return {
+                "success": False,
+                "images": [],
+                "error": f"QuarkSearch API error: {e.response.status_code}"
+            }
+        except Exception as e:
+            logging.error(f"QuarkSearch error: {e}")
+            return {
+                "success": False,
+                "images": [],
+                "error": str(e)
+            }
+    
+    async def _search_images_serper(self, query: str, num_results: int = 12) -> dict:
+        """Search images using SERPER API (fallback)"""
+        try:
+            headers = {
+                "X-API-KEY": self.serper_api_key,
+                "Content-Type": "application/json"
+            }
+            
+            payload = {"q": query, "num": num_results}
+            
+            logging.info(f"Searching images via SERPER: {query}")
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://google.serper.dev/images",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                images = data.get("images", [])
+                image_urls = [img.get("imageUrl") for img in images if img.get("imageUrl")]
+                
+                return {
+                    "success": True,
+                    "images": image_urls,
+                    "total_found": len(image_urls)
+                }
+        except httpx.HTTPStatusError as e:
+            error_message = f"SERPER API error: {e.response.status_code}"
+            if e.response.status_code == 429:
+                error_message = "SERPER API rate limit exceeded. Please try again later."
+            elif e.response.status_code == 401:
+                error_message = "Invalid SERPER API key."
+            return {
+                "success": False,
+                "images": [],
+                "error": error_message
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "images": [],
+                "error": str(e)
+            }
+    
     async def image_search(
         self, 
         query: Union[str, List[str]],
         num_results: int = 12
     ) -> ToolResult:
         """
-        Search for images using SERPER API and return image URLs.
+        Search for images using QuarkSearch (primary) or SERPER API (fallback).
         
         Supports both single and batch searches:
         - Single: query="cats" returns {"images": [...]}  
@@ -109,10 +220,6 @@ class SandboxImageSearchTool(SandboxToolsBase):
         queries = []
         
         try:
-            # Check if Serper API key is configured
-            if not self.serper_api_key:
-                return self.fail_response("Image Search is not available. SERPER_API_KEY is not configured.")
-            
             # Validate inputs
             if isinstance(query, str):
                 if not query or not query.strip():
@@ -126,10 +233,6 @@ class SandboxImageSearchTool(SandboxToolsBase):
                 queries = query
             else:
                 return self.fail_response("Query must be either a string or list of strings.")
-            
-            # Check if SERPER API key is available
-            if not self.serper_api_key:
-                return self.fail_response("SERPER_API_KEY not configured. Image search is not available.")
             
             # Normalize num_results
             if num_results is None:
@@ -145,96 +248,71 @@ class SandboxImageSearchTool(SandboxToolsBase):
 
             if is_batch:
                 logging.info(f"Executing batch image search for {len(queries)} queries with {num_results} results each")
-                # Batch API request
-                payload = [{"q": q, "num": num_results} for q in queries]
-            else:
-                logging.info(f"Executing image search for query: '{queries[0]}' with {num_results} results")
-                # Single API request  
-                payload = {"q": queries[0], "num": num_results}
-            
-            # SERPER API request
-            async with httpx.AsyncClient() as client:
-                headers = {
-                    "X-API-KEY": self.serper_api_key,
-                    "Content-Type": "application/json"
+                
+                # Execute batch searches
+                batch_results = []
+                for q in queries:
+                    # Try QuarkSearch first, fallback to SERPER
+                    result = await self._search_images_quark(q, num_results)
+                    
+                    # If QuarkSearch fails and SERPER is available, try SERPER
+                    if not result["success"] and self.serper_api_key:
+                        logging.info(f"QuarkSearch failed for '{q}', trying SERPER fallback")
+                        result = await self._search_images_serper(q, num_results)
+                    
+                    batch_results.append({
+                        "query": q,
+                        "total_found": result.get("total_found", 0),
+                        "images": result.get("images", []),
+                        "success": result.get("success", False)
+                    })
+                    
+                    logging.info(f"Found {len(result.get('images', []))} image URLs for query: '{q}'")
+                
+                result = {
+                    "batch_results": batch_results,
+                    "total_queries": len(queries)
                 }
-                
-                response = await client.post(
-                    "https://google.serper.dev/images",
-                    json=payload,
-                    headers=headers,
-                    timeout=30.0
-                )
-                
-                response.raise_for_status()
-                data = response.json()
-                
-                if is_batch:
-                    # Handle batch response
-                    if not isinstance(data, list):
-                        return self.fail_response("Unexpected batch response format from SERPER API.")
-                    
-                    batch_results = []
-                    for i, (q, result_data) in enumerate(zip(queries, data)):
-                        images = result_data.get("images", []) if isinstance(result_data, dict) else []
-                        
-                        # Extract image URLs
-                        image_urls = []
-                        for img in images:
-                            img_url = img.get("imageUrl")
-                            if img_url:
-                                image_urls.append(img_url)
-                        
-                        batch_results.append({
-                            "query": q,
-                            "total_found": len(image_urls),
-                            "images": image_urls
-                        })
-                        
-                        logging.info(f"Found {len(image_urls)} image URLs for query: '{q}'")
-                    
-                    result = {
-                        "batch_results": batch_results,
-                        "total_queries": len(queries)
-                    }
-                else:
-                    # Handle single response
-                    images = data.get("images", [])
-                    
-                    if not images:
-                        logging.warning(f"No images found for query: '{queries[0]}'")
-                        return self.fail_response(f"No images found for query: '{queries[0]}'")
-                    
-                    # Extract just the image URLs - keep it simple
-                    image_urls = []
-                    for img in images:
-                        img_url = img.get("imageUrl")
-                        if img_url:
-                            image_urls.append(img_url)
-                    
-                    logging.info(f"Found {len(image_urls)} image URLs for query: '{queries[0]}'")
-                    
-                    result = {
-                        "query": queries[0],
-                        "total_found": len(image_urls),
-                        "images": image_urls
-                    }
                 
                 return ToolResult(
                     success=True,
                     output=json.dumps(result, ensure_ascii=False)
                 )
-        
-        except httpx.HTTPStatusError as e:
-            error_message = f"SERPER API error: {e.response.status_code}"
-            if e.response.status_code == 429:
-                error_message = "SERPER API rate limit exceeded. Please try again later."
-            elif e.response.status_code == 401:
-                error_message = "Invalid SERPER API key."
-            
-            query_desc = f"batch queries {queries}" if is_batch else f"query '{queries[0]}'"
-            logging.error(f"SERPER API error for {query_desc}: {error_message}")
-            return self.fail_response(error_message)
+            else:
+                # Single query mode
+                logging.info(f"Executing image search for query: '{queries[0]}' with {num_results} results")
+                
+                # Try QuarkSearch first
+                result = await self._search_images_quark(queries[0], num_results)
+                
+                # If QuarkSearch fails and SERPER is available, try SERPER
+                if not result["success"] and self.serper_api_key:
+                    logging.info(f"QuarkSearch failed, trying SERPER fallback")
+                    result = await self._search_images_serper(queries[0], num_results)
+                
+                # Check if we got any results
+                if not result["success"]:
+                    error_msg = result.get("error", "Image search failed")
+                    logging.warning(f"No images found for query: '{queries[0]}' - {error_msg}")
+                    return self.fail_response(f"No images found for query: '{queries[0]}'. {error_msg}")
+                
+                image_urls = result.get("images", [])
+                if not image_urls:
+                    logging.warning(f"No images found for query: '{queries[0]}'")
+                    return self.fail_response(f"No images found for query: '{queries[0]}'")
+                
+                logging.info(f"Found {len(image_urls)} image URLs for query: '{queries[0]}'")
+                
+                response_data = {
+                    "query": queries[0],
+                    "total_found": len(image_urls),
+                    "images": image_urls
+                }
+                
+                return ToolResult(
+                    success=True,
+                    output=json.dumps(response_data, ensure_ascii=False)
+                )
         
         except Exception as e:
             error_message = str(e)
