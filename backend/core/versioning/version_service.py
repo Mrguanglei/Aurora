@@ -141,10 +141,22 @@ class VersionService:
     def _version_from_db_row(self, row: Dict[str, Any]) -> AgentVersion:
         config = row.get('config', {})
         tools = config.get('tools', {})
-        
+        # Normalize UUID/datetime fields to the types expected by AgentVersion
+        version_id = str(row.get('version_id')) if row.get('version_id') is not None else None
+        agent_id = str(row.get('agent_id')) if row.get('agent_id') is not None else None
+        previous_version_id = str(row.get('previous_version_id')) if row.get('previous_version_id') is not None else None
+        created_by = str(row.get('created_by')) if row.get('created_by') is not None else None
+
+        created_at_val = row.get('created_at')
+        updated_at_val = row.get('updated_at')
+        if isinstance(created_at_val, str):
+            created_at_val = datetime.fromisoformat(created_at_val.replace('Z', '+00:00'))
+        if isinstance(updated_at_val, str):
+            updated_at_val = datetime.fromisoformat(updated_at_val.replace('Z', '+00:00'))
+
         return AgentVersion(
-            version_id=row['version_id'],
-            agent_id=row['agent_id'],
+            version_id=version_id,
+            agent_id=agent_id,
             version_number=row['version_number'],
             version_name=row['version_name'],
             system_prompt=config.get('system_prompt', ''),
@@ -153,11 +165,11 @@ class VersionService:
             custom_mcps=tools.get('custom_mcp', []),
             agentpress_tools=tools.get('agentpress', {}),
             is_active=row.get('is_active', False),
-            created_at=datetime.fromisoformat(row['created_at'].replace('Z', '+00:00')),
-            updated_at=datetime.fromisoformat(row['updated_at'].replace('Z', '+00:00')),
-            created_by=row['created_by'],
+            created_at=created_at_val,
+            updated_at=updated_at_val,
+            created_by=created_by,
             change_description=row.get('change_description'),
-            previous_version_id=row.get('previous_version_id')
+            previous_version_id=previous_version_id
         )
     
     def _normalize_custom_mcps(self, custom_mcps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -197,6 +209,16 @@ class VersionService:
         
         logger.debug(f"Creating version for agent {agent_id}")
         client = await self.db.client
+
+        # Normalize agent_id/user_id to strings to avoid passing UUID objects into dataclasses/pydantic
+        try:
+            agent_id = str(agent_id)
+        except Exception:
+            pass
+        try:
+            user_id = str(user_id)
+        except Exception:
+            pass
         
         is_owner, _ = await self._verify_and_authorize_agent_access(agent_id, user_id)
         if not is_owner:
@@ -258,8 +280,9 @@ class VersionService:
             'version_number': version.version_number,
             'version_name': version.version_name,
             'is_active': version.is_active,
-            'created_at': version.created_at.isoformat(),
-            'updated_at': version.updated_at.isoformat(),
+            'system_prompt': version.system_prompt,
+            'created_at': version.created_at,
+            'updated_at': version.updated_at,
             'created_by': version.created_by,
             'change_description': version.change_description,
             'previous_version_id': version.previous_version_id,
@@ -369,12 +392,12 @@ class VersionService:
         
         await client.table('agent_versions').update({
             'is_active': False,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }).eq('agent_id', agent_id).eq('is_active', True).execute()
         
         await client.table('agent_versions').update({
             'is_active': True,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }).eq('version_id', version_id).execute()
         
         version_count = await self._count_versions(agent_id)
@@ -502,7 +525,7 @@ class VersionService:
             raise VersionNotFoundError(f"Version {version_id} not found")
         
         update_data = {
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }
         
         if version_name is not None:

@@ -744,8 +744,8 @@ const SlideContent = ({ slide }: { slide: Slide }) => {
             transition={{ delay: 0.2, type: 'spring' }}
           >
             <Image
-              src="/kortix-symbol.svg"
-              alt="Kortix"
+              src="/logo.svg"
+              alt="Aurora"
               width={80}
               height={80}
               className="dark:invert w-full h-full"
