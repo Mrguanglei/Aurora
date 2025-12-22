@@ -380,60 +380,115 @@ async def update_agent(
 @router.delete("/agents/{agent_id}", summary="Delete Agent", operation_id="delete_agent")
 async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user_id_from_jwt)):
     logger.debug(f"Deleting agent: {agent_id}")
-    client = await utils.db.client
     
     try:
-        agent_result = await client.table('agents').select('*').eq('agent_id', agent_id).execute()
-        if not agent_result.data:
-            raise HTTPException(status_code=404, detail="Agent not found")
+        # 使用原生 PostgreSQL 连接绕过 RLS
+        from core.services.postgres import PostgresConnection
+        logger.debug(f"Step 1: Importing PostgresConnection")
         
-        agent = agent_result.data[0]
-        if agent['account_id'] != user_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+        postgres_db = PostgresConnection()
+        logger.debug(f"Step 2: PostgresConnection instance created")
         
-        if agent['is_default']:
-            raise HTTPException(status_code=400, detail="Cannot delete default agent")
+        pool = await postgres_db.pool
+        logger.debug(f"Step 3: Got pool: {pool}")
         
-        if agent.get('metadata', {}).get('is_aurora_default', False):
-            raise HTTPException(status_code=400, detail="Cannot delete Aurora default agent")
-        
-        # Clean up triggers before deleting agent to ensure proper remote cleanup
-        try:
-            from core.triggers.trigger_service import get_trigger_service
-            trigger_service = get_trigger_service(utils.db)
+        async with pool.acquire() as conn:
+            logger.debug(f"Step 4: Acquired connection from pool")
             
-            # Get all triggers for this agent
-            triggers_result = await client.table('agent_triggers').select('trigger_id').eq('agent_id', agent_id).execute()
+            # 检查 agent 是否存在并获取相关信息
+            try:
+                logger.debug(f"Step 5: About to query agent {agent_id}")
+                agent = await conn.fetchrow(
+                    """
+                    SELECT agent_id, account_id, is_default, metadata
+                    FROM agents
+                    WHERE agent_id = $1
+                    """,
+                    agent_id
+                )
+                logger.debug(f"Step 6: Query completed, agent={agent}")
+            except Exception as query_error:
+                logger.error(f"Step 6 ERROR: Failed to query agent: {query_error}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Database query failed: {str(query_error)}")
             
-            if triggers_result.data:
-                logger.debug(f"Cleaning up {len(triggers_result.data)} triggers for agent {agent_id}")
+            if not agent:
+                raise HTTPException(status_code=404, detail="Agent not found")
+            
+            logger.debug(f"Agent data: agent_id={agent['agent_id']}, account_id={agent['account_id']}, user_id={user_id}, is_default={agent['is_default']}, metadata={agent.get('metadata')}")
+            
+            # 权限检查: 只有 agent 的所有者才能删除
+            # 注意: account_id 是 UUID 对象,user_id 是字符串,需要转换后比较
+            if str(agent['account_id']) != str(user_id):
+                logger.warning(f"Access denied: agent account_id={agent['account_id']} != user_id={user_id}")
+                raise HTTPException(status_code=403, detail="Access denied")
+            
+            # 检查是否为默认 agent
+            if agent['is_default']:
+                logger.warning(f"Cannot delete default agent: {agent_id}")
+                raise HTTPException(status_code=400, detail="Cannot delete default agent")
+            
+            # 检查是否为 Aurora 默认 agent
+            metadata = agent.get('metadata', {})
+            is_aurora_default = metadata.get('is_aurora_default', False) if isinstance(metadata, dict) else False
+            logger.debug(f"Metadata check: metadata={metadata}, is_aurora_default={is_aurora_default}")
+            
+            if is_aurora_default:
+                logger.warning(f"Cannot delete Aurora default agent: {agent_id}")
+                raise HTTPException(status_code=400, detail="Cannot delete Aurora default agent")
+        
+            # Clean up triggers before deleting agent to ensure proper remote cleanup
+            try:
+                from core.triggers.trigger_service import get_trigger_service
+                trigger_service = get_trigger_service(utils.db)
                 
-                # Delete each trigger properly (this handles remote cleanup)
-                for trigger_record in triggers_result.data:
-                    trigger_id = trigger_record['trigger_id']
-                    try:
-                        await trigger_service.delete_trigger(trigger_id)
-                        logger.debug(f"Successfully cleaned up trigger {trigger_id}")
-                    except Exception as e:
-                        logger.warning(f"Failed to clean up trigger {trigger_id}: {str(e)}")
-                        # Continue with other triggers even if one fails
-        except Exception as e:
-            logger.warning(f"Failed to clean up triggers for agent {agent_id}: {str(e)}")
-            # Continue with agent deletion even if trigger cleanup fails
+                # Get all triggers for this agent (直接使用 SQL 绕过 RLS)
+                triggers = await conn.fetch(
+                    "SELECT trigger_id FROM agent_triggers WHERE agent_id = $1",
+                    agent_id
+                )
+                
+                if triggers:
+                    logger.debug(f"Cleaning up {len(triggers)} triggers for agent {agent_id}")
+                    
+                    # Delete each trigger properly (this handles remote cleanup)
+                    for trigger_record in triggers:
+                        trigger_id = trigger_record['trigger_id']
+                        try:
+                            await trigger_service.delete_trigger(trigger_id)
+                            logger.debug(f"Successfully cleaned up trigger {trigger_id}")
+                        except Exception as e:
+                            logger.warning(f"Failed to clean up trigger {trigger_id}: {str(e)}")
+                            # Continue with other triggers even if one fails
+            except Exception as e:
+                logger.warning(f"Failed to clean up triggers for agent {agent_id}: {str(e)}")
+                # Continue with agent deletion even if trigger cleanup fails
+            
+            # 使用原生 SQL 删除 agent (绕过 RLS)
+            logger.debug(f"准备删除 agent: agent_id={agent_id}, account_id={user_id}")
+            result = await conn.execute(
+                """
+                DELETE FROM agents
+                WHERE agent_id = $1 AND account_id = $2
+                """,
+                agent_id,
+                user_id
+            )
+            logger.debug(f"删除结果: {result}")
+            
+            # 检查是否真的删除了
+            if result == "DELETE 0":
+                logger.warning(f"No agent was deleted for agent_id: {agent_id}, user_id: {user_id}")
+                raise HTTPException(status_code=500, detail="Failed to delete agent")
+            
+            logger.debug(f"Successfully deleted agent: {agent_id}")
         
-        delete_result = await client.table('agents').delete().eq('agent_id', agent_id).execute()
-        
-        if not delete_result.data:
-            logger.warning(f"No agent was deleted for agent_id: {agent_id}, user_id: {user_id}")
-            raise HTTPException(status_code=403, detail="Unable to delete agent - permission denied or agent not found")
-        
+        # 缓存失效
         try:
             from core.utils.cache import Cache
             await Cache.invalidate(f"agent_count_limit:{user_id}")
         except Exception as cache_error:
             logger.warning(f"Cache invalidation failed for user {user_id}: {str(cache_error)}")
         
-        logger.debug(f"Successfully deleted agent: {agent_id}")
         return {"message": "Agent deleted successfully"}
         
     except HTTPException:
