@@ -368,7 +368,8 @@ async def get_agent_tools(
     if not agent_result.data:
         raise HTTPException(status_code=404, detail="Agent not found")
     agent = agent_result.data[0]
-    if agent['account_id'] != user_id and not agent.get('is_public', False):
+    # 注意: account_id 是 UUID 对象,user_id 是字符串,需要转换后比较
+    if str(agent['account_id']) != str(user_id) and not agent.get('is_public', False):
         raise HTTPException(status_code=403, detail="Access denied")
 
     version_data = None

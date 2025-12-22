@@ -132,7 +132,8 @@ async def validate_agent_ownership(agent_id: str, user_id: str) -> Dict[str, Any
         logger.warning(f"Agent {agent_id} not found")
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    if agent['account_id'] != user_id:
+    # 注意: account_id 是 UUID 对象,user_id 是字符串,需要转换后比较
+    if str(agent['account_id']) != str(user_id):
         logger.warning(f"User {user_id} attempted to access agent {agent_id} owned by {agent['account_id']}")
         raise HTTPException(status_code=403, detail="You don't have permission to access this agent")
     

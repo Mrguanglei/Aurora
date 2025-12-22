@@ -238,7 +238,8 @@ class AgentLoader:
         is_aurora_default = metadata.get('is_aurora_default', False)
         
         # Allow access if: owned by user, is public, or is Suna/Aurora default
-        if (agent_row['account_id'] != user_id and 
+        # 注意: account_id 是 UUID 对象,user_id 是字符串,需要转换后比较
+        if (str(agent_row['account_id']) != str(user_id) and 
             not agent_row.get('is_public', False) and 
             not is_suna_default and 
             not is_aurora_default):
@@ -257,7 +258,7 @@ class AgentLoader:
                 agent_id,
                 agent_data.to_dict(),
                 version_id=agent_row.get('current_version_id'),
-                is_aurora_default=agent_data.is_aurora_default
+                is_suna_default=agent_data.is_aurora_default  # is_suna_default 对应 is_aurora_default
             )
         
         logger.debug(f"⏱️ load_agent completed in {(time.time() - t_start)*1000:.1f}ms")

@@ -165,7 +165,23 @@ async def set_cached_agent_config(
     
     try:
         from core.services import redis as redis_service
-        await redis_service.set(cache_key, json.dumps(config), ex=AGENT_CONFIG_TTL)
+        from uuid import UUID
+        from datetime import datetime
+        
+        # 将 UUID 和 datetime 对象转换为字符串，以便 JSON 序列化
+        def convert_to_json_safe(obj):
+            if isinstance(obj, UUID):
+                return str(obj)
+            elif isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {k: convert_to_json_safe(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_to_json_safe(item) for item in obj]
+            return obj
+        
+        config_safe = convert_to_json_safe(config)
+        await redis_service.set(cache_key, json.dumps(config_safe), ex=AGENT_CONFIG_TTL)
         logger.debug(f"✅ Cached custom agent config in Redis: {agent_id}")
     except Exception as e:
         logger.warning(f"Failed to cache agent config: {e}")

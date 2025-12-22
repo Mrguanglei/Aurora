@@ -867,7 +867,8 @@ async def unified_agent_start(
             project_id = thread_data['project_id']
             
             # Authorization check
-            if thread_data['account_id'] != user_id:
+            # 注意: account_id 是 UUID 对象,user_id 是字符串,需要转换后比较
+            if str(thread_data['account_id']) != str(user_id):
                 await verify_and_authorize_thread_access(client, thread_id, user_id)
             
             structlog.contextvars.bind_contextvars(project_id=project_id, account_id=account_id)
@@ -1048,7 +1049,7 @@ async def start_agent_on_thread(
         project_id = thread_data['project_id']
         thread_status = thread_data.get('status', 'ready')
         
-        if thread_data['account_id'] != user_id:
+        if str(thread_data['account_id']) != str(user_id):
             await verify_and_authorize_thread_access(client, thread_id, user_id)
         
         if thread_status == 'error':

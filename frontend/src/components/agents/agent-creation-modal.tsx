@@ -19,6 +19,8 @@ import { useRouter } from 'next/navigation';
 import { AuroraLogo } from '@/components/sidebar/aurora-logo';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
+import { agentKeys } from '@/hooks/agents/keys';
 
 interface AgentCreationModalProps {
   open: boolean;
@@ -49,6 +51,7 @@ const creationOptions = [
 
 export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreationModalProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<MarketplaceTemplate | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState<'scratch' | 'chat' | 'template' | null>(null);
@@ -157,6 +160,9 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
       const result = await setupAgentFromChat({
         description: chatDescription
       });
+
+      // 刷新 agent 列表
+      queryClient.invalidateQueries({ queryKey: agentKeys.lists() });
 
       toast.success(`Created "${result.name}"!`, { id: 'agent-setup' });
       onOpenChange(false);

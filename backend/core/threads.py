@@ -560,7 +560,8 @@ async def add_message_to_thread(
     thread_data = thread_result.data[0]
     
     # Verify ownership or team access
-    if thread_data['account_id'] != user_id:
+    # 注意: account_id 是 UUID 对象,user_id 是字符串,需要转换后比较
+    if str(thread_data['account_id']) != str(user_id):
         from core.utils.auth_utils import verify_and_authorize_thread_access
         await verify_and_authorize_thread_access(client, thread_id, user_id)
     

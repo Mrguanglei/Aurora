@@ -130,7 +130,8 @@ async def generate_icon_and_colors(name: str, description: str = "") -> Dict[str
     """
     logger.debug(f"Generating icon and colors for: {name}")
     try:
-        model_name = "openai/gpt-5-nano-2025-08-07"
+        # 使用豆包模型生成图标和颜色
+        model_name = "doubao/doubao-seed-1-6-251015"
         
         frontend_colors = [
             "#000000", "#FFFFFF", "#6366F1", "#10B981", "#F59E0B", 

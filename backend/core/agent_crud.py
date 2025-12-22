@@ -95,6 +95,8 @@ async def update_agent(
                 current_version_data = current_version_obj.to_dict()
             except Exception as e:
                 logger.warning(f"Failed to get current version data for agent {agent_id}: {e}")
+                # 如果获取版本失败，使用 existing_data 作为预备
+                current_version_data = None
         
         if current_version_data is None:
             logger.debug(f"Agent {agent_id} has no version data, creating initial version")

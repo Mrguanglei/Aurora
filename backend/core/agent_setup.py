@@ -251,7 +251,7 @@ async def setup_agent_from_chat(
         logger.info(f"Successfully created agent '{agent_name}' (ID: {agent_id}) from chat description")
         
         return AgentSetupFromChatResponse(
-            agent_id=agent_id,
+            agent_id=str(agent_id),  # 将 UUID 转换为字符串
             name=agent_name,
             system_prompt=system_prompt,
             icon_name=config["icon_name"],
