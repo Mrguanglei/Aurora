@@ -121,7 +121,7 @@ class ScheduleProvider(TriggerProvider):
             # Schedule via Supabase Cron RPC helper
             client = await self._db.client
             try:
-                result = await client.rpc(
+                response = await client.rpc(
                     "schedule_trigger_http",
                     {
                         "job_name": job_name,
@@ -131,7 +131,8 @@ class ScheduleProvider(TriggerProvider):
                         "body": payload,
                         "timeout_ms": 8000,
                     },
-                ).execute()
+                )
+                result = await response.execute()
             except Exception as rpc_err:
                 logger.error(f"Failed to schedule Supabase Cron job via RPC: {rpc_err}")
                 return False
@@ -154,10 +155,11 @@ class ScheduleProvider(TriggerProvider):
             client = await self._db.client
 
             try:
-                await client.rpc(
+                response = await client.rpc(
                     "unschedule_job_by_name",
                     {"job_name": job_name},
-                ).execute()
+                )
+                await response.execute()
                 logger.debug(f"Unschedule requested for Supabase Cron job '{job_name}' (trigger {trigger.trigger_id})")
                 return True
             except Exception as rpc_err:

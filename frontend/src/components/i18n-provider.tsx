@@ -7,18 +7,20 @@ import { detectBestLocale } from '@/lib/utils/geo-detection';
 
 // Preload default translations synchronously for immediate render
 // This prevents the loading spinner from blocking FCP
-import defaultTranslations from '../../translations/en.json';
+// Preload default translations (Chinese) synchronously for immediate render
+// This prevents a flash of English while translations load
+import defaultTranslations from '../../translations/zh.json';
 
 async function getTranslations(locale: Locale) {
   try {
-    // Return cached default translations immediately for English
-    if (locale === 'en') {
+    // Return cached default translations immediately for the configured default locale
+    if (locale === defaultLocale) {
       return defaultTranslations;
     }
     return (await import(`../../translations/${locale}.json`)).default;
   } catch (error) {
     console.error(`Failed to load translations for locale ${locale}:`, error);
-    // Fallback to English if locale file doesn't exist
+    // Fallback to default translations if locale file doesn't exist
     return defaultTranslations;
   }
 }
@@ -64,7 +66,7 @@ const LOCALE_CHANGE_EVENT = 'locale-change';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(defaultLocale);
-  // Initialize with preloaded English translations to prevent blocking FCP
+  // Initialize with preloaded default translations to prevent blocking FCP
   const [messages, setMessages] = useState<any>(defaultTranslations);
   const [isLoading, setIsLoading] = useState(false);
   const localeRef = useRef(locale);
