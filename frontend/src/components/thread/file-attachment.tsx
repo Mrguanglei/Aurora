@@ -147,6 +147,13 @@ function getFileSize(filepath: string, type: FileType): string {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Format bytes to human-readable string
+function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // Get the API URL for file content
 function getFileUrl(sandboxId: string | undefined, path: string): string {
     if (!sandboxId) return path;
@@ -196,6 +203,7 @@ interface FileAttachmentProps {
     isSingleItemGrid?: boolean; // New prop to detect single item in grid
     standalone?: boolean; // New prop for minimal standalone styling
     alignRight?: boolean; // New prop to control right alignment
+    fileSize?: number; // Real file size in bytes (optional)
 }
 
 // Cache fetched content between mounts to avoid duplicate fetches
@@ -215,7 +223,8 @@ export function FileAttachment({
     project,
     isSingleItemGrid = false,
     standalone = false,
-    alignRight = false
+    alignRight = false,
+    fileSize: realFileSize // Real file size in bytes
 }: FileAttachmentProps) {
     // Authentication 
     const { session } = useAuth();
@@ -237,7 +246,10 @@ export function FileAttachment({
     const fileType = getFileType(filename);
     const fileUrl = localPreviewUrl || (sandboxId ? getFileUrl(sandboxId, filepath) : filepath);
     const typeLabel = getTypeLabel(fileType, extension);
-    const fileSize = getFileSize(filepath, fileType);
+    // Use real file size if provided, otherwise calculate fake size
+    const fileSize = realFileSize !== undefined 
+        ? formatBytes(realFileSize) 
+        : getFileSize(filepath, fileType);
     const IconComponent = getFileIcon(fileType);
 
     // Display flags

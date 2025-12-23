@@ -496,6 +496,7 @@ export function AttachmentGroup({
                                     localPreviewUrl={getLocalPreviewUrl(item.file)}
                                     collapsed={true} // Collapse all files in inline layout - show as compact attachments
                                     alignRight={alignRight} // Pass alignRight prop
+                                    fileSize={typeof item.file === 'object' ? item.file.size : undefined} // Pass real file size
                                 />
                                 {onRemove && (
                                     <div

@@ -76,9 +76,14 @@ class ToolsListResponse(BaseModel):
 class ToolkitService:
     def __init__(self, api_key: Optional[str] = None):
         self.client = ComposioClient.get_client(api_key)
+        self.is_available = self.client is not None
     
     async def list_categories(self) -> List[CategoryInfo]:
         try:
+            if not self.is_available:
+                logger.warning("Composio client not available - returning empty categories")
+                return []
+            
             logger.debug("Fetching Composio categories")
             popular_categories = [
                 {"id": "popular", "name": "Popular"},
@@ -107,6 +112,16 @@ class ToolkitService:
     
     async def list_toolkits(self, limit: int = 500, cursor: Optional[str] = None, category: Optional[str] = None) -> Dict[str, Any]:
         try:
+            if not self.is_available:
+                logger.warning("Composio client not available - returning empty toolkits")
+                return {
+                    "items": [],
+                    "total_items": 0,
+                    "total_pages": 0,
+                    "current_page": 1,
+                    "next_cursor": None
+                }
+            
             logger.debug(f"Fetching toolkits with limit: {limit}, cursor: {cursor}, category: {category}")
             params = {
                 "limit": limit,
@@ -247,6 +262,10 @@ class ToolkitService:
     
     async def get_toolkit_icon(self, toolkit_slug: str) -> Optional[str]:
         try:
+            if not self.is_available:
+                logger.warning("Composio client not available - cannot fetch toolkit icon")
+                return None
+            
             # logger.debug(f"Fetching toolkit icon for: {toolkit_slug}")
             toolkit_response = self.client.toolkits.retrieve(toolkit_slug)
             

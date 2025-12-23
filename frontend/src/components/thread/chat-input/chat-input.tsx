@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { useAgents } from '@/hooks/agents/use-agents';
 import { useAgentSelection } from '@/stores/agent-selection-store';
+import { useAuth } from '@/components/AuthProvider';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles, FileUploadHandler } from './file-upload-handler';
@@ -719,6 +720,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     // STATE MANAGEMENT - Optimized to prevent re-renders on typing
     // =========================================================================
     
+    // Get authentication session for file uploads
+    const { session } = useAuth();
+    
     // Ref to access current value - textarea manages its own state
     const valueRef = useRef('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -906,7 +910,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         return '';
       }
       
-      return `\n\n----\n\n**Presentation Template:** ${selectedTemplate}`;
+      return `
+
+----
+
+**Presentation Template:** ${selectedTemplate}`;
     }, [selectedMode, selectedTemplate]);
 
     // Handle mode deselection with animation
@@ -1362,13 +1370,13 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             className={`shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible py-0 pb-5 ${isSnackVisible ? 'mt-6' : ''} ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => {
+            onDrop={async (e) => {
               e.preventDefault();
               e.stopPropagation();
               setIsDraggingOver(false);
               if (fileInputRef.current && e.dataTransfer.files.length > 0) {
                 const files = Array.from(e.dataTransfer.files);
-                handleFiles(
+                await handleFiles(
                   files,
                   sandboxId,
                   projectId,
@@ -1377,6 +1385,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   setIsUploading,
                   messages,
                   queryClient,
+                  session?.access_token,
                 );
               }
             }}

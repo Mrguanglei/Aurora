@@ -15,6 +15,47 @@ from . import core_utils as utils
 
 router = APIRouter(tags=["threads"])
 
+def _to_iso_z(ts):
+    """
+    Normalize timestamp-like values to an ISO 8601 string with 'Z' (UTC).
+    Important: PostgreSQL TIMESTAMPTZ columns store UTC time, but the Supabase client
+    may return them as naive ISO strings. We handle this properly here.
+    """
+    if ts is None:
+        return None
+    
+    if isinstance(ts, datetime):
+        try:
+            # If datetime has timezone info, convert to UTC
+            if ts.tzinfo is not None and ts.tzinfo.utcoffset(ts) is not None:
+                utc_dt = ts.astimezone(timezone.utc)
+                return utc_dt.isoformat().replace("+00:00", "Z")
+            # If naive datetime, it's already UTC from PostgreSQL
+            return ts.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+        except Exception as e:
+            logger.warning(f"Failed to convert datetime to ISO-Z: {e}")
+            return str(ts)
+    
+    # Handle string timestamps
+    try:
+        s = str(ts)
+        if not s:
+            return s
+        
+        # If already has 'Z' or timezone offset, return as-is
+        if s.endswith("Z") or ("+" in s[10:]) or ("-" in s[10:] and s[10] != "-"):
+            return s
+        
+        # Naive ISO string from PostgreSQL TIMESTAMPTZ - already UTC, just add 'Z'
+        # Format: "2025-12-22 10:30:45.123456" or "2025-12-22T10:30:45.123456"
+        if len(s) >= 19:  # Minimum length for datetime string
+            return s.replace(" ", "T") + "Z"
+        
+        return s
+    except Exception as e:
+        logger.warning(f"Failed to normalize timestamp string: {e}")
+        return str(ts)
+
 @router.get("/threads", summary="List User Threads", operation_id="list_user_threads")
 async def get_user_threads(
     request: Request,
@@ -98,8 +139,8 @@ async def get_user_threads(
                 "project_id": thread.get('project_id'),
                 "metadata": thread.get('metadata', {}),
                 "is_public": thread.get('is_public', False),
-                "created_at": thread['created_at'],
-                "updated_at": thread['updated_at'],
+                "created_at": _to_iso_z(thread.get('created_at')),
+                "updated_at": _to_iso_z(thread.get('updated_at')),
                 "project": project_data
             }
             mapped_threads.append(mapped_thread)

@@ -4,18 +4,18 @@ import { ArrowRight, Github } from 'lucide-react';
 import Image from 'next/image';
 
 export const metadata: Metadata = {
-  title: 'Suna is now Kortix | Kortix Suna - Open Source AI Worker',
-  description: 'Suna has rebranded to Kortix. Kortix (formerly Suna) is the same powerful open source AI assistant and generalist AI worker you know and love, now with a new name and bigger vision.',
+  title: 'Suna is now Aurora | Aurora Suna - Open Source AI Worker',
+  description: 'Suna has rebranded to Aurora. Aurora (formerly Suna) is the same powerful open source AI assistant and generalist AI worker you know and love, now with a new name and bigger vision.',
   keywords: [
     'Suna',
-    'Kortix Suna',
+    'Aurora Suna',
     'Suna AI',
     'Suna assistant',
     'Suna.so',
     'where is Suna',
-    'Kortix',
+    'Aurora',
     'Suna rebrand',
-    'Suna is now Kortix',
+    'Suna is now Aurora',
     'AI assistant',
     'open source AI',
     'generalist AI worker',
@@ -23,28 +23,28 @@ export const metadata: Metadata = {
     'autonomous AI',
   ],
   openGraph: {
-    title: 'Suna is now Kortix',
-    description: 'Kortix (formerly Suna) - Same powerful open source AI worker, new name.',
+    title: 'Suna is now Aurora',
+    description: 'Aurora (formerly Suna) - Same powerful open source AI worker, new name.',
     type: 'website',
-    url: 'https://www.kortix.com/suna',
-    siteName: 'Kortix',
+    url: 'https://www.Aurora.com/suna',
+    siteName: 'Aurora',
     images: [
       {
         url: '/banner.png',
         width: 1200,
         height: 630,
-        alt: 'Kortix - Formerly Suna',
+        alt: 'Aurora - Formerly Suna',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Suna is now Kortix',
-    description: 'Kortix (formerly Suna) - Same powerful open source AI worker, new name.',
+    title: 'Suna is now Aurora',
+    description: 'Aurora (formerly Suna) - Same powerful open source AI worker, new name.',
     images: ['/banner.png'],
   },
   alternates: {
-    canonical: 'https://www.kortix.com/suna',
+    canonical: 'https://www.Aurora.com/suna',
   },
   robots: {
     index: true,
@@ -62,17 +62,17 @@ export default function SunaPage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Organization',
-            name: 'Kortix',
-            alternateName: ['Suna', 'Kortix Suna', 'Suna AI'],
-            url: 'https://www.kortix.com',
-            logo: 'https://www.kortix.com/favicon.png',
+            name: 'Aurora',
+            alternateName: ['Suna', 'Aurora Suna', 'Suna AI'],
+            url: 'https://www.Aurora.com',
+            logo: 'https://www.Aurora.com/favicon.png',
             sameAs: [
-              'https://github.com/kortix-ai',
-              'https://x.com/kortix',
-              'https://linkedin.com/company/kortix',
+              'https://github.com/Aurora-ai',
+              'https://x.com/Aurora',
+              'https://linkedin.com/company/Aurora',
             ],
             description:
-              'Kortix (formerly known as Suna) is an open source generalist AI worker that helps you accomplish real-world tasks through natural conversation.',
+              'Aurora (formerly known as Suna) is an open source generalist AI worker that helps you accomplish real-world tasks through natural conversation.',
           }),
         }}
       />
@@ -88,13 +88,13 @@ export default function SunaPage() {
                 '@type': 'ListItem',
                 position: 1,
                 name: 'Home',
-                item: 'https://www.kortix.com',
+                item: 'https://www.Aurora.com',
               },
               {
                 '@type': 'ListItem',
                 position: 2,
-                name: 'Suna is now Kortix',
-                item: 'https://www.kortix.com/suna',
+                name: 'Suna is now Aurora',
+                item: 'https://www.Aurora.com/suna',
               },
             ],
           }),
@@ -106,7 +106,7 @@ export default function SunaPage() {
           {/* Hero Section with Logo */}
           <div className="relative z-10 pt-16 sm:pt-24 md:pt-32 mx-auto h-full w-full max-w-6xl flex flex-col items-center justify-center">
             <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 pt-8 sm:pt-20 max-w-4xl mx-auto pb-10">
-              {/* Kortix Symbol with grain texture */}
+              {/* Aurora Symbol with grain texture */}
               <div className="relative mb-8 sm:mb-12" style={{ width: '80px', height: '80px' }}>
                 <Image
                   src="/logo.svg"
@@ -124,8 +124,8 @@ export default function SunaPage() {
                     backgroundRepeat: 'repeat',
                     mixBlendMode: 'multiply',
                     opacity: 0.6,
-                    maskImage: 'url(/kortix-symbol.svg)',
-                    WebkitMaskImage: 'url(/kortix-symbol.svg)',
+                    maskImage: 'url(/Aurora-symbol.svg)',
+                    WebkitMaskImage: 'url(/Aurora-symbol.svg)',
                     maskSize: 'contain',
                     WebkitMaskSize: 'contain',
                     maskRepeat: 'no-repeat',
@@ -153,7 +153,7 @@ export default function SunaPage() {
                 <ArrowRight className="ml-2 size-4" />
               </Link>
               <a
-                href="https://github.com/kortix-ai/suna"
+                href="https://github.com/Aurora-ai/suna"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-12 items-center justify-center w-full sm:w-auto px-8 text-center rounded-full border border-border bg-background hover:bg-accent/50 transition-all font-medium"
@@ -173,8 +173,8 @@ export default function SunaPage() {
                   What changed?
                 </h2>
                 <div className="space-y-3 text-base md:text-lg text-muted-foreground font-medium">
-                  <p>Our name changed from Suna to Kortix</p>
-                  <p>Our domain is now kortix.com</p>
+                  <p>Our name changed from Suna to Aurora</p>
+                  <p>Our domain is now Aurora.com</p>
                 </div>
               </div>
 
@@ -201,7 +201,7 @@ export default function SunaPage() {
                   Where to find us?
                 </h2>
                 <p className="text-base md:text-lg text-muted-foreground font-medium">
-                  Our GitHub repository remains at github.com/kortix-ai/suna
+                  Our GitHub repository remains at github.com/Aurora-ai/suna
                 </p>
               </div>
             </div>
@@ -213,7 +213,7 @@ export default function SunaPage() {
               <div className="relative w-full h-full" style={{ isolation: 'isolate' }}>
                 <Image
                   src="/wordmark.svg"
-                  alt="Kortix"
+                  alt="Aurora"
                   fill
                   className="object-contain dark:invert opacity-10"
                   priority
@@ -245,11 +245,11 @@ export default function SunaPage() {
           {/* SEO Footer Text */}
           <div className="relative z-10 text-center max-w-2xl mx-auto pb-20 pt-12 border-t border-border/50">
             <p className="text-sm text-muted-foreground/60 leading-relaxed font-medium">
-              Looking for Suna? You've found us. Kortix is the evolution of Suna — the same open
+              Looking for Suna? You've found us. Aurora is the evolution of Suna — the same open
               source AI assistant and generalist AI worker, now with a name that better represents
               our vision. For users searching for "Suna AI", "Suna assistant", "Suna.so", "where is
-              Suna", or "Kortix Suna" — this is the official continuation of the Suna project under
-              the Kortix brand.
+              Suna", or "Aurora Suna" — this is the official continuation of the Suna project under
+              the Aurora brand.
             </p>
           </div>
         </div>

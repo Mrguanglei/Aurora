@@ -403,7 +403,7 @@ export function FileBrowserView({
         formData.append('file', file, normalizedName);
         formData.append('path', uploadPath);
 
-        if (!session) {
+        if (!session || !session.access_token) {
           throw new Error('No authentication token available');
         }
 
@@ -418,7 +418,7 @@ export function FileBrowserView({
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${session}`,
+              Authorization: `Bearer ${session.access_token}`,
             },
             body: formData,
           },
@@ -449,7 +449,7 @@ export function FileBrowserView({
         if (event.target) event.target.value = '';
       }
     },
-    [sandboxId, refetchFiles],
+    [sandboxId, refetchFiles, session],
   );
 
   // Get file icon based on type
@@ -480,8 +480,8 @@ export function FileBrowserView({
       // Fetch git log for entire workspace (no specific path)
       const url = `${API_URL}/sandboxes/${sandboxId}/files/history?path=/workspace&limit=100`;
       const headers: Record<string, string> = {};
-      if (session) {
-        headers['Authorization'] = `Bearer ${session}`;
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
       const response = await fetch(url, { headers });
@@ -534,8 +534,8 @@ export function FileBrowserView({
     try {
       const url = `${API_URL}/sandboxes/${sandboxId}/files/tree?path=${encodeURIComponent(currentPath)}&commit=${encodeURIComponent(commit)}`;
       const headers: Record<string, string> = {};
-      if (session) {
-        headers['Authorization'] = `Bearer ${session}`;
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
       const response = await fetch(url, { headers });
@@ -573,7 +573,7 @@ export function FileBrowserView({
     setRevertCommitInfo(null);
     try {
       const url = `${API_URL}/sandboxes/${sandboxId}/files/commit-info?commit=${encodeURIComponent(commit)}`;
-      const res = await fetch(url, { headers: session ? { Authorization: `Bearer ${session}` } : {} });
+      const res = await fetch(url, { headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {} });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || 'Failed to fetch commit info');

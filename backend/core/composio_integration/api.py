@@ -228,7 +228,13 @@ async def list_categories(
         
     except Exception as e:
         logger.error(f"Failed to fetch categories: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to fetch categories: {str(e)}")
+        # Return empty result instead of 500 error when COMPOSIO_API_KEY is not configured
+        return {
+            "success": False,
+            "categories": [],
+            "total": 0,
+            "error": str(e)
+        }
 
 
 @router.get("/toolkits")
@@ -261,7 +267,17 @@ async def list_toolkits(
         
     except Exception as e:
         logger.error(f"Failed to fetch toolkits: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to fetch toolkits: {str(e)}")
+        # Return empty result instead of 500 error when COMPOSIO_API_KEY is not configured
+        return {
+            "success": False,
+            "toolkits": [],
+            "total_items": 0,
+            "total_pages": 0,
+            "current_page": 1,
+            "next_cursor": None,
+            "has_more": False,
+            "error": str(e)
+        }
 
 
 @router.get("/toolkits/{toolkit_slug}/details")

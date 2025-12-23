@@ -559,13 +559,45 @@ async def _ensure_sandbox_for_thread(client, project_id: str, files: List[Upload
         # Get preview links
         vnc_link = await sandbox.get_preview_link(6080)
         website_link = await sandbox.get_preview_link(8888)
-        vnc_url = vnc_link.url if hasattr(vnc_link, 'url') else str(vnc_link).split("url='")[1].split("'")[0]
-        website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+        
+        # Safely extract VNC URL
+        if hasattr(vnc_link, 'url'):
+            vnc_url = vnc_link.url
+        else:
+            vnc_str = str(vnc_link)
+            if "url='" in vnc_str:
+                try:
+                    vnc_url = vnc_str.split("url='")[1].split("'")[0]
+                except IndexError:
+                    logger.warning(f"Failed to parse VNC URL from: {vnc_str}")
+                    vnc_url = vnc_str
+            else:
+                vnc_url = vnc_str
+        
+        # Safely extract website URL
+        if hasattr(website_link, 'url'):
+            website_url = website_link.url
+        else:
+            website_str = str(website_link)
+            if "url='" in website_str:
+                try:
+                    website_url = website_str.split("url='")[1].split("'")[0]
+                except IndexError:
+                    logger.warning(f"Failed to parse website URL from: {website_str}")
+                    website_url = website_str
+            else:
+                website_url = website_str
+        
+        # Safely extract token
         token = None
         if hasattr(vnc_link, 'token'):
             token = vnc_link.token
         elif "token='" in str(vnc_link):
-            token = str(vnc_link).split("token='")[1].split("'")[0]
+            try:
+                token = str(vnc_link).split("token='")[1].split("'")[0]
+            except IndexError:
+                logger.warning(f"Failed to parse token from VNC link")
+                token = None
 
         # Update project with sandbox info
         update_result = await client.table('projects').update({
@@ -1228,11 +1260,29 @@ async def get_thread_agent(thread_id: str, user_id: str = Depends(verify_and_get
     
     try:
         # Verify thread access and get thread data
-        await verify_and_authorize_thread_access(client, thread_id, user_id)
+        try:
+            await verify_and_authorize_thread_access(client, thread_id, user_id)
+        except HTTPException as e:
+            if e.status_code == 404:
+                # Thread doesn't exist yet (race condition during creation)
+                logger.debug(f"Thread {thread_id} not found, returning no agent")
+                return {
+                    "agent": None,
+                    "source": "none",
+                    "message": "Thread is being created. No agent has been used yet."
+                }
+            raise
+        
         thread_result = await client.table('threads').select('account_id').eq('thread_id', thread_id).execute()
         
         if not thread_result.data:
-            raise HTTPException(status_code=404, detail="Thread not found")
+            # Thread doesn't exist (shouldn't happen after verify_and_authorize, but handle it)
+            logger.debug(f"Thread {thread_id} not found in database")
+            return {
+                "agent": None,
+                "source": "none",
+                "message": "Thread not found or is being created."
+            }
         
         thread_data = thread_result.data[0]
         account_id = thread_data.get('account_id')

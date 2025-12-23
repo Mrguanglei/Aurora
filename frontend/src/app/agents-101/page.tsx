@@ -18,7 +18,7 @@ interface Slide {
   content?: string[];
   bulletPoints?: string[];
   accent?: string;
-  diagram?: 'agent-loop' | 'kortix-stack' | 'task-types' | 'token-flow' | 'messages-array' | 'sandbox-arch' | 'tools-overview';
+  diagram?: 'agent-loop' | 'Aurora-stack' | 'task-types' | 'token-flow' | 'messages-array' | 'sandbox-arch' | 'tools-overview';
   leftColumn?: { title: string; points: string[] };
   rightColumn?: { title: string; points: string[] };
   codeSnippet?: string;
@@ -37,13 +37,13 @@ const slides: Slide[] = [
     id: 2,
     type: 'speaker',
     title: 'Marko Kraemer & Domenico Gagliardi',
-    subtitle: 'CEO & COO at Kortix',
+    subtitle: 'CEO & COO at Aurora',
   },
   {
     id: 3,
     type: 'title',
     title: 'Demo',
-    subtitle: 'Let\'s see Kortix in action',
+    subtitle: 'Let\'s see Aurora in action',
   },
 
   // Part 2: What Are Agents?
@@ -669,7 +669,7 @@ const SlideContent = ({ slide }: { slide: Slide }) => {
           >
             <Image
               src="/Logomark.svg"
-              alt="Kortix"
+              alt="Aurora"
               width={140}
               height={40}
               className="dark:invert h-10 w-auto"
@@ -837,7 +837,7 @@ const SlideContent = ({ slide }: { slide: Slide }) => {
             transition={{ delay: 0.3 }}
           >
             {slide.diagram === 'agent-loop' && <AgentLoopDiagram />}
-            {slide.diagram === 'kortix-stack' && <KortixStackDiagram />}
+            {slide.diagram === 'Aurora-stack' && <KortixStackDiagram />}
             {slide.diagram === 'task-types' && <TaskTypesDiagram />}
             {slide.diagram === 'token-flow' && <TokenFlowDiagram />}
             {slide.diagram === 'messages-array' && <MessagesArrayDiagram />}
@@ -1126,7 +1126,7 @@ export default function Agents101Page() {
       <div className="fixed top-8 left-8 z-50">
         <Image
           src="/Logomark.svg"
-          alt="Kortix"
+          alt="Aurora"
           width={72}
           height={72}
           className="dark:invert"

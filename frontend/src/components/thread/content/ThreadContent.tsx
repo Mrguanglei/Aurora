@@ -99,7 +99,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
     sandboxId,
     project,
     isPreviewMode = false,
-    agentName = 'Kortix',
+    agentName = 'Aurora',
     agentAvatar = <AuroraLogo size={14} />,
     emptyStateComponent,
     threadMetadata,
@@ -165,7 +165,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
             };
         }
         return {
-            name: agentName || 'Kortix',
+            name: agentName || 'Aurora',
             avatar: agentAvatar
         };
     }, [threadMetadata, displayMessages, agentName, agentAvatar]);

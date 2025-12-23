@@ -48,7 +48,7 @@ const handleLocalFiles = (
   setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
   filteredFiles.forEach((file) => {
     const normalizedName = normalizeFilenameToNFC(file.name);
-    toast.success(`File attached: ${normalizedName}`);
+    toast.success(`上传成功: ${normalizedName}`);
   });
 };
 
@@ -67,6 +67,11 @@ const uploadFiles = async (
 
     if (!token) {
       throw new Error('No authentication token available');
+    }
+
+    // Set pending files at the start so UI can show upload progress
+    if (setPendingFiles) {
+      setPendingFiles(Array.from(files));
     }
 
     const newUploadedFiles: UploadedFile[] = [];
@@ -179,6 +184,11 @@ const uploadFilesToProject = async (
       throw new Error('No authentication token available');
     }
 
+    // Set pending files at the start so UI can show upload progress
+    if (setPendingFiles) {
+      setPendingFiles(Array.from(files));
+    }
+
     const newUploadedFiles: UploadedFile[] = [];
 
     for (const file of files) {
@@ -259,13 +269,14 @@ const handleFiles = async (
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>,
   messages: any[] = [], // Add messages parameter
   queryClient?: any, // Add queryClient parameter
+  token?: string, // Add token parameter
 ) => {
   if (sandboxId) {
     // If we have a sandboxId, upload files directly to sandbox
-    await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient, setPendingFiles);
+    await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient, setPendingFiles, token);
   } else if (projectId) {
     // If we have a projectId but no sandbox, upload to project (creates sandbox if needed)
-    await uploadFilesToProject(files, projectId, setUploadedFiles, setIsUploading, setPendingFiles);
+    await uploadFilesToProject(files, projectId, setUploadedFiles, setIsUploading, setPendingFiles, token);
   } else {
     // No sandboxId or projectId, store files locally
     handleLocalFiles(files, setPendingFiles, setUploadedFiles);
@@ -306,6 +317,7 @@ export const FileUploadHandler = memo(forwardRef<
     },
     ref,
   ) => {
+    const { session } = useAuth();
     const queryClient = useQueryClient();
     // Clean up object URLs when component unmounts
     useEffect(() => {
@@ -335,7 +347,7 @@ export const FileUploadHandler = memo(forwardRef<
 
       const files = Array.from(event.target.files);
       // Use the helper function instead of the static method
-      handleFiles(
+      await handleFiles(
         files,
         sandboxId,
         projectId,
@@ -344,6 +356,7 @@ export const FileUploadHandler = memo(forwardRef<
         setIsUploading,
         messages,
         queryClient,
+        session?.access_token,
       );
 
       event.target.value = '';

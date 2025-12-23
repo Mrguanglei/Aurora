@@ -548,7 +548,7 @@ export function NavAgents() {
               onSuccess: () => {
                 // Invalidate queries to refresh the list
                 queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
-                toast.success('Conversation deleted successfully');
+                toast.success('对话删除成功');
               },
               onSettled: () => {
                 setThreadToDelete(null);
