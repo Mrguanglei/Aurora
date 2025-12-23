@@ -49,7 +49,21 @@ export function useThreadData(
   const hasInitiallyScrolled = useRef<boolean>(false);
   
 
-  const threadQuery = useThreadQuery(threadId);
+  const threadQuery = useThreadQuery(threadId, {
+    retry: (failureCount, error: any) => {
+      // For new threads (enablePolling=true), keep retrying 404 errors for up to 30 seconds
+      // This handles the case where optimisticAgentStart is still creating the thread
+      if (enablePolling) {
+        const is404 = error?.message?.toLowerCase().includes('404') || 
+                     error?.message?.toLowerCase().includes('not found');
+        if (is404 && failureCount < 30) {
+          return true; // Keep retrying
+        }
+      }
+      return false; // Stop retrying
+    },
+    retryDelay: 1000, // Wait 1 second between retries
+  });
   const messagesQuery = useMessagesQuery(threadId, {
     refetchInterval: enablePolling ? 1000 : false,
   });

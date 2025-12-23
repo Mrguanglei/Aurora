@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/tooltip';
 import { UploadedFile } from './chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
+import { useFileMetadataStore } from '@/stores/file-metadata-store';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -135,12 +136,18 @@ const uploadFiles = async (
         });
       }
 
-      newUploadedFiles.push({
+      const fileMetadata = {
         name: finalFilename,
         path: actualPath,
         size: file.size,
         type: file.type || 'application/octet-stream',
-      });
+        uploadedAt: Date.now(),
+      };
+
+      newUploadedFiles.push(fileMetadata);
+      
+      // Save metadata to store for later retrieval
+      useFileMetadataStore.getState().addFileMetadata(fileMetadata);
 
       if (wasRenamed) {
         toast.success(`File uploaded as: ${finalFilename} (renamed to avoid conflict)`);
@@ -226,12 +233,18 @@ const uploadFilesToProject = async (
       const finalFilename = responseData.final_filename || normalizedName;
       const wasRenamed = responseData.renamed || false;
 
-      newUploadedFiles.push({
+      const fileMetadata = {
         name: finalFilename,
         path: actualPath,
         size: file.size,
         type: file.type || 'application/octet-stream',
-      });
+        uploadedAt: Date.now(),
+      };
+
+      newUploadedFiles.push(fileMetadata);
+      
+      // Save metadata to store for later retrieval
+      useFileMetadataStore.getState().addFileMetadata(fileMetadata);
 
       if (wasRenamed) {
         toast.success(`File uploaded as: ${finalFilename} (renamed to avoid conflict)`);

@@ -82,8 +82,20 @@ export function FullScreenPresentationViewer({
   const totalSlides = slides.length;
 
   // Helper function to sanitize filename (matching backend logic)
+  // Allow Unicode letters and numbers so non-ASCII presentation names (e.g. Chinese)
+  // don't collapse to an empty string. If the sanitized result would be empty,
+  // fall back to the original name so URL builder can encode it properly.
   const sanitizeFilename = (name: string): string => {
-    return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
+    if (!name) return '';
+    try {
+      // Keep Unicode letters (\p{L}) and numbers (\p{N}), plus dash and underscore.
+      const sanitized = name.replace(/[^\p{L}\p{N}\-_]+/gu, '');
+      return sanitized || name;
+    } catch (e) {
+      // If Unicode property escapes aren't supported, fall back to a permissive approach:
+      const simpleSanitized = name.replace(/[^a-zA-Z0-9\-_]/g, '');
+      return simpleSanitized || name;
+    }
   };
 
   // Load metadata with retry logic
@@ -139,6 +151,14 @@ export function FullScreenPresentationViewer({
       }
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
+      
+      // If we get HTTP 400 or 502, the sandbox might be stopped - try to wake it up
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage.includes('400') || errorMessage.includes('502') || errorMessage.includes('503')) {
+        // Trigger a refresh of the sandbox URL by using the project prop if available
+        // This will likely be handled by parent components
+        console.warn('Sandbox might be stopped, attempting to wake up...');
+      }
       
       // Calculate delay with exponential backoff, capped at 10 seconds
       // For early attempts, use shorter delays. After 5 attempts, use consistent 5 second intervals
@@ -271,7 +291,6 @@ export function FullScreenPresentationViewer({
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [isOpen, goToNextSlide, goToPreviousSlide, totalSlides, onClose, showEditor]);
-
 
 
   // Always show controls

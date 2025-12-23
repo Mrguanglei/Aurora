@@ -598,7 +598,7 @@ export function PresentationViewer({
 
           <div className="flex items-center gap-2">
             {/* Export actions */}
-            {metadata && slides.length > 0 && !isStreaming && (
+            {(metadata && slides.length > 0 && !isStreaming) || (metadata && metadata.slides && Object.keys(metadata.slides).length > 0 && !isStreaming) ? (
               <>
                 <Button
                   variant="ghost"
@@ -662,7 +662,29 @@ export function PresentationViewer({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
-            )}
+            ) : metadata && isStreaming ? (
+              // Show export button as disabled when still streaming but metadata exists
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 opacity-50 cursor-not-allowed"
+                  title="Full screen available after generation"
+                  disabled={true}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 w-8 p-0 opacity-50 cursor-not-allowed"
+                  title="Export available after generation"
+                  disabled={true}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : null}
 
             {!isStreaming && (
               <Badge

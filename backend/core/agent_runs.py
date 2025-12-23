@@ -454,7 +454,11 @@ async def _handle_file_uploads(files: List[UploadFile], sandbox, project_id: str
                 target_path = f"{uploads_dir}/{unique_filename}"
                 
                 logger.debug(f"Attempting to upload {safe_filename} to {target_path} in sandbox {sandbox.id}")
+                
+                # Read the file content before any potential issues
                 content = await file.read()
+                await file.close()  # Close the file immediately after reading
+                
                 upload_successful = False
                 try:
                     if hasattr(sandbox, 'fs') and hasattr(sandbox.fs, 'upload_file'):
@@ -485,8 +489,11 @@ async def _handle_file_uploads(files: List[UploadFile], sandbox, project_id: str
             except Exception as file_error:
                 logger.error(f"Error processing file {file.filename}: {str(file_error)}", exc_info=True)
                 failed_uploads.append(file.filename)
-            finally:
-                await file.close()
+                # Ensure file is closed in case of error during processing
+                try:
+                    await file.close()
+                except:
+                    pass  # File might already be closed
 
     if successful_uploads:
         message_content += "\n\n" if message_content else ""

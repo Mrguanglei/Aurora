@@ -581,4 +581,43 @@ class SandboxFilesTool(SandboxToolsBase):
                 "original_content": original_content_on_error,
                 "updated_content": None
             }))
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Read the contents of a file at the given path. The path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Use this to examine file contents when you need to understand existing code, read data files, or review configurations.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to the file to read, relative to /workspace (e.g., 'src/main.py')"
+                    }
+                },
+                "required": ["file_path"]
+            }
+        }
+    })
+    async def read_file(self, file_path: str) -> ToolResult:
+        try:
+            # Ensure sandbox is initialized
+            await self._ensure_sandbox()
             
+            file_path = self.clean_path(file_path)
+            full_path = f"{self.workspace_path}/{file_path}"
+            
+            if not await self._file_exists(full_path):
+                return self.fail_response(f"File '{file_path}' does not exist")
+            
+            content = (await self.sandbox.fs.download_file(full_path)).decode()
+            
+            return self.success_response({
+                "file_path": file_path,
+                "content": content,
+                "size": len(content)
+            })
+        except UnicodeDecodeError:
+            return self.fail_response(f"File '{file_path}' is a binary file and cannot be read as text")
+        except Exception as e:
+            return self.fail_response(f"Error reading file: {str(e)}")

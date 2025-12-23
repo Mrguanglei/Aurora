@@ -12,6 +12,7 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog';
+import { useFileMetadataStore } from '@/stores/file-metadata-store';
 
 type LayoutStyle = 'inline' | 'grid';
 
@@ -55,6 +56,9 @@ export function AttachmentGroup({
     standalone = false, // Add standalone prop
     alignRight = false // Add alignRight prop
 }: AttachmentGroupProps) {
+    // Access file metadata store
+    const getFileMetadata = useFileMetadataStore(state => state.getFileMetadata);
+    
     // State for modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     // Responsive state - ALWAYS initialize this hook first before any conditionals
@@ -208,7 +212,13 @@ export function AttachmentGroup({
                 isImage ? "flex items-start justify-center" : "",
                 isPreviewFile ? "w-full" : "" // Previewable files span full width
             ),
-            wrapperStyle: isPreviewFile ? { gridColumn: '1 / -1' } : undefined // Make previewable files span full width like in CompleteToolView
+            wrapperStyle: isPreviewFile ? { gridColumn: '1 / -1' } : undefined, // Make previewable files span full width like in CompleteToolView
+            customStyle: isImage ? {
+                width: '100%',
+                height: 'auto',
+                maxHeight: `${gridImageHeight}px`,
+                '--attachment-height': `${gridImageHeight}px`
+            } as React.CSSProperties : undefined
         };
     });
     
@@ -300,11 +310,11 @@ export function AttachmentGroup({
                                                 width: '100%'
                                             } : undefined
                                     }
-                                    collapsed={false}
+                                    collapsed={collapsed}
                                     project={project}
-                                    isSingleItemGrid={true}
                                     standalone={standalone}
                                     alignRight={alignRight}
+                                    fileSize={typeof currentItem.file === 'object' ? currentItem.file.size : getFileMetadata(currentFilePath)?.size}
                                 />
                                 {onRemove && (
                                     <div
@@ -372,23 +382,12 @@ export function AttachmentGroup({
                                         sandboxId={sandboxId}
                                         showPreview={showPreviews}
                                         localPreviewUrl={getLocalPreviewUrl(item.file)}
-                                        className={cn(
-                                            "w-full",
-                                            item.isImage ? "h-auto min-h-[54px]" : "h-[54px]"
-                                        )}
-                                        customStyle={
-                                            item.isImage ? {
-                                                width: '100%',
-                                                height: 'auto',
-                                                maxHeight: `${gridImageHeight}px`,
-                                                '--attachment-height': `${gridImageHeight}px`
-                                            } as React.CSSProperties : undefined
-                                        }
-                                        collapsed={false}
-                                        project={project}
+                                        customStyle={item.customStyle}
+                                        collapsed={true}
                                         isSingleItemGrid={uniqueFiles.length === 1}
                                         standalone={standalone}
                                         alignRight={alignRight}
+                                        fileSize={typeof item.file === 'object' ? item.file.size : getFileMetadata(item.path)?.size}
                                     />
                                     {onRemove && (
                                         <div
@@ -435,7 +434,7 @@ export function AttachmentGroup({
                                 localPreviewUrl={getLocalPreviewUrl(item.file)}
                                 className="w-full min-h-[240px] max-h-[400px]"
                                 customStyle={{
-                                    gridColumn: '1 / -1', // This triggers isGridLayout and preview rendering!
+                                    gridColumn: '1 / -1',
                                     width: '100%'
                                 }}
                                 collapsed={false}
@@ -443,6 +442,7 @@ export function AttachmentGroup({
                                 isSingleItemGrid={uniqueFiles.length === 1}
                                 standalone={standalone}
                                 alignRight={alignRight}
+                                fileSize={typeof item.file === 'object' ? item.file.size : getFileMetadata(item.path)?.size}
                             />
                             {onRemove && (
                                 <div
@@ -494,9 +494,9 @@ export function AttachmentGroup({
                                     sandboxId={sandboxId}
                                     showPreview={showPreviews}
                                     localPreviewUrl={getLocalPreviewUrl(item.file)}
-                                    collapsed={true} // Collapse all files in inline layout - show as compact attachments
-                                    alignRight={alignRight} // Pass alignRight prop
-                                    fileSize={typeof item.file === 'object' ? item.file.size : undefined} // Pass real file size
+                                    collapsed={true}
+                                    alignRight={alignRight}
+                                    fileSize={typeof item.file === 'object' ? item.file.size : getFileMetadata(item.path)?.size}
                                 />
                                 {onRemove && (
                                     <div
@@ -677,6 +677,7 @@ export function AttachmentGroup({
                                         isSingleItemGrid={uniqueFiles.length === 1} // Pass single item detection to modal too
                                         standalone={false} // Never standalone in modal
                                         alignRight={false} // Never align right in modal
+                                        fileSize={typeof item.file === 'object' ? item.file.size : getFileMetadata(item.path)?.size}
                                     />
                                     {onRemove && (
                                         <div

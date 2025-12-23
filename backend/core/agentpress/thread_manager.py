@@ -865,6 +865,12 @@ class ThreadManager:
                 # Only auto-continue for 'tool_calls' or 'length' finish reasons (not 'stop' or others)
                 # tools_executed flag is only set when finish_reason == 'tool_calls', so checking finish_reason is sufficient
                 if finish_reason == 'tool_calls':
+                    # Only auto-continue if tools were actually executed. This prevents
+                    # repeated auto-continue when a tool call finished but produced no results.
+                    if not tools_executed:
+                        logger.debug("Skipping auto-continue for 'tool_calls' because no tools_executed flag present")
+                        auto_continue_state['active'] = False
+                        return False
                     if native_max_auto_continues > 0:
                         logger.debug(f"Auto-continuing for tool execution ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                         auto_continue_state['active'] = True

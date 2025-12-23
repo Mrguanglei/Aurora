@@ -237,16 +237,35 @@ class SandboxShellTool(SandboxToolsBase):
             session_id,
             req
         )
-        
-        logs = await self.sandbox.process.get_session_command_logs(
-            session_id=session_id,
-            command_id=response.cmd_id
-        )
-        
-        # Extract the actual log content from the SessionCommandLogsResponse object
-        # The response has .output, .stdout, and .stderr attributes
-        logs_output = logs.output if logs and logs.output else ""
-        
+
+        # Prefer direct output returned by execute_session_command.
+        # response.output can be bytes, str, or a tuple (stdout, stderr) depending on docker SDK demux.
+        raw_output = getattr(response, "output", None)
+        logs_output = ""
+
+        if raw_output:
+            if isinstance(raw_output, (tuple, list)):
+                parts = []
+                for part in raw_output:
+                    if part is None:
+                        continue
+                    if isinstance(part, bytes):
+                        parts.append(part.decode("utf-8", errors="ignore"))
+                    else:
+                        parts.append(str(part))
+                logs_output = "\n".join(parts).strip()
+            elif isinstance(raw_output, bytes):
+                logs_output = raw_output.decode("utf-8", errors="ignore")
+            else:
+                logs_output = str(raw_output)
+        else:
+            # Fallback to get_session_command_logs if direct output was not provided
+            logs = await self.sandbox.process.get_session_command_logs(
+                session_id=session_id,
+                command_id=response.cmd_id
+            )
+            logs_output = getattr(logs, "output", "") if logs and getattr(logs, "output", None) else ""
+
         return {
             "output": logs_output,
             "exit_code": response.exit_code

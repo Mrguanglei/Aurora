@@ -32,7 +32,15 @@ interface PresentationMetadata {
 }
 
 const sanitizeFilename = (name: string): string => {
-  return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
+  if (!name) return '';
+  try {
+    const sanitized = name.replace(/[^\p{L}\p{N}\-_]+/gu, '');
+    return sanitized || name;
+  } catch (e) {
+    // Fallback if Unicode property escapes are unsupported
+    const simpleSanitized = name.replace(/[^a-zA-Z0-9\-_]/g, '');
+    return simpleSanitized || name;
+  }
 };
 
 export function PresentationSlidePreview({

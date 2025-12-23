@@ -124,27 +124,8 @@ async def create_thread_optimistically(
         logger.error(f"Failed to create project optimistically: {str(e)}")
         raise
     
-    if files and len(files) > 0:
-        try:
-            from core.agent_runs import _ensure_sandbox_for_thread, _handle_file_uploads
-            
-            logger.info(f"Processing {len(files)} files for optimistic thread {thread_id}")
-            sandbox, _ = await _ensure_sandbox_for_thread(client, project_id, files)
-            
-            if sandbox:
-                message_content = await _handle_file_uploads(files, sandbox, project_id, prompt)
-                logger.info(f"Successfully uploaded files for thread {thread_id}")
-            else:
-                logger.warning(f"No sandbox created for thread {thread_id}, files will not be uploaded")
-        except Exception as e:
-            logger.error(f"Error handling files in optimistic thread creation: {str(e)}\n{traceback.format_exc()}")
-            try:
-                await client.table('projects').delete().eq('project_id', project_id).execute()
-                logger.debug(f"Rolled back project {project_id} due to file handling error")
-            except Exception as rollback_error:
-                logger.error(f"Failed to rollback project {project_id}: {str(rollback_error)}")
-            raise
-    
+    # IMPORTANT: Create thread FIRST before processing files
+    # This ensures the thread exists even if file upload/sandbox creation is slow
     try:
         thread_data = {
             "thread_id": thread_id,
@@ -160,7 +141,7 @@ async def create_thread_optimistically(
         result = await client.table('threads').insert(thread_data).execute()
         logger.debug(f"Thread insert result: data={result.data}, count={result.count}")
         
-        logger.debug(f"Created thread {thread_id} with status=pending, memory_enabled={memory_enabled}")
+        logger.info(f"✅ Created thread {thread_id} with status=pending, memory_enabled={memory_enabled}")
         
     except Exception as e:
         logger.error(f"Failed to create thread optimistically: {str(e)}")
@@ -173,18 +154,46 @@ async def create_thread_optimistically(
         
         raise
     
+    # Create user message
     await client.table('messages').insert({
         "message_id": str(uuid.uuid4()),
         "thread_id": thread_id,
         "role": "user",
         "type": "user",
         "is_llm_message": True,
-        "content": {"role": "user", "content": message_content}
+        "content": {"role": "user", "content": prompt}
         # created_at 使用数据库默认值 CURRENT_TIMESTAMP
     }).execute()
     
-    logger.debug(f"Created user message for thread {thread_id} with content length: {len(message_content)}")
+    logger.debug(f"Created user message for thread {thread_id} with content length: {len(prompt)}")
     
+    # NOW handle files asynchronously - this won't block thread creation
+    if files and len(files) > 0:
+        logger.info(f"Files detected ({len(files)} files), will process in background")
+        # Schedule file upload in background task
+        async def upload_files_background():
+            try:
+                from core.agent_runs import _ensure_sandbox_for_thread, _handle_file_uploads
+                
+                logger.info(f"Processing {len(files)} files for thread {thread_id}")
+                sandbox, _ = await _ensure_sandbox_for_thread(client, project_id, files)
+                
+                if sandbox:
+                    message_content = await _handle_file_uploads(files, sandbox, project_id, prompt)
+                    # Update the user message with file paths
+                    await client.table('messages').update({
+                        "content": {"role": "user", "content": message_content}
+                    }).eq('thread_id', thread_id).eq('role', 'user').order('created_at', desc=False).limit(1).execute()
+                    logger.info(f"✅ Successfully uploaded files and updated message for thread {thread_id}")
+                else:
+                    logger.warning(f"No sandbox created for thread {thread_id}, files will not be uploaded")
+            except Exception as e:
+                logger.error(f"Error handling files in background: {str(e)}\n{traceback.format_exc()}")
+                # Don't fail the whole request - thread is already created
+        
+        asyncio.create_task(upload_files_background())
+    
+    # Dispatch background initialization
     initialize_thread_background.send(
         thread_id=thread_id,
         project_id=project_id,

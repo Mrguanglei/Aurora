@@ -534,8 +534,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         return;
       }
       
-      // If agent is running and queue is disabled, don't do anything (keep text in input)
-      if (agentStatus === 'running' || agentStatus === 'connecting') {
+      // IMPORTANT FIX: Allow message submission even if agentStatus is 'running'
+      // when agentRunId is null (meaning agent hasn't actually started yet)
+      // This happens when optimisticAgentStart succeeds but thread creation is still pending
+      if ((agentStatus === 'running' || agentStatus === 'connecting') && agentRunId) {
+        // Agent is ACTUALLY running (has a run ID), so block submission
+        console.log('[ThreadComponent] Agent is actually running, blocking submission:', { agentStatus, agentRunId });
         return;
       }
 
