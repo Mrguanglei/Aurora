@@ -323,7 +323,7 @@ class ModelRegistry:
         
         # theTurbo AI Models
         if config.THETURBO_API_KEY:
-            turbo_name = getattr(config, 'THETURBO_MODEL_NAME', None) or "gemini-2.5-flash"
+            turbo_name = getattr(config, 'THETURBO_MODEL_NAME', None) or "gpt-5.1"
             self.register(Model(
                 id=f"theturbo/{turbo_name}",
                 name=f"theTurbo {turbo_name}",
@@ -460,7 +460,7 @@ class ModelRegistry:
 
         # Special-case theTurbo (theturbo/*): map to provider-expected model string.
         if model_id.startswith("theturbo/") or "theturbo" in model_id:
-            turbo_name = getattr(config, 'THETURBO_MODEL_NAME', None) or "gemini-2.5-flash"
+            turbo_name = getattr(config, 'THETURBO_MODEL_NAME', None) or "gpt-5.1"
             return f"openai/{turbo_name}"
 
         # Special-case Doubao: map to configured Doubao model name if present

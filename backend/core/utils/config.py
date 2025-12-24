@@ -306,7 +306,7 @@ class Configuration:
     # theTurbo AI (OpenAI-compatible) configuration
     THETURBO_API_KEY: Optional[str] = "sk-aPOUGa"
     THETURBO_API_BASE: Optional[str] = "https://gateway.theturbo.ai/v1"
-    THETURBO_MODEL_NAME: Optional[str] = "gemini-2.5-flash"
+    THETURBO_MODEL_NAME: Optional[str] = "gpt-5.1"
     THETURBO_MAX_TOKENS: Optional[int] = 114096
     
     MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openai"

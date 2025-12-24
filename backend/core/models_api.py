@@ -49,7 +49,7 @@ def list_models() -> List[Dict]:
         # theTurbo AI (OpenAI-compatible)
         turbo_key = getattr(config, "THETURBO_API_KEY", None)
         turbo_base = getattr(config, "THETURBO_API_BASE", None)
-        turbo_name = getattr(config, "THETURBO_MODEL_NAME", None) or "gemini-2.5-flash"
+        turbo_name = getattr(config, "THETURBO_MODEL_NAME", None) or "gpt-5.1"
         if turbo_key or turbo_base:
             models.append({
                 "id": f"theturbo/{turbo_name}",
