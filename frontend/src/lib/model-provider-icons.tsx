@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 export type ModelProvider =
   | 'openai'
   | 'doubao'
-  | 'deepseek'
+  | 'theturbo'
   | 'anthropic'
   | 'google'
   | 'xai'
@@ -49,8 +49,8 @@ export function getModelProvider(modelId: string): ModelProvider {
   if (modelId.includes('doubao')) {
     return 'doubao';
   }
-  if (modelId.includes('deepseek')) {
-    return 'deepseek';
+  if (modelId.includes('theturbo')) {
+    return 'theturbo';
   }
   if (modelId.includes('google') || modelId.includes('gemini')) {
     return 'google';
@@ -107,7 +107,7 @@ export function ModelProviderIcon({
     bedrock: '/images/models/Anthropic.svg', // Bedrock uses Anthropic models primarily
     openrouter: '/images/models/OAI.svg', // Default to OpenAI icon for OpenRouter
     doubao: '/images/models/DouBao.svg',
-    deepseek: '/images/models/DeepSeek.svg',
+    theturbo: '/images/models/OAI.svg', // Using OpenAI icon as default for theTurbo
   };
 
   // Special handling for Kortix symbol - needs different invert behavior
@@ -173,7 +173,7 @@ export function getModelProviderName(modelId: string): string {
     bedrock: 'AWS Bedrock',
     openrouter: 'OpenRouter',
     doubao: 'DouBao',
-    deepseek: 'DeepSeek',
+    theturbo: 'theTurbo',
   };
 
   return nameMap[provider] || 'Unknown';

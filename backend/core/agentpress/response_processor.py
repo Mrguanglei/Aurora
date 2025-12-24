@@ -1835,6 +1835,9 @@ class ResponseProcessor:
             logger.debug(f"📝 RAW ARGUMENTS VALUE: {arguments}")
             self.trace.event(name="executing_tool", level="DEFAULT", status_message=(f"Executing tool: {function_name} with arguments: {arguments}"))
 
+            # Store raw arguments for logging
+            raw_args_for_logging = str(arguments)
+
             # Get available functions from tool registry
             logger.debug(f"🔍 Looking up tool function: {function_name}")
             available_functions = self.tool_registry.get_available_functions()
@@ -1906,7 +1909,37 @@ class ResponseProcessor:
 
             logger.debug(f"✅ Found tool function for '{function_name}'")
 
-            raw_args_for_logging = tool_call.get("raw_arguments", arguments) if isinstance(tool_call.get("raw_arguments"), str) else arguments
+            from core.utils.json_helpers import safe_json_parse
+
+            def _validate_required_params(func, args_dict, sig):
+                """Validate that required parameters are provided, with fallback defaults if needed."""
+                validated_args = {}
+
+                for param_name, param in sig.parameters.items():
+                    if param_name == 'self':  # Skip 'self' parameter
+                        continue
+
+                    if param_name in args_dict:
+                        validated_args[param_name] = args_dict[param_name]
+                    elif param.default is inspect.Parameter.empty:
+                        # Required parameter is missing
+                        if param_name == 'tool_names' and function_name == 'initialize_tools':
+                            # Special case: if initialize_tools is called without tool_names, provide default
+                            logger.warning(f"⚠️ initialize_tools called without tool_names, using default empty list")
+                            validated_args[param_name] = []
+                        else:
+                            logger.error(f"❌ Required parameter '{param_name}' missing for function '{function_name}'")
+                            raise ValueError(f"Required parameter '{param_name}' is missing for function '{function_name}'")
+                    else:
+                        # Use default value
+                        validated_args[param_name] = param.default
+
+                return validated_args
+
+            # Get function signature to validate required parameters
+            import inspect
+            sig = inspect.signature(tool_fn)
+            
             
             if isinstance(arguments, str):
                 logger.debug(f"🔄 Parsing string arguments for {function_name}")
@@ -1919,7 +1952,15 @@ class ResponseProcessor:
                         arg_types = {k: type(v).__name__ for k, v in parsed_args.items()}
                         logger.debug(f"✅ Parsed arguments as dict successfully. Types: {arg_types}")
                         logger.debug(f"📋 Parsed arguments: {parsed_args}")
-                        result = await tool_fn(**parsed_args)
+                        
+                        # Special handling for initialize_tools when arguments dict is empty
+                        if function_name == 'initialize_tools' and not parsed_args:
+                            logger.warning(f"⚠️ initialize_tools called with empty arguments dict, using default empty list")
+                            result = await tool_fn([])
+                        else:
+                            # Validate required parameters before calling function
+                            validated_args = _validate_required_params(tool_fn, parsed_args, sig)
+                            result = await tool_fn(**validated_args)
                     else:
                         logger.warning(f"⚠️ Parsed arguments is not a dict (type: {type(parsed_args)}), trying direct JSON parse")
                         try:
@@ -1928,7 +1969,15 @@ class ResponseProcessor:
                                 arg_types = {k: type(v).__name__ for k, v in parsed_args.items()}
                                 logger.debug(f"✅ Direct JSON parse succeeded. Types: {arg_types}")
                                 logger.debug(f"📋 Parsed arguments: {parsed_args}")
-                                result = await tool_fn(**parsed_args)
+                                
+                                # Special handling for initialize_tools when arguments dict is empty
+                                if function_name == 'initialize_tools' and not parsed_args:
+                                    logger.warning(f"⚠️ initialize_tools called with empty arguments dict, using default empty list")
+                                    result = await tool_fn([])
+                                else:
+                                    # Validate required parameters before calling function
+                                    validated_args = _validate_required_params(tool_fn, parsed_args, sig)
+                                    result = await tool_fn(**validated_args)
                             else:
                                 raise ValueError(f"JSON parse result is not a dict: {type(parsed_args)}")
                         except json.JSONDecodeError as je:
@@ -1937,9 +1986,17 @@ class ResponseProcessor:
                 except (json.JSONDecodeError, ValueError, TypeError) as parse_error:
                     logger.error(f"❌ Error parsing arguments: {str(parse_error)}")
                     logger.error(f"❌ Raw arguments that failed: {raw_args_for_logging[:500]}")
-                    # Last resort: try to pass as single argument (some tools might accept this)
-                    logger.debug(f"🔄 Falling back to passing raw string as single argument")
-                    result = await tool_fn(arguments)
+                    # Special handling for initialize_tools function - if arguments failed to parse, try with empty list as default
+                    if function_name == 'initialize_tools':
+                        logger.warning(f"⚠️ initialize_tools arguments failed to parse, using default empty list")
+                        result = await tool_fn([])
+                    # Check if function accepts single argument
+                    elif len(sig.parameters) == 1:
+                        logger.debug(f"🔄 Function accepts single argument, passing raw string")
+                        result = await tool_fn(arguments)
+                    else:
+                        logger.error(f"❌ Function {function_name} requires specific parameters but none provided")
+                        return ToolResult(success=False, output=f"Tool '{function_name}' requires proper arguments but none provided")
             else:
                 # Arguments are already parsed (dict or other type)
                 if isinstance(arguments, dict):
@@ -1947,10 +2004,26 @@ class ResponseProcessor:
                     arg_types = {k: type(v).__name__ for k, v in arguments.items()}
                     logger.debug(f"✅ Arguments are already a dict, unpacking. Types: {arg_types}")
                     logger.debug(f"📋 Arguments: {arguments}")
-                    result = await tool_fn(**arguments)
+                    
+                    # Special handling for initialize_tools when arguments dict is empty
+                    if function_name == 'initialize_tools' and not arguments:
+                        logger.warning(f"⚠️ initialize_tools called with empty arguments dict, using default empty list")
+                        result = await tool_fn([])
+                    else:
+                        # Validate required parameters before calling function
+                        validated_args = _validate_required_params(tool_fn, arguments, sig)
+                        result = await tool_fn(**validated_args)
                 else:
-                    logger.debug(f"🔄 Arguments are non-dict type ({type(arguments)}), passing as single argument")
-                    result = await tool_fn(arguments)
+                    logger.debug(f"🔄 Arguments are non-dict type ({type(arguments)}), checking function signature")
+                    # Special handling for initialize_tools function - if arguments are not a dict, try with empty list as default
+                    if function_name == 'initialize_tools':
+                        logger.warning(f"⚠️ initialize_tools called with non-dict arguments ({type(arguments)}), using default empty list")
+                        result = await tool_fn([])
+                    elif len(sig.parameters) == 1:
+                        result = await tool_fn(arguments)
+                    else:
+                        logger.error(f"❌ Function {function_name} requires specific parameters but got single non-dict value")
+                        return ToolResult(success=False, output=f"Tool '{function_name}' requires proper arguments but got single value")
 
             logger.debug(f"✅ Tool execution completed successfully")
             # logger.debug(f"📤 Result type: {type(result)}")

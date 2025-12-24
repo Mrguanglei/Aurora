@@ -303,6 +303,12 @@ class Configuration:
     DEEPSEEK_MODEL_NAME: Optional[str] = "deepseek-chat"
     DEEPSEEK_MAX_TOKENS: Optional[int] = 65536 
     
+    # theTurbo AI (OpenAI-compatible) configuration
+    THETURBO_API_KEY: Optional[str] = "sk-aPOUGa"
+    THETURBO_API_BASE: Optional[str] = "https://gateway.theturbo.ai/v1"
+    THETURBO_MODEL_NAME: Optional[str] = "gemini-2.5-flash"
+    THETURBO_MAX_TOKENS: Optional[int] = 114096
+    
     MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openai"
     MEMORY_EMBEDDING_MODEL: Optional[str] = "text-embedding-3-small"
     MEMORY_EXTRACTION_MODEL: Optional[str] = "Aurora/basic"

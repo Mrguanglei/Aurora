@@ -46,22 +46,22 @@ def list_models() -> List[Dict]:
                 "configured": False,
             })
 
-        # DeepSeek (via OpenRouter / DeepSeek)
-        deep_key = getattr(config, "DEEPSEEK_API_KEY", None)
-        deep_base = getattr(config, "DEEPSEEK_API_BASE", None)
-        deep_name = getattr(config, "DEEPSEEK_MODEL_NAME", None) or "deepseek-chat"
-        if deep_key or deep_base:
+        # theTurbo AI (OpenAI-compatible)
+        turbo_key = getattr(config, "THETURBO_API_KEY", None)
+        turbo_base = getattr(config, "THETURBO_API_BASE", None)
+        turbo_name = getattr(config, "THETURBO_MODEL_NAME", None) or "gemini-2.5-flash"
+        if turbo_key or turbo_base:
             models.append({
-                "id": f"openrouter/deepseek/{deep_name}",
-                "label": f"DeepSeek ({deep_name})",
-                "provider": "deepseek",
+                "id": f"theturbo/{turbo_name}",
+                "label": f"theTurbo ({turbo_name})",
+                "provider": "theturbo",
                 "configured": True,
             })
         else:
             models.append({
-                "id": f"openrouter/deepseek/{deep_name}",
-                "label": f"DeepSeek ({deep_name})",
-                "provider": "deepseek",
+                "id": f"theturbo/{turbo_name}",
+                "label": f"theTurbo ({turbo_name})",
+                "provider": "theturbo",
                 "configured": False,
             })
 

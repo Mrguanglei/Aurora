@@ -321,25 +321,31 @@ class ModelRegistry:
             )
         ))
         
-        # DeepSeek Models
-        self.register(Model(
-            id="openrouter/deepseek/deepseek-chat",
-            name="DeepSeek Chat",
-            provider=ModelProvider.OPENROUTER,
-            aliases=["deepseek", "deepseek-chat"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT, 
-                ModelCapability.FUNCTION_CALLING
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.38,
-                output_cost_per_million_tokens=0.89
-            ),
-            tier_availability=["free", "paid"],
-            priority=95,
-            enabled=False  # Currently disabled
-        ))
+        # theTurbo AI Models
+        if config.THETURBO_API_KEY:
+            turbo_name = getattr(config, 'THETURBO_MODEL_NAME', None) or "gemini-2.5-flash"
+            self.register(Model(
+                id=f"theturbo/{turbo_name}",
+                name=f"theTurbo {turbo_name}",
+                provider=ModelProvider.OPENAI,  # Using OPENAI provider since it's OpenAI-compatible
+                aliases=["theturbo", "theTurbo", turbo_name],
+                context_window=128_000,
+                capabilities=[
+                    ModelCapability.CHAT, 
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.VISION
+                ],
+                pricing=ModelPricing(
+                    input_cost_per_million_tokens=0.35,
+                    output_cost_per_million_tokens=1.05
+                ),
+                tier_availability=["free", "paid"],
+                priority=95,
+                enabled=True,
+                config=ModelConfig(
+                    api_base=config.THETURBO_API_BASE,
+                )
+            ))
         
         # Qwen Models
         self.register(Model(
@@ -452,11 +458,10 @@ class ModelRegistry:
                     return model.aliases[0]
                 return model.id
 
-        # Special-case DeepSeek (openrouter/deepseek/*): map to provider-expected model string.
-        # Many OpenRouter-hosted models expect a provider-prefixed model name like "deepseek/<model>".
-        if model_id.startswith("openrouter/deepseek/") or "deepseek" in model_id:
-            deep_name = getattr(config, 'DEEPSEEK_MODEL_NAME', None) or "deepseek-chat"
-            return f"deepseek/{deep_name}"
+        # Special-case theTurbo (theturbo/*): map to provider-expected model string.
+        if model_id.startswith("theturbo/") or "theturbo" in model_id:
+            turbo_name = getattr(config, 'THETURBO_MODEL_NAME', None) or "gemini-2.5-flash"
+            return f"openai/{turbo_name}"
 
         # Special-case Doubao: map to configured Doubao model name if present
         if model_id.startswith("doubao/") or model_id == "doubao":

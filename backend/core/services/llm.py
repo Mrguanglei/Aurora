@@ -82,13 +82,13 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
                 "api_base": getattr(config, 'DOUBAO_API_BASE', None) if config else None,
             },
         },
-        # DeepSeek via OpenRouter / OpenAI-compatible endpoint
+        # theTurbo AI via OpenAI-compatible endpoint
         {
-            "model_name": "openrouter/deepseek/*",
+            "model_name": "theturbo/*",
             "litellm_params": {
                 "model": "openai/*",
-                "api_key": getattr(config, 'DEEPSEEK_API_KEY', None) if config else None,
-                "api_base": getattr(config, 'DEEPSEEK_API_BASE', None) if config else None,
+                "api_key": getattr(config, 'THETURBO_API_KEY', None) if config else None,
+                "api_base": getattr(config, 'THETURBO_API_BASE', None) if config else None,
             },
         },
         # Generic fallback entry for any model string passed through

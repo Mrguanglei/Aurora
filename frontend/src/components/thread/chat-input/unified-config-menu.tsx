@@ -348,12 +348,12 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     ), []);
 
     const ModeToggle = useCallback(({ compact = false }: { compact?: boolean }) => {
-        const doubaoModel = modelOptions.find(m => m.id === 'doubao/doubao-seed-1-6-251015' || m.label?.includes('Doubao'));
-        const deepseekModel = modelOptions.find(m => m.id === 'openrouter/deepseek/deepseek-chat' || m.label?.includes('DeepSeek'));
+        const doubaoModel = modelOptions.find(m => m.id.startsWith('doubao/') || m.label?.includes('Doubao'));
+        const theturboModel = modelOptions.find(m => m.id.startsWith('theturbo/') || m.label?.includes('theTurbo'));
 
         // Manual selection: user chooses which provider to use
         const isDoubaoSelected = doubaoModel && selectedModel === doubaoModel.id;
-        const isDeepseekSelected = deepseekModel && selectedModel === deepseekModel.id;
+        const isTheturboSelected = theturboModel && selectedModel === theturboModel.id;
 
         return (
             <div className={cn(
@@ -375,33 +375,33 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                             : "text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    <ModelProviderIcon modelId={doubaoModel?.id || 'doubao/doubao-seed-1-6-251015'} size={compact ? 14 : 18} />
+                    <ModelProviderIcon modelId={doubaoModel?.id || 'doubao/'} size={compact ? 14 : 18} />
                     <span className={cn(
                         "font-medium",
                         compact ? "text-xs" : "text-sm"
                     )}>Doubao</span>
                 </button>
 
-                {/* DeepSeek */}
+                {/* theTurbo */}
                 <button
                     onClick={() => {
-                        if (deepseekModel) {
-                            onModelChange(deepseekModel.id);
+                        if (theturboModel) {
+                            onModelChange(theturboModel.id);
                         }
                     }}
                     className={cn(
                         "flex-1 flex items-center justify-center gap-2 rounded-lg transition-all",
                         compact ? "px-3 py-1.5" : "px-4 py-2",
-                        isDeepseekSelected
+                        isTheturboSelected
                             ? "bg-background shadow-sm text-foreground"
                             : "text-muted-foreground hover:text-foreground"
                     )}
                 >
-                    <ModelProviderIcon modelId={deepseekModel?.id || 'openrouter/deepseek/deepseek-chat'} size={compact ? 14 : 18} />
+                    <ModelProviderIcon modelId={theturboModel?.id || 'theturbo/'} size={compact ? 14 : 18} />
                     <span className={cn(
                         "font-medium",
                         compact ? "text-xs" : "text-sm"
-                    )}>DeepSeek</span>
+                    )}>theTurbo</span>
                 </button>
             </div>
         );

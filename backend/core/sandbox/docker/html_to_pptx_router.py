@@ -161,7 +161,12 @@ class OptimizedHTMLToPPTXConverter:
                 
                 if file_path:
                     # Handle both absolute and relative paths
-                    if Path(file_path).is_absolute():
+                    # Check if file_path is a URL and handle appropriately
+                    if file_path.startswith(('http://', 'https://')):
+                        # This is a URL, not a file path - skip it
+                        print(f"Skipping URL path: {file_path}")
+                        continue
+                    elif Path(file_path).is_absolute():
                         html_path = Path(file_path)
                     else:
                         html_path = Path(f"/workspace/{file_path}")
@@ -190,7 +195,6 @@ class OptimizedHTMLToPPTXConverter:
     
     async def extract_visual_elements(self, page, html_path: Path, temp_dir: Path) -> List[Dict]:
         """Extract all visual elements (non-text) as individual images with positioning."""
-        visual_elements = []
         
         try:
             # Set viewport and load HTML
@@ -206,6 +210,9 @@ class OptimizedHTMLToPPTXConverter:
                 print(f"BROWSER CONSOLE: {msg.text}")
 
             page.on("console", handle_console)
+            
+            # Initialize visual_elements list
+            visual_elements = []
             
             # Step 1: First extract icons BEFORE making text transparent
             icon_data = await page.evaluate(r"""
@@ -552,7 +559,7 @@ class OptimizedHTMLToPPTXConverter:
                         x = max(0, min(data['x'], 1920))
                         y = max(0, min(data['y'], 1080))
                         width = min(data['width'], 1920 - x)
-                        height = min(data['height'], 1920 - y)
+                        height = min(data['height'], 1080 - y)
                         
                         # Skip if area is too small
                         if width < 5 or height < 5:
@@ -724,7 +731,6 @@ class OptimizedHTMLToPPTXConverter:
                         }
                         
                         visual_elements.append(visual_element)
-                        
                     except Exception as e:
                         print(f"Failed to capture visual element {i}: {e}")
                         # Ensure we restore backgrounds and visibility even if capture fails
@@ -1125,129 +1131,159 @@ class OptimizedHTMLToPPTXConverter:
     
     def create_text_box(self, slide, text_element: TextElement) -> None:
         """Create an editable text box in PowerPoint with exact positioning and enhanced styling."""
-        # Convert pixel coordinates to inches
-        left = Inches(text_element.x / 96.0)
-        top = Inches(text_element.y / 96.0)
-        
-        # Calculate proper width - ensure it's wide enough for the text content
-        text_width = text_element.width
-        
-        # For large fonts, increase the width calculation significantly
-        font_size_factor = max(1.0, text_element.font_size / 20.0)  # Scale factor based on font size
-        
-        if text_width < 100:  # If width is too small, estimate based on text length and font size
-            # More generous estimate: each character needs more space for larger fonts
-            chars_per_pixel = 8 / font_size_factor  # Fewer characters per pixel for larger fonts
-            estimated_width = len(text_element.text) * chars_per_pixel
-            text_width = max(text_width, estimated_width)
-        
-        # Add generous padding to prevent text from being cut off
-        padding = max(20, text_element.font_size * 0.5)  # Padding scales with font size
-        final_width = text_width + (padding * 2)
-        
-        width = Inches(final_width / 96.0)
-        height = Inches(max(text_element.height, 10) / 96.0)
-        
-        # Create text box
-        textbox = slide.shapes.add_textbox(left, top, width, height)
-        text_frame = textbox.text_frame
-        text_frame.clear()
-        
-        # Set text frame properties for exact positioning
-        text_frame.margin_left = Pt(0)
-        text_frame.margin_right = Pt(0)
-        text_frame.margin_top = Pt(0)
-        text_frame.margin_bottom = Pt(0)
-        text_frame.word_wrap = True
-        text_frame.auto_size = None
-        
-        # Add paragraph
-        p = text_frame.paragraphs[0]
-        p.text = text_element.text
-        
-        # Add bullet formatting for list items
-        if text_element.tag == 'li':
-            p.level = 0
-            p.text = text_element.text  # Ensure text is set
-            # Note: python-pptx doesn't have direct bullet control, but we can prepend bullet
-            if not p.text.startswith('•'):
-                p.text = '• ' + p.text
-        
-        # Set text alignment
-        alignment_map = {
-            'left': PP_ALIGN.LEFT, 'center': PP_ALIGN.CENTER, 'centre': PP_ALIGN.CENTER,
-            'right': PP_ALIGN.RIGHT, 'justify': PP_ALIGN.JUSTIFY, 'start': PP_ALIGN.LEFT,
-            'end': PP_ALIGN.RIGHT
-        }
-        p.alignment = alignment_map.get(text_element.text_align.lower(), PP_ALIGN.LEFT)
-        
-        # Set spacing
-        p.space_before = Pt(0)
-        p.space_after = Pt(0)
-        if hasattr(p, 'line_spacing'):
-            p.line_spacing = text_element.line_height
-        
-        # Set font properties
-        font = p.font
-        font.name = text_element.font_family
-        font.size = Pt(max(text_element.font_size, 8))
-        font.bold = CSSParser.parse_font_weight(text_element.font_weight)
-        
-        # Enhanced styling from the style object
-        if text_element.style:
-            style = text_element.style
-            
-            # Handle letter spacing
-            letter_spacing = style.get('letterSpacing', 'normal')
-            if letter_spacing != 'normal' and letter_spacing.endswith('px'):
-                try:
-                    spacing_px = float(letter_spacing[:-2])
-                    if hasattr(font, 'character_spacing'):
-                        font.character_spacing = spacing_px
-                except:
-                    pass
-            
-            # Handle text transform
-            text_transform = style.get('textTransform', 'none')
-            if text_transform == 'uppercase':
-                p.text = p.text.upper()
-            elif text_transform == 'lowercase':
-                p.text = p.text.lower()
-            elif text_transform == 'capitalize':
-                p.text = p.text.title()
-        
-        # Set font color with enhanced handling
         try:
-            # Handle gradient text (webkit background clip)
-            if text_element.style and text_element.style.get('webkitBackgroundClip') == 'text':
-                r, g, b = CSSParser.parse_color(text_element.color)
-                font.color.rgb = RGBColor(r, g, b)
-            else:
-                # Regular color handling
-                r, g, b = CSSParser.parse_color(text_element.color)
-                font.color.rgb = RGBColor(r, g, b)
-        except Exception:
-            font.color.rgb = RGBColor(0, 0, 0)
-        
-        # Make textbox transparent (no background, no border)
-        textbox.fill.background()
-        textbox.line.fill.background()
+            # Convert pixel coordinates to inches
+            left = Inches(text_element.x / 96.0)
+            top = Inches(text_element.y / 96.0)
+            
+            # Calculate proper width - ensure it's wide enough for the text content
+            text_width = text_element.width
+            
+            # For large fonts, increase the width calculation significantly
+            font_size_factor = max(1.0, text_element.font_size / 20.0)  # Scale factor based on font size
+            
+            if text_width < 100:  # If width is too small, estimate based on text length and font size
+                # More generous estimate: each character needs more space for larger fonts
+                chars_per_pixel = 8 / font_size_factor  # Fewer characters per pixel for larger fonts
+                estimated_width = len(text_element.text) * chars_per_pixel
+                text_width = max(text_width, estimated_width)
+            
+            # Add generous padding to prevent text from being cut off
+            padding = max(20, text_element.font_size * 0.5)  # Padding scales with font size
+            final_width = text_width + (padding * 2)
+            
+            width = Inches(final_width / 96.0)
+            height = Inches(max(text_element.height, 10) / 96.0)
+            
+            # Create text box
+            textbox = slide.shapes.add_textbox(left, top, width, height)
+            text_frame = textbox.text_frame
+            text_frame.clear()
+            
+            # Set text frame properties for exact positioning
+            text_frame.margin_left = Pt(0)
+            text_frame.margin_right = Pt(0)
+            text_frame.margin_top = Pt(0)
+            text_frame.margin_bottom = Pt(0)
+            text_frame.word_wrap = True
+            text_frame.auto_size = None
+            
+            # Add paragraph
+            p = text_frame.paragraphs[0]
+            p.text = text_element.text
+            
+            # Add bullet formatting for list items
+            if text_element.tag == 'li':
+                p.level = 0
+                p.text = text_element.text  # Ensure text is set
+                # Note: python-pptx doesn't have direct bullet control, but we can prepend bullet
+                if not p.text.startswith('•'):
+                    p.text = '• ' + p.text
+            
+            # Set text alignment
+            alignment_map = {
+                'left': PP_ALIGN.LEFT, 'center': PP_ALIGN.CENTER, 'centre': PP_ALIGN.CENTER,
+                'right': PP_ALIGN.RIGHT, 'justify': PP_ALIGN.JUSTIFY, 'start': PP_ALIGN.LEFT,
+                'end': PP_ALIGN.RIGHT
+            }
+            p.alignment = alignment_map.get(text_element.text_align.lower(), PP_ALIGN.LEFT)
+            
+            # Set spacing
+            p.space_before = Pt(0)
+            p.space_after = Pt(0)
+            if hasattr(p, 'line_spacing'):
+                p.line_spacing = text_element.line_height
+            
+            # Set font properties
+            font = p.font
+            font.name = text_element.font_family
+            font.size = Pt(max(text_element.font_size, 8))
+            font.bold = CSSParser.parse_font_weight(text_element.font_weight)
+            
+            # Enhanced styling from the style object
+            if text_element.style:
+                style = text_element.style
+                
+                # Handle letter spacing
+                letter_spacing = style.get('letterSpacing', 'normal')
+                if letter_spacing != 'normal' and letter_spacing.endswith('px'):
+                    try:
+                        spacing_px = float(letter_spacing[:-2])
+                        if hasattr(font, 'character_spacing'):
+                            font.character_spacing = spacing_px
+                    except:
+                        pass
+                
+                # Handle text transform
+                text_transform = style.get('textTransform', 'none')
+                if text_transform == 'uppercase':
+                    p.text = p.text.upper()
+                elif text_transform == 'lowercase':
+                    p.text = p.text.lower()
+                elif text_transform == 'capitalize':
+                    p.text = p.text.title()
+            
+            # Set font color with enhanced handling
+            try:
+                # Handle gradient text (webkit background clip)
+                if text_element.style and text_element.style.get('webkitBackgroundClip') == 'text':
+                    r, g, b = CSSParser.parse_color(text_element.color)
+                    font.color.rgb = RGBColor(r, g, b)
+                else:
+                    # Regular color handling
+                    r, g, b = CSSParser.parse_color(text_element.color)
+                    font.color.rgb = RGBColor(r, g, b)
+            except Exception:
+                font.color.rgb = RGBColor(0, 0, 0)
+            
+            # Make textbox transparent (no background, no border)
+            try:
+                textbox.fill.background()
+                textbox.line.fill.background()
+            except:
+                # If setting background fails, continue anyway to avoid breaking the entire slide
+                pass
+        except Exception as e:
+            print(f"Failed to create text box for text '{text_element.text[:50]}...': {str(e)}")
     
     def add_visual_element_to_slide(self, slide, visual_element: Dict) -> None:
         """Add a visual element as an image to the PowerPoint slide with exact positioning."""
-        if visual_element['image_path'].exists():
-            # Convert pixel coordinates to inches
-            left = Inches(visual_element['x'] / 96.0)
-            top = Inches(visual_element['y'] / 96.0)
-            width = Inches(visual_element['width'] / 96.0)
-            height = Inches(visual_element['height'] / 96.0)
-            
-            # Add the image to the slide
-            picture = slide.shapes.add_picture(str(visual_element['image_path']), left, top, width, height)
+        image_path = visual_element['image_path']
+        
+        # Check if image file exists and is valid
+        if not image_path.exists():
+            print(f"Image file does not exist: {image_path}")
+            return
+        
+        # Validate image file
+        try:
+            from PIL import Image
+            # Verify the image is valid before adding to slide
+            with Image.open(str(image_path)) as img:
+                # Reopen image to avoid any path object issues
+                img_copy = Image.open(str(image_path))
+                img_format = img_copy.format
+                img_copy.close()
+        except Exception as e:
+            print(f"Invalid image file {image_path}: {str(e)}")
+            return
+        
+        # Convert pixel coordinates to inches
+        left = Inches(visual_element['x'] / 96.0)
+        top = Inches(visual_element['y'] / 96.0)
+        width = Inches(visual_element['width'] / 96.0)
+        height = Inches(visual_element['height'] / 96.0)
+        
+        # Add the image to the slide
+        try:
+            # Ensure the path is a string to avoid any path object issues
+            picture = slide.shapes.add_picture(str(image_path), left, top, width, height)
             
             # Special handling for background elements
             if visual_element['tag'] == 'clean_background':
                 picture.z_order = 0
+        except Exception as e:
+            print(f"Failed to add picture {image_path}: {str(e)}")
     
     async def build_slide_from_analysis(self, presentation, slide_analysis: Dict, temp_dir: Path) -> None:
         """Build a PowerPoint slide from pre-analyzed data."""
@@ -1256,9 +1292,14 @@ class OptimizedHTMLToPPTXConverter:
         background_path = slide_analysis['background_path']
         text_elements = slide_analysis['text_elements']
         
-        # Add blank slide
-        blank_slide_layout = presentation.slide_layouts[6]  # Blank layout
-        slide = presentation.slides.add_slide(blank_slide_layout)
+        # Add blank slide - ensure we're using the right layout
+        try:
+            blank_slide_layout = presentation.slide_layouts[6]  # Blank layout
+            slide = presentation.slides.add_slide(blank_slide_layout)
+        except Exception as e:
+            print(f"Error creating slide: {str(e)}")
+            # Fallback to first available layout
+            slide = presentation.slides.add_slide(presentation.slide_layouts[0])
         
         # Step 1: Add the clean background as the base layer
         if background_path and background_path.exists():
@@ -1285,8 +1326,8 @@ class OptimizedHTMLToPPTXConverter:
             for text_element in text_elements:
                 try:
                     self.create_text_box(slide, text_element)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"Error creating text box: {str(e)}")
     
     async def convert_to_pptx(self, store_locally: bool = True) -> tuple:
         """Main conversion method - optimized and reliable."""
@@ -1323,10 +1364,6 @@ class OptimizedHTMLToPPTXConverter:
                     # Process all slides in parallel
                     # Create semaphore to limit concurrent operations
                     semaphore = asyncio.Semaphore(5)
-                    context = await browser.new_context(
-                        viewport={'width': 1920, 'height': 1080}
-                    )
-                    
                     context = await browser.new_context(
                         viewport={'width': 1920, 'height': 1080}
                     )
@@ -1383,7 +1420,10 @@ class OptimizedHTMLToPPTXConverter:
                                     
                                 finally:
                                     # Always close the page to free memory
-                                    await page.close()
+                                    try:
+                                        await page.close()
+                                    except:
+                                        pass  # Ignore errors when closing page
                                     
                             except Exception as e:
                                 return {
@@ -1431,10 +1471,14 @@ class OptimizedHTMLToPPTXConverter:
             presentation.slide_width = Inches(20)  # 1920px at 96 DPI
             presentation.slide_height = Inches(11.25)  # 1080px at 96 DPI
             
-            # Remove default slide
-            if len(presentation.slides) > 0:
-                xml_slides = presentation.slides._sldIdLst
-                xml_slides.remove(xml_slides[0])
+            # Remove default slide if it exists
+            try:
+                if len(presentation.slides) > 0:
+                    xml_slides = presentation.slides._sldIdLst
+                    if len(xml_slides) > 0:
+                        xml_slides.remove(xml_slides[0])
+            except Exception as e:
+                print(f"Warning: Could not remove default slide: {e}")
             
             # Build slides using the analyzed data
             successful_slides = 0
@@ -1453,6 +1497,7 @@ class OptimizedHTMLToPPTXConverter:
                         p.text = f"Error processing slide: {slide_analysis['error']}"
                         p.font.size = Pt(18)
                         p.font.color.rgb = RGBColor(255, 0, 0)
+                        successful_slides += 1
                     else:
                         await self.build_slide_from_analysis(presentation, slide_analysis, temp_path)
                         successful_slides += 1
@@ -1469,16 +1514,25 @@ class OptimizedHTMLToPPTXConverter:
                     p.text = f"Error building slide: {str(e)}"
                     p.font.size = Pt(18)
                     p.font.color.rgb = RGBColor(255, 0, 0)
+                    successful_slides += 1
             
             # Save PowerPoint presentation
             presentation_name = self.metadata.get('presentation_name', 'presentation')
             temp_output_path = temp_path / f"{presentation_name}.pptx"
             
-            presentation.save(str(temp_output_path))
+            try:
+                presentation.save(str(temp_output_path))
+            except Exception as e:
+                print(f"Failed to save presentation: {str(e)}")
+                raise
+            
+            # Ensure the file is properly closed
+            del presentation
             
             if store_locally:
                 # Store in the static files directory for URL serving
-                timestamp = int(asyncio.get_event_loop().time())
+                import time
+                timestamp = int(time.time())
                 filename = f"{presentation_name}_{timestamp}.pptx"
                 final_output = output_dir / filename
                 final_output.parent.mkdir(exist_ok=True)
@@ -1486,7 +1540,7 @@ class OptimizedHTMLToPPTXConverter:
                 # Copy from temp to final location
                 shutil.copy2(temp_output_path, final_output)
                 
-                return final_output, len(presentation.slides)
+                return final_output, successful_slides
             else:
                 # For direct download, read content from temp file before cleanup
                 try:
@@ -1495,7 +1549,7 @@ class OptimizedHTMLToPPTXConverter:
                 except Exception as e:
                     raise
                 
-                return pptx_content, len(presentation.slides), presentation_name
+                return pptx_content, successful_slides, presentation_name
 
 
 @router.post("/convert-to-pptx")
@@ -1523,28 +1577,36 @@ async def convert_presentation_to_pptx(request: ConvertRequest):
         
         # If download is requested, don't store locally and return file directly
         if request.download:
-            pptx_content, total_slides, presentation_name = await converter.convert_to_pptx(store_locally=False)
-            
-            encoded_filename = quote(f"{presentation_name}.pptx", safe="")
-            return Response(
-                content=pptx_content,
-                media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
-            )
+            try:
+                pptx_content, total_slides, presentation_name = await converter.convert_to_pptx(store_locally=False)
+                
+                encoded_filename = quote(f"{presentation_name}.pptx", safe="")
+                return Response(
+                    content=pptx_content,
+                    media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+                )
+            except Exception as e:
+                print(f"PPTX conversion failed: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"PPTX conversion failed: {str(e)}")
         
         # Otherwise, store locally and return JSON with download URL
-        pptx_path, total_slides = await converter.convert_to_pptx(store_locally=True)
+        try:
+            pptx_path, total_slides = await converter.convert_to_pptx(store_locally=True)
         
-        # Return workspace-relative path for file system access
-        pptx_url = f"/workspace/downloads/{pptx_path.name}"
-        
-        return ConvertResponse(
-            success=True,
-            message=f"PPTX generated successfully with {total_slides} slides",
-            pptx_url=pptx_url,
-            filename=pptx_path.name,
-            total_slides=total_slides
-        )
+            # Return workspace-relative path for file system access
+            pptx_url = f"/workspace/downloads/{pptx_path.name}"
+            
+            return ConvertResponse(
+                success=True,
+                message=f"PPTX generated successfully with {total_slides} slides",
+                pptx_url=pptx_url,
+                filename=pptx_path.name,
+                total_slides=total_slides
+            )
+        except Exception as e:
+            print(f"PPTX conversion failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"PPTX conversion failed: {str(e)}")
         
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -1561,3 +1623,49 @@ async def pptx_health_check():
         "status": "healthy", 
         "service": "HTML to PPTX Converter"
     }
+
+
+# Test function to validate PPTX generation
+async def test_pptx_generation():
+    """Test function to validate that PPTX generation works properly."""
+    import tempfile
+    from pathlib import Path
+    from pptx import Presentation
+    
+    # Create a minimal test presentation
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        test_pptx_path = temp_path / "test.pptx"
+        
+        # Create a simple presentation
+        presentation = Presentation()
+        
+        # Add a blank slide
+        blank_slide_layout = presentation.slide_layouts[6]
+        slide = presentation.slides.add_slide(blank_slide_layout)
+        
+        # Add some text
+        textbox = slide.shapes.add_textbox(1, 1, 10, 2)
+        text_frame = textbox.text_frame
+        text_frame.text = "Test slide"
+        
+        # Save the presentation
+        try:
+            presentation.save(str(test_pptx_path))
+            
+            # Verify the file exists and is not empty
+            if test_pptx_path.exists() and test_pptx_path.stat().st_size > 0:
+                # Try to open the generated file to ensure it's valid
+                try:
+                    test_presentation = Presentation(str(test_pptx_path))
+                    print("✅ Test PPTX generation successful - file is valid")
+                    return True
+                except Exception as e:
+                    print(f"❌ Test PPTX validation failed: {str(e)}")
+                    return False
+            else:
+                print("❌ Test PPTX generation failed - file is empty or missing")
+                return False
+        except Exception as e:
+            print(f"❌ Test PPTX save failed: {str(e)}")
+            return False

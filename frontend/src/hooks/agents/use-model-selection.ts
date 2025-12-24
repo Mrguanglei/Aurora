@@ -31,7 +31,7 @@ export const useModelSelection = () => {
     const fetchModels = async () => {
       try {
         setIsLoadingModels(true);
-        const res = await fetch('/models');
+        const res = await fetch('/v1/models');
         if (!res.ok) throw new Error('Failed to fetch models');
         const data = await res.json();
         if (!mounted) return;
@@ -52,7 +52,7 @@ export const useModelSelection = () => {
         // Fallback to default two models if fetch fails
         setAvailableModels([
           { id: 'doubao/doubao-seed-1-6-251015', label: 'Doubao (豆包)', requiresSubscription: false, priority: 1, recommended: true, capabilities: ['chat'], contextWindow: 200000 },
-          { id: 'openrouter/deepseek/deepseek-chat', label: 'DeepSeek Chat', requiresSubscription: false, priority: 2, recommended: false, capabilities: ['chat'], contextWindow: 128000 },
+          { id: 'theturbo/gpt-5.1', label: 'theTurbo Chat', requiresSubscription: false, priority: 2, recommended: false, capabilities: ['chat'], contextWindow: 128000 },
         ]);
       } finally {
         setIsLoadingModels(false);

@@ -72,6 +72,11 @@ presentations/
 **Final Phase: Deliver**
 - Review for visual consistency
 - Deliver with first slide attached using 'complete' tool
+
+**EXPORTING TO PPTX/PDF:**
+- Use `export_presentation(presentation_name)` to convert HTML slides to PPTX and PDF formats
+- Use `create_slide_and_export(...)` to create a slide and immediately export the entire presentation
+- Files are stored in /workspace/downloads/ and can be downloaded repeatedly
 """
 )
 class SandboxPresentationTool(SandboxToolsBase):
@@ -692,10 +697,93 @@ class SandboxPresentationTool(SandboxToolsBase):
                 logger.warning(f"Failed to auto-validate slide: {str(e)}")
                 response_data["message"] += f"\n\n⚠️ Note: Slide validation could not be completed."
             
+            # Auto-convert to PPTX after slide creation if requested
+            # Only convert when explicitly requested via environment variable
+            should_auto_convert = os.getenv('AUTO_CONVERT_PRESENTATIONS', 'false').lower() == 'true'
+            if should_auto_convert:
+                try:
+                    export_result = await self.export_presentation(presentation_name, store_locally=True)
+                    if export_result.success:
+                        response_data["export_status"] = "Presentation auto-converted to PPTX and PDF"
+                        response_data["export_result"] = export_result.output
+                    else:
+                        response_data["export_status"] = f"Slide created but auto-conversion failed: {export_result.output}"
+                        logger.warning(f"Auto-conversion failed: {export_result.output}")
+                except Exception as export_error:
+                    response_data["export_status"] = f"Slide created but auto-conversion failed: {str(export_error)}"
+                    logger.warning(f"Auto-conversion error: {str(export_error)}")
+            
             return self.success_response(response_data)
             
         except Exception as e:
             return self.fail_response(f"Failed to create slide: {str(e)}")
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "create_slide_and_export",
+            "description": "Create a single slide and immediately export the entire presentation to PPTX and PDF formats. Use this when you want to generate the final presentation files right after creating a slide.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "presentation_name": {
+                        "type": "string",
+                        "description": "Name of the presentation"
+                    },
+                    "slide_number": {
+                        "type": "integer",
+                        "description": "Slide number (1-based)"
+                    },
+                    "slide_title": {
+                        "type": "string",
+                        "description": "Title of the slide"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "HTML content of the slide"
+                    },
+                    "presentation_title": {
+                        "type": "string",
+                        "description": "Title of the overall presentation",
+                        "default": "Presentation"
+                    }
+                },
+                "required": ["presentation_name", "slide_number", "slide_title", "content"]
+            }
+        }
+    })
+    async def create_slide_and_export(
+        self,
+        presentation_name: str,
+        slide_number: int,
+        slide_title: str,
+        content: str,
+        presentation_title: str = "Presentation"
+    ) -> ToolResult:
+        """Create a slide and immediately export the presentation to PPTX and PDF"""
+        try:
+            # First create the slide
+            create_result = await self.create_slide(
+                presentation_name, slide_number, slide_title, content, presentation_title
+            )
+            
+            if not create_result.success:
+                return create_result
+            
+            # Then export to PPTX and PDF
+            export_result = await self.export_presentation(presentation_name, store_locally=True)
+            
+            # Combine results
+            if export_result.success:
+                create_result.output["export_status"] = "Presentation exported to PPTX and PDF successfully"
+                create_result.output["exports"] = export_result.output.get("exports", {}) if export_result.success else {}
+            else:
+                create_result.output["export_status"] = f"Slide created but export failed: {export_result.output}"
+            
+            return create_result
+            
+        except Exception as e:
+            return self.fail_response(f"Failed to create slide and export: {str(e)}")
 
     @openapi_schema({
         "type": "function",
@@ -1120,7 +1208,10 @@ print(json.dumps(result))
                 try:
                     file_content = await self.sandbox.fs.download_file(downloads_path)
                     await self.sandbox.fs.upload_file(file_content, presentation_file_path)
-                except Exception:
+                except Exception as e:
+                    # Log the error but continue
+                    print(f"Error copying file from downloads to presentation path: {e}")
+                    # Don't fail the entire operation, but at least log the issue
                     pass
                 
                 return {
