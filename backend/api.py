@@ -245,25 +245,39 @@ async def log_requests_middleware(request: Request, call_next):
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
-# Define allowed origins（本地私有化部署，始终允许 localhost）
+# Define allowed origins（本地私有化部署，支持 Docker 环境）
 allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://0.0.0.0:3000",  # Docker host access
+    "http://host.docker.internal:3000",  # Docker host access from containers
+    "http://localhost:3001",  # VS Code remote development
+    "http://127.0.0.1:3001",  # VS Code remote development
+    "http://host.docker.internal:3001",  # VS Code remote development
 ]
 allow_origin_regex = None
 
+# 开发环境允许所有 origins（不使用 credentials 以支持通配符）
+allow_all_origins = config.ENV_MODE in [EnvMode.LOCAL, EnvMode.STAGING]
+
+if allow_all_origins:
+    allowed_origins = ["*"]
+    allow_credentials = False
+else:
+    allow_credentials = True
 
 # 如果是 STAGING 环境，可以额外允许线上域名（可选）
 if config.ENV_MODE == EnvMode.STAGING:
-    allowed_origins.append("https://staging.aurora.so")
-    # 允许 Vercel preview
-    allow_origin_regex = r"https://kortix-.*-prjcts\.vercel\.app"
+    if not allow_all_origins:
+        allowed_origins.append("https://staging.aurora.so")
+        # 允许 Vercel preview
+        allow_origin_regex = r"https://kortix-.*-prjcts\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_origin_regex=allow_origin_regex,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-API-Key"],
 )

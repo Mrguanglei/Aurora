@@ -13,7 +13,7 @@ import { HealthCheckedVncIframe } from '../HealthCheckedVncIframe';
 import { BrowserHeader } from '../tool-views/BrowserToolView';
 import { useTranslations } from 'next-intl';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
 import { 
   useKortixComputerStore,
@@ -711,11 +711,12 @@ export const KortixComputer = memo(function KortixComputer({
     if (isMaximized) {
       return (
         <Dialog open={isMaximized} onOpenChange={(open) => !open && setIsMaximized(false)}>
-          <DialogContent 
+          <DialogContent
             hideCloseButton={true}
             className="max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] p-0 border-0 rounded-none bg-transparent"
             style={{ contain: 'strict' }}
           >
+            <DialogTitle className="sr-only">Aurora Computer</DialogTitle>
             <SandboxDesktop
               toolCalls={toolCallSnapshots.map(s => s.toolCall)}
               currentIndex={safeInternalIndex}
@@ -815,11 +816,12 @@ export const KortixComputer = memo(function KortixComputer({
   if (isMaximized) {
     return (
       <Dialog open={isMaximized} onOpenChange={(open) => !open && setIsMaximized(false)}>
-        <DialogContent 
+        <DialogContent
           hideCloseButton={true}
           className="max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] p-0 border-0 rounded-none bg-transparent"
           style={{ contain: 'strict' }}
         >
+          <DialogTitle className="sr-only">Aurora Computer</DialogTitle>
           <SandboxDesktop
             toolCalls={toolCallSnapshots.map(s => s.toolCall)}
             currentIndex={safeInternalIndex}

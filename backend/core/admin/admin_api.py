@@ -369,7 +369,7 @@ async def get_user_activity(
             thread = run.get('threads', {})
             
             activities.append({
-                'id': run.get('id'),
+                'id': run.get('run_id'),
                 'created_at': run.get('created_at'),
                 'updated_at': run.get('updated_at'),
                 'status': run.get('status'),
@@ -378,7 +378,7 @@ async def get_user_activity(
                 'agent_id': run.get('agent_id'),
                 'agent_name': 'Agent',  # We'll need to fetch agent names separately if needed
                 'credit_cost': float(run.get('credit_cost', 0) if run.get('credit_cost') else 0),
-                'error': run.get('error'),
+                'error': run.get('error_message'),
                 'duration_ms': run.get('duration_ms')
             })
         

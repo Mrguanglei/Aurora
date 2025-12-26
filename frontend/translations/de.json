@@ -778,10 +778,10 @@
     "heroPlaceholder": "Beschreibe die Aufgabe, die dein Worker erledigen soll..."
   },
   "showcase": {
-    "title": "Kortix: Dein autonomer KI-Worker",
+    "title": "Aurora: Dein autonomer KI-Worker",
     "subtitle": "Gebaut für komplexe Aufgaben, entwickelt für alles. Der ultimative KI-Assistent, der alles bewältigt—von einfachen Anfragen bis hin zu mega-komplexen Projekten.",
     "tryItOut": "Ausprobieren",
-    "kortixComputer": "Aurora Computer",
+    "Aurora Computer": "Aurora Computer",
     "running": "Läuft",
     "workers": {
       "images": {

@@ -31,9 +31,12 @@ export const useModelSelection = () => {
     const fetchModels = async () => {
       try {
         setIsLoadingModels(true);
-        const res = await fetch('/v1/models');
-        if (!res.ok) throw new Error('Failed to fetch models');
-        const data = await res.json();
+        // 使用 NEXT_PUBLIC_BACKEND_URL 环境变量来构建正确的后端API URL
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8011/v1';
+        const modelsUrl = `${backendUrl}/models`;
+        const response = await fetch(modelsUrl);
+        if (!response.ok) throw new Error('Failed to fetch models');
+        const data = await response.json();
         if (!mounted) return;
         const mapped: ModelOption[] = (data || []).map((m: any) => ({
           id: m.id,

@@ -204,6 +204,14 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   if (shouldHideOptimisticUI && showOptimisticUI) {
     setShowOptimisticUI(false);
   }
+
+  // Force disable optimistic UI for debugging
+  useEffect(() => {
+    if (showOptimisticUI) {
+      console.log('[DEBUG] Forcing showOptimisticUI to false');
+      setShowOptimisticUI(false);
+    }
+  }, [showOptimisticUI]);
   
   const effectivePanelOpen = isSidePanelOpen || (isNewThread && showOptimisticUI);
 
@@ -534,14 +542,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         return;
       }
       
-      // IMPORTANT FIX: Allow message submission even if agentStatus is 'running'
-      // when agentRunId is null (meaning agent hasn't actually started yet)
-      // This happens when optimisticAgentStart succeeds but thread creation is still pending
-      if ((agentStatus === 'running' || agentStatus === 'connecting') && agentRunId) {
-        // Agent is ACTUALLY running (has a run ID), so block submission
-        console.log('[ThreadComponent] Agent is actually running, blocking submission:', { agentStatus, agentRunId });
-        return;
-      }
+      // Allow message submission even if agent is running - user should be able to send multiple messages
+      // The backend will handle concurrent agent runs appropriately
 
       setIsSending(true);
 

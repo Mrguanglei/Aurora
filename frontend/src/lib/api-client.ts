@@ -1,7 +1,12 @@
 import { handleApiError, handleNetworkError, ErrorContext, ApiError } from './error-handler';
 import { parseTierRestrictionError, RequestTooLargeError } from './api/errors';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+// Use different URLs for client and server
+// Client: use host-accessible URL (localhost:8011)
+// Server: use internal Docker network URL (backend:8011)
+const API_URL = (typeof window === 'undefined'
+  ? process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL
+  : process.env.NEXT_PUBLIC_BACKEND_URL) || '';
 
 // Get auth token from localStorage (Supabase removed)
 function getAuthToken(): string | null {

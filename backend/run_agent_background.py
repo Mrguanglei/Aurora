@@ -144,7 +144,7 @@ async def acquire_run_lock(agent_run_id: str, instance_id: str, client) -> bool:
             
             db_run_status = None
             try:
-                run_result = await client.table('agent_runs').select('status').eq('id', agent_run_id).maybe_single().execute()
+                run_result = await client.table('agent_runs').select('status').eq('run_id', agent_run_id).maybe_single().execute()
                 if run_result.data:
                     db_run_status = run_result.data.get('status')
             except Exception as db_err:
@@ -777,14 +777,14 @@ async def update_agent_run_status(
         }
 
         if error:
-            update_data["error"] = error
+            update_data["error_message"] = error
 
         for retry in range(3):
             try:
-                update_result = await client.table('agent_runs').update(update_data).eq("id", agent_run_id).execute()
+                update_result = await client.table('agent_runs').update(update_data).eq("run_id", agent_run_id).execute()
 
                 if hasattr(update_result, 'data') and update_result.data:
-                    verify_result = await client.table('agent_runs').select('status', 'completed_at').eq("id", agent_run_id).execute()
+                    verify_result = await client.table('agent_runs').select('status', 'completed_at').eq("run_id", agent_run_id).execute()
                     if verify_result.data:
                         actual_status = verify_result.data[0].get('status')
                         completed_at = verify_result.data[0].get('completed_at')

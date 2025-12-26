@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS projects (
     account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     is_public BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    icon_name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_projects_account_id ON projects(account_id);
@@ -45,6 +47,48 @@ ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
 -- 添加头像 URL 字段
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- 为现有表添加缺失的列
+ALTER TABLE projects
+ADD COLUMN IF NOT EXISTS icon_name TEXT,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS memory_enabled BOOLEAN DEFAULT TRUE;
+
+-- 为 messages 表添加缺失的列
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text',
+ADD COLUMN IF NOT EXISTS is_llm_message BOOLEAN DEFAULT TRUE,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+-- 如果存在旧的 message_type 列，将其重命名为 type
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'message_type'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'messages' AND column_name = 'type'
+    ) THEN
+        ALTER TABLE messages RENAME COLUMN message_type TO type;
+    END IF;
+END $$;
+
+-- 为 agents 表添加缺失的列
+ALTER TABLE agents
+ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS marketplace_published_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS download_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';
+
+-- 为 agent_templates 表添加缺失的列
+ALTER TABLE agent_templates
+ADD COLUMN IF NOT EXISTS icon_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS icon_color VARCHAR(255),
+ADD COLUMN IF NOT EXISTS icon_background VARCHAR(255),
+ADD COLUMN IF NOT EXISTS is_kortix_team BOOLEAN DEFAULT false;
 
 -- ============================================================================
 -- Agent 相关表
@@ -75,6 +119,10 @@ CREATE INDEX IF NOT EXISTS idx_agents_account_id ON agents(account_id);
 CREATE INDEX IF NOT EXISTS idx_agents_created_at ON agents(created_at);
 CREATE INDEX IF NOT EXISTS idx_agents_is_default ON agents(account_id, is_default) WHERE is_default = true;
 CREATE INDEX IF NOT EXISTS idx_agents_current_version ON agents(current_version_id);
+CREATE INDEX IF NOT EXISTS idx_agents_is_public ON agents(is_public);
+CREATE INDEX IF NOT EXISTS idx_agents_marketplace_published_at ON agents(marketplace_published_at);
+CREATE INDEX IF NOT EXISTS idx_agents_download_count ON agents(download_count);
+CREATE INDEX IF NOT EXISTS idx_agents_tags ON agents USING gin(tags);
 
 -- ============================================================================
 -- Thread/Conversation 相关表
@@ -91,6 +139,7 @@ CREATE TABLE IF NOT EXISTS threads (
     initialization_started_at TIMESTAMP WITH TIME ZONE,
     initialization_error TEXT,
     initialization_completed_at TIMESTAMP WITH TIME ZONE,
+    memory_enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     archived_at TIMESTAMP WITH TIME ZONE
@@ -107,10 +156,15 @@ ALTER COLUMN initialization_completed_at TYPE TIMESTAMP WITH TIME ZONE USING ini
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(project_id) ON DELETE CASCADE;
 
+-- 添加 metadata 列到 threads 表
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
 CREATE INDEX IF NOT EXISTS idx_threads_account_id ON threads(account_id);
 CREATE INDEX IF NOT EXISTS idx_threads_project_id ON threads(project_id);
 CREATE INDEX IF NOT EXISTS idx_threads_agent_id ON threads(agent_id);
 CREATE INDEX IF NOT EXISTS idx_threads_created_at ON threads(created_at);
+CREATE INDEX IF NOT EXISTS idx_threads_memory_enabled ON threads(thread_id) WHERE memory_enabled = FALSE;
 
 
 -- 消息表
@@ -119,15 +173,51 @@ CREATE TABLE IF NOT EXISTS messages (
     thread_id UUID NOT NULL REFERENCES threads(thread_id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     role VARCHAR(50), -- 'user', 'assistant', 'system' (允许为 NULL，因为 status/llm_response 类型消息不需要 role)
+    type TEXT NOT NULL DEFAULT 'text', -- 重命名为 type，与代码期望一致
+    is_llm_message BOOLEAN DEFAULT TRUE,
     content TEXT NOT NULL,
-    message_type VARCHAR(50) DEFAULT 'text', -- 'text', 'tool_call', 'tool_result'
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_thread_id ON messages(thread_id);
 CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_thread_type_created_desc ON messages(thread_id, type, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_thread_created_desc ON messages(thread_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_thread_llm_created ON messages(thread_id, created_at) WHERE is_llm_message = TRUE;
+
+-- ============================================================================
+-- Agent 模板表
+-- ============================================================================
+
+-- Agent模板表
+CREATE TABLE IF NOT EXISTS agent_templates (
+    template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    system_prompt TEXT NOT NULL,
+    mcp_requirements JSONB DEFAULT '[]'::jsonb,
+    agentpress_tools JSONB DEFAULT '{}'::jsonb,
+    tags TEXT[] DEFAULT '{}'::text[],
+    is_public BOOLEAN DEFAULT false,
+    marketplace_published_at TIMESTAMP WITH TIME ZONE,
+    download_count INTEGER DEFAULT 0,
+    avatar VARCHAR(10),
+    avatar_color VARCHAR(7),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    icon_name VARCHAR(255),
+    icon_color VARCHAR(255),
+    icon_background VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_templates_creator_created_desc ON agent_templates(creator_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_templates_is_public ON agent_templates(is_public);
+CREATE INDEX IF NOT EXISTS idx_agent_templates_marketplace_published_at ON agent_templates(marketplace_published_at);
 
 -- ============================================================================
 -- 工具执行相关表
@@ -221,12 +311,37 @@ DROP TRIGGER IF EXISTS update_user_memories_updated_at ON user_memories;
 CREATE TRIGGER update_user_memories_updated_at BEFORE UPDATE ON user_memories
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_agent_templates_updated_at ON agent_templates;
+CREATE TRIGGER update_agent_templates_updated_at BEFORE UPDATE ON agent_templates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_messages_updated_at ON messages;
+CREATE TRIGGER update_messages_updated_at BEFORE UPDATE ON messages
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
+CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 为所有表创建updated_at更新触发器
 DROP TRIGGER IF EXISTS update_kb_folders_updated_at ON knowledge_base_folders;
 CREATE TRIGGER update_kb_folders_updated_at BEFORE UPDATE ON knowledge_base_folders
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_kb_entries_updated_at ON knowledge_base_entries;
 CREATE TRIGGER update_kb_entries_updated_at BEFORE UPDATE ON knowledge_base_entries
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_agent_triggers_updated_at ON agent_triggers;
+CREATE TRIGGER update_agent_triggers_updated_at BEFORE UPDATE ON agent_triggers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_custom_trigger_providers_updated_at ON custom_trigger_providers;
+CREATE TRIGGER update_custom_trigger_providers_updated_at BEFORE UPDATE ON custom_trigger_providers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_oauth_installations_updated_at ON oauth_installations;
+CREATE TRIGGER update_oauth_installations_updated_at BEFORE UPDATE ON oauth_installations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_credential_profiles_updated_at ON user_mcp_credential_profiles;
@@ -287,14 +402,18 @@ CREATE TABLE IF NOT EXISTS agent_versions (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    created_by UUID REFERENCES users(id),
-    
+    created_by UUID REFERENCES accounts(id),
+    change_description TEXT,
+    previous_version_id UUID REFERENCES agent_versions(version_id),
+
     UNIQUE(agent_id, version_number),
     UNIQUE(agent_id, version_name)
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_versions_agent_id ON agent_versions(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_versions_is_active ON agent_versions(is_active);
+CREATE INDEX IF NOT EXISTS idx_agent_versions_version_number ON agent_versions(version_number);
+CREATE INDEX IF NOT EXISTS idx_agent_versions_previous_version_id ON agent_versions(previous_version_id);
 
 -- Agent版本历史记录表
 CREATE TABLE IF NOT EXISTS agent_version_history (
@@ -302,13 +421,38 @@ CREATE TABLE IF NOT EXISTS agent_version_history (
     agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
     version_id UUID NOT NULL REFERENCES agent_versions(version_id) ON DELETE CASCADE,
     action VARCHAR(50) NOT NULL,
-    performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    performed_by UUID REFERENCES accounts(id) ON DELETE SET NULL,
     change_description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_version_history_agent_id ON agent_version_history(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_version_history_version_id ON agent_version_history(version_id);
+
+-- ============================================================================
+-- Agent运行记录表
+-- ============================================================================
+
+-- Agent运行记录表
+CREATE TABLE IF NOT EXISTS agent_runs (
+    run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    thread_id UUID NOT NULL REFERENCES threads(thread_id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
+    agent_version_id UUID REFERENCES agent_versions(version_id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE,
+    failed_at TIMESTAMP WITH TIME ZONE,
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_thread_id ON agent_runs(thread_id);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_agent_id ON agent_runs(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_status ON agent_runs(status);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_started_at ON agent_runs(started_at);
 
 -- ============================================================================
 -- 用户记忆系统表
@@ -330,7 +474,7 @@ END $$;
 -- 用户记忆表
 CREATE TABLE IF NOT EXISTS user_memories (
     memory_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     memory_type memory_type NOT NULL DEFAULT 'fact',
     source_thread_id UUID REFERENCES threads(thread_id) ON DELETE SET NULL,
@@ -341,12 +485,14 @@ CREATE TABLE IF NOT EXISTS user_memories (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_memories_account_id ON user_memories(account_id);
-CREATE INDEX IF NOT EXISTS idx_user_memories_source_thread ON user_memories(source_thread_id);
+CREATE INDEX IF NOT EXISTS idx_user_memories_memory_type ON user_memories(memory_type);
+CREATE INDEX IF NOT EXISTS idx_user_memories_created_at ON user_memories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_memories_source_thread ON user_memories(source_thread_id) WHERE source_thread_id IS NOT NULL;
 
 -- 记忆提取队列表
 CREATE TABLE IF NOT EXISTS memory_extraction_queue (
     queue_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     thread_id UUID NOT NULL REFERENCES threads(thread_id) ON DELETE CASCADE,
     message_ids JSONB NOT NULL DEFAULT '[]',
     status memory_extraction_status NOT NULL DEFAULT 'pending',
@@ -358,7 +504,7 @@ CREATE TABLE IF NOT EXISTS memory_extraction_queue (
 
 CREATE INDEX IF NOT EXISTS idx_memory_queue_account_id ON memory_extraction_queue(account_id);
 CREATE INDEX IF NOT EXISTS idx_memory_queue_thread_id ON memory_extraction_queue(thread_id);
-CREATE INDEX IF NOT EXISTS idx_memory_queue_status ON memory_extraction_queue(status);
+CREATE INDEX IF NOT EXISTS idx_memory_queue_status ON memory_extraction_queue(status) WHERE status IN ('pending', 'processing');
 
 -- ============================================================================
 -- 知识库系统表
@@ -415,6 +561,93 @@ CREATE TABLE IF NOT EXISTS agent_knowledge_entry_assignments (
 
 CREATE INDEX IF NOT EXISTS idx_kb_entry_assignments_agent_id ON agent_knowledge_entry_assignments(agent_id);
 CREATE INDEX IF NOT EXISTS idx_kb_entry_assignments_entry_id ON agent_knowledge_entry_assignments(entry_id);
+
+-- ============================================================================
+-- Agent触发器系统表
+-- ============================================================================
+
+-- Agent触发器类型枚举
+DO $$ BEGIN
+    CREATE TYPE agent_trigger_type AS ENUM ('telegram', 'slack', 'webhook', 'schedule', 'email', 'github', 'discord', 'teams');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Agent触发器表
+CREATE TABLE IF NOT EXISTS agent_triggers (
+    trigger_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
+    trigger_type agent_trigger_type NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 触发器事件日志表
+CREATE TABLE IF NOT EXISTS trigger_events (
+    event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trigger_id UUID NOT NULL REFERENCES agent_triggers(trigger_id) ON DELETE CASCADE,
+    agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
+    trigger_type agent_trigger_type NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    success BOOLEAN NOT NULL,
+    should_execute_agent BOOLEAN DEFAULT FALSE,
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+-- 自定义触发器提供商表
+CREATE TABLE IF NOT EXISTS custom_trigger_providers (
+    provider_id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    trigger_type VARCHAR(50) NOT NULL,
+    provider_class TEXT,
+    config_schema JSONB DEFAULT '{}'::jsonb,
+    webhook_enabled BOOLEAN DEFAULT FALSE,
+    webhook_config JSONB,
+    response_template JSONB,
+    field_mappings JSONB,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_by UUID REFERENCES accounts(id)
+);
+
+-- OAuth安装表
+CREATE TABLE IF NOT EXISTS oauth_installations (
+    installation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    trigger_id UUID NOT NULL REFERENCES agent_triggers(trigger_id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    expires_in INTEGER,
+    scope TEXT,
+    provider_data JSONB DEFAULT '{}'::jsonb,
+    installed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_agent_triggers_agent_id ON agent_triggers(agent_id);
+CREATE INDEX IF NOT EXISTS idx_agent_triggers_trigger_type ON agent_triggers(trigger_type);
+CREATE INDEX IF NOT EXISTS idx_agent_triggers_is_active ON agent_triggers(is_active);
+CREATE INDEX IF NOT EXISTS idx_agent_triggers_created_at ON agent_triggers(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_trigger_events_trigger_id ON trigger_events(trigger_id);
+CREATE INDEX IF NOT EXISTS idx_trigger_events_agent_id ON trigger_events(agent_id);
+CREATE INDEX IF NOT EXISTS idx_trigger_events_timestamp ON trigger_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_trigger_events_success ON trigger_events(success);
+
+CREATE INDEX IF NOT EXISTS idx_custom_trigger_providers_trigger_type ON custom_trigger_providers(trigger_type);
+CREATE INDEX IF NOT EXISTS idx_custom_trigger_providers_is_active ON custom_trigger_providers(is_active);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_installations_trigger_id ON oauth_installations(trigger_id);
+CREATE INDEX IF NOT EXISTS idx_oauth_installations_provider ON oauth_installations(provider);
+CREATE INDEX IF NOT EXISTS idx_oauth_installations_installed_at ON oauth_installations(installed_at);
 
 -- ============================================================================
 -- MCP凭证配置表
@@ -576,6 +809,31 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 为所有表创建updated_at更新触发器
+DROP TRIGGER IF EXISTS update_kb_folders_updated_at ON knowledge_base_folders;
+CREATE TRIGGER update_kb_folders_updated_at BEFORE UPDATE ON knowledge_base_folders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_kb_entries_updated_at ON knowledge_base_entries;
+CREATE TRIGGER update_kb_entries_updated_at BEFORE UPDATE ON knowledge_base_entries
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_credential_profiles_updated_at ON user_mcp_credential_profiles;
+CREATE TRIGGER update_credential_profiles_updated_at BEFORE UPDATE ON user_mcp_credential_profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_agent_triggers_updated_at ON agent_triggers;
+CREATE TRIGGER update_agent_triggers_updated_at BEFORE UPDATE ON agent_triggers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_custom_trigger_providers_updated_at ON custom_trigger_providers;
+CREATE TRIGGER update_custom_trigger_providers_updated_at BEFORE UPDATE ON custom_trigger_providers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_oauth_installations_updated_at ON oauth_installations;
+CREATE TRIGGER update_oauth_installations_updated_at BEFORE UPDATE ON oauth_installations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS trigger_slugify_account_slug ON accounts;
 CREATE TRIGGER trigger_slugify_account_slug

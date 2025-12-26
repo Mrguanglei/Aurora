@@ -558,7 +558,7 @@ async def get_trigger_executions(
         client = await db.client
 
         runs_result = await client.table('agent_runs').select(
-            'id, thread_id, agent_id, status, created_at, completed_at, error, metadata'
+            'run_id, thread_id, agent_id, status, created_at, completed_at, error_message, metadata'
         ).eq(
             'metadata->>trigger_id', trigger_id
         ).order(
@@ -568,14 +568,14 @@ async def get_trigger_executions(
         executions = []
         for run in runs_result.data or []:
             executions.append(TriggerExecution(
-                execution_id=run['id'],
+                execution_id=run['run_id'],
                 thread_id=run['thread_id'],
                 trigger_id=trigger_id,
                 agent_id=run['agent_id'],
                 status=run['status'],
                 started_at=run['created_at'],
                 completed_at=run.get('completed_at'),
-                error_message=run.get('error')
+                error_message=run.get('error_message')
             ))
         
         # Calculate next run time for scheduled triggers

@@ -27,22 +27,29 @@ export function useSandboxDetails(projectId: string | undefined, options?: { ena
     queryKey: sandboxKeys.details(projectId || ''),
     queryFn: async () => {
       if (!projectId) return null;
-      
+
       const response = await backendApi.get<SandboxDetailsResponse>(
         `/project/${projectId}/sandbox`,
         { showErrors: false }
       );
 
       console.log('Sandbox Details Response:', response.data);
-      
+
       if (!response.success || !response.data) {
         throw new Error(response.error?.message || 'Failed to fetch sandbox details');
       }
-      
+
       return response.data.sandbox;
     },
     enabled: !!projectId && (options?.enabled !== false),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 errors (project doesn't exist or no sandbox)
+      if (error?.message?.includes('404') || error?.message?.includes('Not Found')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }

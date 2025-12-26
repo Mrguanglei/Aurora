@@ -69,7 +69,9 @@ async def get_user_threads(
         offset = (page - 1) * limit
         
         # Optimized count query - only count, don't select columns
+        logger.debug(f"Count query for user: {user_id}")
         count_result = await client.table('threads').select('thread_id', count='exact').eq('account_id', user_id).execute()
+        logger.debug(f"Count query completed: {count_result.count}")
         total_count = count_result.count or 0
         
         if total_count == 0:
@@ -86,7 +88,7 @@ async def get_user_threads(
         
         # Optimized: Select only needed columns from threads table
         threads_result = await client.table('threads')\
-            .select('thread_id,project_id,metadata,is_public,created_at,updated_at')\
+            .select('thread_id,project_id,metadata,created_at,updated_at')\
             .eq('account_id', user_id)\
             .order('created_at', desc=True)\
             .range(offset, offset + limit - 1)\
@@ -138,7 +140,7 @@ async def get_user_threads(
                 "thread_id": thread['thread_id'],
                 "project_id": thread.get('project_id'),
                 "metadata": thread.get('metadata', {}),
-                "is_public": thread.get('is_public', False),
+                "is_public": project_data.get('is_public', False) if project_data else False,
                 "created_at": _to_iso_z(thread.get('created_at')),
                 "updated_at": _to_iso_z(thread.get('updated_at')),
                 "project": project_data
@@ -254,7 +256,7 @@ async def get_thread(
     try:
         await verify_and_authorize_thread_access(client, thread_id, user_id)
         
-        thread_result = await client.table('threads').select('*').eq('thread_id', thread_id).execute()
+        thread_result = await client.table('threads').select('thread_id,account_id,project_id,agent_id,title,status,initialization_started_at,initialization_error,initialization_completed_at,memory_enabled,created_at,updated_at,archived_at,metadata').eq('thread_id', thread_id).execute()
         
         if not thread_result.data:
             raise HTTPException(status_code=404, detail="Thread not found")
@@ -305,15 +307,15 @@ async def get_thread(
         message_count_result = await client.table('messages').select('message_id', count='exact').eq('thread_id', thread_id).execute()
         message_count = message_count_result.count if message_count_result.count is not None else 0
         
-        agent_runs_result = await client.table('agent_runs').select('*').eq('thread_id', thread_id).order('created_at', desc=True).execute()
+        agent_runs_result = await client.table('agent_runs').select('run_id, thread_id, status, started_at, completed_at, error_message, agent_id, agent_version_id, created_at').eq('thread_id', thread_id).order('created_at', desc=True).execute()
         agent_runs_data = []
         if agent_runs_result.data:
             agent_runs_data = [{
-                "id": run['id'],
+                "id": run['run_id'],
                 "status": run.get('status', ''),
                 "started_at": run.get('started_at'),
                 "completed_at": run.get('completed_at'),
-                "error": run.get('error'),
+                "error": run.get('error_message'),
                 "agent_id": run.get('agent_id'),
                 "agent_version_id": run.get('agent_version_id'),
                 "created_at": run['created_at']
@@ -323,7 +325,7 @@ async def get_thread(
             "thread_id": thread['thread_id'],
             "project_id": thread.get('project_id'),
             "metadata": thread.get('metadata', {}),
-            "is_public": thread.get('is_public', False),
+            "is_public": project_data.get('is_public', False) if project_data else False,
             "created_at": thread['created_at'],
             "updated_at": thread['updated_at'],
             "project": project_data,
@@ -738,7 +740,7 @@ async def update_thread(
         
         logger.debug(f"Successfully updated thread: {thread_id}")
         
-        updated_thread = await client.table('threads').select('*').eq('thread_id', thread_id).execute()
+        updated_thread = await client.table('threads').select('thread_id,account_id,project_id,agent_id,title,status,initialization_started_at,initialization_error,initialization_completed_at,memory_enabled,created_at,updated_at,archived_at,metadata').eq('thread_id', thread_id).execute()
         if not updated_thread.data:
             raise HTTPException(status_code=404, detail="Thread not found")
         

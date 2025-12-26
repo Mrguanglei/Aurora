@@ -418,7 +418,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
             queryClient.invalidateQueries({ queryKey: ['accounts'] });
             
             // Update local state
-            toast.success(t('profileUpdateSuccess'));
+            toast.success(t('profileUpdated'));
 
             // Clean up preview URL
             if (avatarPreview) {

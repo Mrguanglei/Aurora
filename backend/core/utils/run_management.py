@@ -105,12 +105,12 @@ async def check_for_active_project_agent_run(client, project_id: str) -> Optiona
         active_runs = await batch_query_in(
             client=client,
             table_name='agent_runs',
-            select_fields='id',
+            select_fields='run_id',
             in_field='thread_id',
             in_values=project_thread_ids,
             additional_filters={'status': 'running'}
         )
         
         if active_runs:
-            return active_runs[0]['id']
+            return active_runs[0]['run_id']
     return None

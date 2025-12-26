@@ -40,7 +40,7 @@ async def _get_agent_run_with_access_check(client, agent_run_id: str, user_id: s
     from core.utils.json_helpers import ensure_dict
     
     # 获取 agent run
-    agent_run = await client.table('agent_runs').select('*').eq('id', agent_run_id).execute()
+    agent_run = await client.table('agent_runs').select('*').eq('run_id', agent_run_id).execute()
     if not agent_run.data:
         raise HTTPException(status_code=404, detail="Agent run not found")
 
@@ -364,7 +364,7 @@ async def _create_agent_run_record(
         "metadata": run_metadata
     }).execute()
 
-    agent_run_id = agent_run.data[0]['id']
+    agent_run_id = agent_run.data[0]['run_id']
     structlog.contextvars.bind_contextvars(agent_run_id=agent_run_id)
     logger.debug(f"Created new agent run: {agent_run_id}")
 
@@ -1182,7 +1182,7 @@ async def get_active_agent_runs(user_id: str = Depends(verify_and_get_user_id_fr
             agent_runs_data = await batch_query_in(
                 client=client,
                 table_name='agent_runs',
-                select_fields='id, thread_id, status, started_at',
+                select_fields='run_id, thread_id, status, started_at',
                 in_field='thread_id',
                 in_values=thread_ids,
                 additional_filters={'status': 'running'}
@@ -1198,13 +1198,13 @@ async def get_active_agent_runs(user_id: str = Depends(verify_and_get_user_id_fr
         
         accessible_runs = [
             {
-                'id': run.get('id'),
+                'id': run.get('run_id'),
                 'thread_id': run.get('thread_id'),
                 'status': run.get('status'),
                 'started_at': run.get('started_at')
             }
             for run in agent_runs_data
-            if run and run.get('id')  # Ensure run exists and has required fields
+            if run and run.get('run_id')  # Ensure run exists and has required fields
         ]
         
         logger.debug(f"Found {len(accessible_runs)} active agent runs for user: {user_id}")
@@ -1232,9 +1232,18 @@ async def get_agent_runs(thread_id: str, user_id: str = Depends(verify_and_get_u
             logger.debug(f"Thread {thread_id} not found, returning empty agent_runs")
             return {"agent_runs": []}
         raise
-    agent_runs = await client.table('agent_runs').select('id, thread_id, status, started_at, completed_at, error, created_at, updated_at').eq("thread_id", thread_id).order('created_at', desc=True).execute()
+    agent_runs = await client.table('agent_runs').select('run_id, thread_id, status, started_at, completed_at, error_message, created_at, updated_at').eq("thread_id", thread_id).order('created_at', desc=True).execute()
     logger.debug(f"Found {len(agent_runs.data)} agent runs for thread: {thread_id}")
-    return {"agent_runs": agent_runs.data}
+    
+    # Map error_message to error for frontend compatibility
+    formatted_runs = []
+    for run in agent_runs.data or []:
+        formatted_run = {**run}
+        # Map error_message to error for frontend compatibility
+        formatted_run['error'] = formatted_run.pop('error_message', None)
+        formatted_runs.append(formatted_run)
+    
+    return {"agent_runs": formatted_runs}
 
 @router.get("/agent-run/{agent_run_id}", summary="Get Agent Run", operation_id="get_agent_run")
 async def get_agent_run(agent_run_id: str, user_id: str = Depends(verify_and_get_user_id_from_jwt)):
@@ -1247,12 +1256,12 @@ async def get_agent_run(agent_run_id: str, user_id: str = Depends(verify_and_get
     agent_run_data = await _get_agent_run_with_access_check(client, agent_run_id, user_id)
     # Note: Responses are not included here by default, they are in the stream or DB
     return {
-        "id": agent_run_data['id'],
+        "id": agent_run_data['run_id'],
         "threadId": agent_run_data['thread_id'],
         "status": agent_run_data['status'],
         "startedAt": agent_run_data['started_at'],
         "completedAt": agent_run_data['completed_at'],
-        "error": agent_run_data['error']
+        "error": agent_run_data['error_message']
     }
 
 @router.get("/thread/{thread_id}/agent", response_model=ThreadAgentResponse, summary="Get Thread Agent", operation_id="get_thread_agent")

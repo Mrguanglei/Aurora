@@ -11,7 +11,7 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useIsMobile } from '@/hooks/utils';
 
@@ -78,6 +78,7 @@ export function HelpSearchModal({ open, onOpenChange }: HelpSearchModalProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background">
+                <DialogTitle className="sr-only">Aurora Help Center</DialogTitle>
                 <Command className="bg-background border-0" shouldFilter={false}>
                     <div className="px-4 py-3 border-b">
                         <CommandInput

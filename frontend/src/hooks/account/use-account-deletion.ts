@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { backendApi } from '@/lib/api-client';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/AuthProvider';
 
 export interface AccountDeletionStatus {
     has_pending_deletion: boolean;
@@ -29,9 +30,21 @@ export interface DeleteImmediatelyResponse {
 export const ACCOUNT_DELETION_QUERY_KEY = ['account', 'deletion-status'];
 
 export function useAccountDeletionStatus() {
+    const { user } = useAuth();
+
     return useQuery<AccountDeletionStatus>({
         queryKey: ACCOUNT_DELETION_QUERY_KEY,
         queryFn: async () => {
+            // Only make API call if user is authenticated
+            if (!user) {
+                return {
+                    has_pending_deletion: false,
+                    deletion_scheduled_for: null,
+                    requested_at: null,
+                    can_cancel: false
+                };
+            }
+
             const response = await backendApi.get<AccountDeletionStatus>('/account/deletion-status', {
                 showErrors: false
             });
@@ -49,6 +62,7 @@ export function useAccountDeletionStatus() {
         },
         staleTime: 30000,
         refetchOnWindowFocus: true,
+        enabled: !!user, // Only run query if user is authenticated
     });
 }
 
