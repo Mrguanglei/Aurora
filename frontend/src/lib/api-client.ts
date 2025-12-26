@@ -43,12 +43,12 @@ async function makeRequest<T = any>(
   const {
     showErrors = true,
     errorContext,
-    timeout = 30000,
+    timeout = 60000, // Increased from 30000 to 60000 (60 seconds)
     ...fetchOptions
   } = options;
 
   const controller = new AbortController();
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: any | null = null; // Changed from NodeJS.Timeout to any to avoid type issues
   let isAborted = false;
 
   try {

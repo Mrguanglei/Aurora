@@ -251,9 +251,6 @@ allowed_origins = [
     "http://127.0.0.1:3000",
     "http://0.0.0.0:3000",  # Docker host access
     "http://host.docker.internal:3000",  # Docker host access from containers
-    "http://localhost:3001",  # VS Code remote development
-    "http://127.0.0.1:3001",  # VS Code remote development
-    "http://host.docker.internal:3001",  # VS Code remote development
 ]
 allow_origin_regex = None
 

@@ -21,6 +21,7 @@ export const useAdminRole = (
 
       const response = await backendApi.get<AdminRoleResponse>('/user-roles', {
         showErrors: false,
+        timeout: 10000, // 10 seconds for database query
       });
 
       if (response.error) {

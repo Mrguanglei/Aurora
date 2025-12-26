@@ -39,7 +39,7 @@ export const useThreads = (options?: {
   enabled?: boolean;
 }) => {
   const page = options?.page ?? 1;
-  const limit = options?.limit ?? 20;
+  const limit = options?.limit ?? 10; // Reduced from 20 to 10 for faster loading
   const queryKey = [...threadKeys.lists(), 'paginated', page, limit];
   
   return useQuery<ThreadsResponse>({
@@ -90,7 +90,7 @@ export const useThreadsForProject = (projectId: string, options?) => {
   // Use paginated API and filter client-side for project-specific threads
   const threadsQuery = useThreads({
     page: 1,
-    limit: 20, // Reduced from 50 to 20 to reduce API response size
+    limit: 10, // Reduced from 20 to 10 for faster loading
     enabled: !!projectId && (options?.enabled !== false),
   });
   

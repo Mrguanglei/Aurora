@@ -592,7 +592,7 @@ async def get_toolkit_icon(
                 "message": "Composio not configured",
             }
 
-        toolkit_service = ToolkitService()
+        toolkit_service = ToolkitService(api_key=config.COMPOSIO_API_KEY)
         icon_url = await toolkit_service.get_toolkit_icon(toolkit_slug)
         
         if icon_url:
@@ -627,7 +627,17 @@ async def list_toolkit_tools(
     try:
         logger.debug(f"User {current_user_id} requesting tools for toolkit: {request.toolkit_slug}")
         
-        toolkit_service = ToolkitService()
+        toolkit_service = ToolkitService(api_key=config.COMPOSIO_API_KEY)
+        if not toolkit_service.is_available:
+            logger.warning("COMPOSIO_API_KEY not configured - returning empty tools list")
+            return {
+                "success": True,
+                "tools": [],
+                "total_items": 0,
+                "current_page": 1,
+                "total_pages": 1,
+                "next_cursor": None
+            }
         tools_response = await toolkit_service.get_toolkit_tools(
             toolkit_slug=request.toolkit_slug,
             limit=request.limit,

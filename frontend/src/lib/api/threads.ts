@@ -255,6 +255,7 @@ export const getThreadsPaginated = async (projectId?: string, page: number = 1, 
     
     const response = await backendApi.get<{ threads: any[]; pagination: any }>(`/threads?${params.toString()}`, {
       showErrors: false,
+      timeout: 30000, // 30 seconds for complex threads + projects query
     });
 
     if (response.error) {
@@ -330,6 +331,7 @@ export const getThread = async (threadId: string): Promise<Thread> => {
   try {
     const response = await backendApi.get<Thread>(`/threads/${threadId}`, {
       showErrors: false,
+      timeout: 15000, // 15 seconds for thread query
     });
 
     if (response.error) {

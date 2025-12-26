@@ -61,8 +61,11 @@ async def get_user_threads(
     request: Request,
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     page: Optional[int] = Query(1, ge=1, description="Page number (1-based)"),
-    limit: Optional[int] = Query(100, ge=1, le=1000, description="Number of items per page (max 1000)")
+    limit: Optional[int] = Query(20, ge=1, le=100, description="Number of items per page (max 100)")
 ):
+    import time
+    start_time = time.time()
+
     logger.debug(f"Fetching threads with project data for user: {user_id} (page={page}, limit={limit})")
     client = await utils.db.client
     try:
@@ -93,39 +96,51 @@ async def get_user_threads(
             .order('created_at', desc=True)\
             .range(offset, offset + limit - 1)\
             .execute()
+
+        logger.debug(f"Threads query executed in {(time.time() - start_time):.2f}s - found {len(threads_result.data)} threads")
         
         paginated_threads = threads_result.data
         
-        project_ids = [
-            thread['project_id'] for thread in paginated_threads 
-            if thread.get('project_id')
-        ]
-        unique_project_ids = list(set(project_ids)) if project_ids else []
-        
+        # TEMPORARY: Skip project data loading to test if this is the bottleneck
+        # TODO: Re-enable project data loading once performance is optimized
         projects_by_id = {}
-        if unique_project_ids:
-            from core.utils.query_utils import batch_query_in
-            
-            # Optimized: Select only needed columns from projects table (exclude sandbox, description - they're large and only needed when viewing specific project)
-            projects_data = await batch_query_in(
-                client=client,
-                table_name='projects',
-                select_fields='project_id,name,icon_name,is_public,created_at,updated_at',
-                in_field='project_id',
-                in_values=unique_project_ids
-            )
-            
-            projects_by_id = {
-                project['project_id']: project 
-                for project in projects_data
-            }
+
+        # Original project loading code (commented out for performance testing):
+        # project_ids = [
+        #     thread['project_id'] for thread in paginated_threads
+        #     if thread.get('project_id')
+        # ]
+        # unique_project_ids = list(set(project_ids)) if project_ids else []
+        #
+        # projects_by_id = {}
+        # if unique_project_ids:
+        #     from core.utils.query_utils import batch_query_in
+        #
+        #     # Optimized: Select only needed columns from projects table (exclude sandbox, description - they're large and only needed when viewing specific project)
+        #     project_query_start = time.time()
+        #     projects_data = await batch_query_in(
+        #         client=client,
+        #         table_name='projects',
+        #         select_fields='project_id,name,icon_name,is_public,created_at,updated_at',
+        #         in_field='project_id',
+        #         in_values=unique_project_ids
+        #     )
+        #     project_query_time = time.time() - project_query_start
+        #
+        #     logger.debug(f"Projects query executed in {project_query_time:.2f}s for {len(unique_project_ids)} projects")
+        #
+        #     projects_by_id = {
+        #         project['project_id']: project
+        #         for project in projects_data
+        #     }
         
+        mapping_start = time.time()
         mapped_threads = []
         for thread in paginated_threads:
             project_data = None
             if thread.get('project_id') and thread['project_id'] in projects_by_id:
                 project = projects_by_id[thread['project_id']]
-                
+
                 # Optimized: Only include fields needed for list view (exclude sandbox, description - they're large and only needed when viewing specific project)
                 project_data = {
                     "project_id": project['project_id'],
@@ -143,12 +158,20 @@ async def get_user_threads(
                 "is_public": project_data.get('is_public', False) if project_data else False,
                 "created_at": _to_iso_z(thread.get('created_at')),
                 "updated_at": _to_iso_z(thread.get('updated_at')),
-                "project": project_data
+                "project": project_data  # Will be None when project loading is disabled
             }
             mapped_threads.append(mapped_thread)
+
+        mapping_time = time.time() - mapping_start
+        logger.debug(f"Thread mapping completed in {mapping_time:.2f}s")
         
         total_pages = (total_count + limit - 1) // limit if total_count else 0
-        
+
+        # Performance monitoring
+        end_time = time.time()
+        duration = end_time - start_time
+        logger.info(f"Threads query completed in {duration:.2f}s for user {user_id} (page={page}, limit={limit}, total_threads={total_count})")
+
         return {
             "threads": mapped_threads,
             "pagination": {
@@ -209,7 +232,14 @@ async def get_project(
                     logger.error(f"Project {project_id} has no associated account")
                     raise HTTPException(status_code=500, detail="Project has no associated account")
                 
-                account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+                try:
+                    # Try basejump schema first (for Supabase)
+                    account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+                except Exception as e:
+                    logger.warning(f"Failed to access basejump.account_user, trying public schema: {e}")
+                    # Fallback to public schema (for local PostgreSQL)
+                    account_user_result = await client.table('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+                
                 if not (account_user_result.data and len(account_user_result.data) > 0):
                     logger.error(f"User {user_id} not authorized to access project {project_id}")
                     raise HTTPException(status_code=403, detail="Not authorized to access this project")

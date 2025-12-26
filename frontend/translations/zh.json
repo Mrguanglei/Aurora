@@ -461,7 +461,8 @@
     "title": "Aurora ：您的自主AI工作器",
     "subtitle": "为复杂任务而构建，为一切而设计。终极AI助手，处理一切——从简单请求到超级复杂的项目。",
     "tryItOut": "试试看",
-    "Aurora Computer": "Aurora  Computer",
+    "kortixComputer": "Aurora 计算机",
+    "Aurora Computer": "Aurora 计算机",
     "running": "运行中",
     "workers": {
       "images": {

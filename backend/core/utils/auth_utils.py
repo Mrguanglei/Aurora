@@ -708,7 +708,13 @@ async def verify_sandbox_access_optional(client, sandbox_id: str, user_id: Optio
         raise HTTPException(status_code=500, detail="Project has no associated account")
     
     # Check if user is a member of the project's account
-    account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+    try:
+        # Try basejump schema first (for Supabase)
+        account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+    except Exception as e:
+        logger.warning(f"Failed to access basejump.account_user, trying public schema: {e}")
+        # Fallback to public schema (for local PostgreSQL)
+        account_user_result = await client.table('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
     
     if account_user_result.data and len(account_user_result.data) > 0:
         user_role = account_user_result.data[0].get('account_role')

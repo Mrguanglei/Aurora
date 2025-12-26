@@ -30,6 +30,8 @@ export function ReactQueryProvider({ children }: { children: React.ReactNode }) 
             retry: (failureCount, error: any) => {
               if (error?.status >= 400 && error?.status < 500) return false;
               if (error?.status === 404) return false;
+              // Don't retry timeout errors
+              if (error?.code === 'TIMEOUT' || error?.name === 'ApiError' && error?.code === 'TIMEOUT') return false;
               return failureCount < 3;
             },
             refetchOnMount: true,

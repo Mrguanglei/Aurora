@@ -169,7 +169,13 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
       queryKey: threadKeys.agentRuns(threadId),
       queryFn: () => getAgentRuns(threadId),
       enabled: open && !!threadId,
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        // Don't retry on 404 errors (thread not found)
+        if (error?.status === 404) {
+          return false;
+        }
+        return failureCount < 1;
+      },
     }))
   });
 
@@ -188,10 +194,16 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
   });
 
   const runningThreadsInfo: RunningThreadInfo[] = useMemo(() => {
-    return runningThreadIds.map((threadId, index) => {
-      const threadQuery = threadQueries[index];
-      const agentRunQuery = agentRunQueries[index];
-      const projectQuery = projectQueries[index];
+    return runningThreadIds
+      .map((threadId, index) => {
+        const threadQuery = threadQueries[index];
+        const agentRunQuery = agentRunQueries[index];
+        const projectQuery = projectQueries[index];
+
+        // Filter out threads that don't exist (404 errors)
+        if ((threadQuery.error as any)?.status === 404 || (agentRunQuery.error as any)?.status === 404) {
+          return null;
+        }
       
       const isLoading = threadQuery.isLoading || agentRunQuery.isLoading || projectQuery.isLoading;
       const hasError = threadQuery.isError || agentRunQuery.isError || projectQuery.isError;
@@ -219,6 +231,16 @@ export const AgentRunLimitDialog: React.FC<AgentRunLimitDialogProps> = ({
         isLoading,
         error: hasError,
       };
+    })
+    .filter((info): info is NonNullable<typeof info> => {
+      // Filter out threads that don't exist (404 errors)
+      const threadIndex = runningThreadIds.indexOf(info.threadId);
+      if (threadIndex === -1) return false;
+
+      const tQuery = threadQueries[threadIndex];
+      const aQuery = agentRunQueries[threadIndex];
+
+      return !((tQuery.error as any)?.status === 404 || (aQuery.error as any)?.status === 404);
     });
   }, [runningThreadIds, threadQueries, agentRunQueries, projectQueries]);
 

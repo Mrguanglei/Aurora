@@ -261,21 +261,28 @@ class ToolkitService:
             raise
     
     async def get_toolkit_icon(self, toolkit_slug: str) -> Optional[str]:
+        import asyncio
+
         try:
             if not self.is_available:
                 logger.warning("Composio client not available - cannot fetch toolkit icon")
                 return None
-            
+
             # logger.debug(f"Fetching toolkit icon for: {toolkit_slug}")
-            toolkit_response = self.client.toolkits.retrieve(toolkit_slug)
-            
+
+            # Add timeout to prevent hanging on slow Composio API calls
+            toolkit_response = await asyncio.wait_for(
+                self.client.toolkits.retrieve(toolkit_slug),
+                timeout=8.0  # 8 second timeout for icon requests (matching frontend timeout)
+            )
+
             if hasattr(toolkit_response, 'model_dump'):
                 toolkit_dict = toolkit_response.model_dump()
             elif hasattr(toolkit_response, '__dict__'):
                 toolkit_dict = toolkit_response.__dict__
             else:
                 toolkit_dict = dict(toolkit_response)
-            
+
             meta = toolkit_dict.get('meta', {})
             if isinstance(meta, dict):
                 logo = meta.get('logo')
@@ -283,10 +290,13 @@ class ToolkitService:
                 logo = meta.__dict__.get('logo')
             else:
                 logo = None
-            
+
             # logger.debug(f"Successfully fetched icon for {toolkit_slug}: {logo}")
             return logo
-            
+
+        except asyncio.TimeoutError:
+            logger.warning(f"Timeout fetching toolkit icon for {toolkit_slug} from Composio API")
+            return None
         except Exception as e:
             logger.error(f"Failed to get toolkit icon for {toolkit_slug}: {e}")
             return None

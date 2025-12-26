@@ -24,6 +24,9 @@ async def get_user_admin_role(
 
     target_admin_email = "mrguanglei@163.com"
 
+    import time
+    start_time = time.time()
+
     try:
         db = PostgresConnection()
         pool = await db.pool
@@ -63,6 +66,12 @@ async def get_user_admin_role(
         logger.debug(
             f"User roles endpoint: user_id={user_id}, email={email}, is_admin={is_admin_flag} -> non-admin"
         )
+
+        # Performance monitoring
+        end_time = time.time()
+        duration = end_time - start_time
+        logger.debug(f"User roles query completed in {duration:.3f}s for user {user_id}")
+
         return {
             "isAdmin": False,
             "role": None,

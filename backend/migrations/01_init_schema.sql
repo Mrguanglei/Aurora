@@ -209,6 +209,8 @@ CREATE TABLE IF NOT EXISTS projects (
     name VARCHAR(255) NOT NULL,
     is_public BOOLEAN DEFAULT false,
     icon_name TEXT,
+    description TEXT,
+    sandbox JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -518,6 +520,76 @@ CREATE TABLE IF NOT EXISTS user_mcp_credential_profiles (
 );
 
 -- ============================================================================
+-- 3.x. 创建 basejump schema 兼容层（本地部署使用）
+-- ============================================================================
+
+-- 创建 basejump schema（如果不存在）
+CREATE SCHEMA IF NOT EXISTS basejump;
+
+-- 创建 auth schema（必须在创建函数之前）
+CREATE SCHEMA IF NOT EXISTS auth;
+
+-- 创建 auth.uid() 函数（本地部署模拟）
+-- 注意：这个函数返回 NULL，因为本地部署通常不使用 RLS
+-- 如果需要 RLS 支持，需要配置 set_config 来设置当前用户
+CREATE OR REPLACE FUNCTION auth.uid()
+RETURNS UUID
+LANGUAGE SQL
+STABLE
+AS $$
+    SELECT NULLIF(current_setting('request.jwt.claim.sub', TRUE), '')::UUID;
+$$;
+
+-- 为 accounts 表创建视图（basejump.accounts -> public.accounts）
+CREATE OR REPLACE VIEW basejump.accounts AS SELECT * FROM public.accounts;
+
+-- 为 account_user 表创建视图（basejump.account_user -> public.account_user）
+CREATE OR REPLACE VIEW basejump.account_user AS SELECT * FROM public.account_user;
+
+-- 创建 has_role_on_account 函数（兼容 Supabase 的 RLS 策略）
+-- 这个函数检查当前用户是否在指定账户中拥有指定角色
+CREATE OR REPLACE FUNCTION basejump.has_role_on_account(
+    account_id UUID,
+    passed_in_role TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.account_user au
+        WHERE au.account_id = has_role_on_account.account_id
+          AND au.user_id = auth.uid()
+          AND (
+              passed_in_role IS NULL
+              OR au.account_role::TEXT = passed_in_role
+          )
+    );
+$$;
+
+-- 添加注释
+COMMENT ON SCHEMA basejump IS 'Compatibility schema for Supabase basejump functions and views (local deployment)';
+COMMENT ON SCHEMA auth IS 'Authentication schema for Supabase compatibility (local deployment)';
+COMMENT ON FUNCTION basejump.has_role_on_account IS 'Check if current user has a role on the specified account (Supabase compatibility)';
+COMMENT ON FUNCTION auth.uid IS 'Get current authenticated user ID from JWT claim (Supabase compatibility)';
+
+-- 用户反馈表
+CREATE TABLE IF NOT EXISTS feedback (
+    feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    thread_id UUID REFERENCES threads(thread_id) ON DELETE CASCADE,
+    message_id UUID REFERENCES messages(message_id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating DECIMAL(2,1) NOT NULL CHECK (rating >= 0.5 AND rating <= 5.0 AND rating % 0.5 = 0),
+    feedback_text TEXT,
+    help_improve BOOLEAN DEFAULT TRUE,
+    context JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- ============================================================================
 -- 4. 添加外键约束（需要在相关表创建后）
 -- ============================================================================
 
@@ -554,6 +626,7 @@ CREATE INDEX IF NOT EXISTS idx_account_user_user ON account_user(user_id);
 
 -- 项目表索引
 CREATE INDEX IF NOT EXISTS idx_projects_account_id ON projects(account_id);
+CREATE INDEX IF NOT EXISTS idx_projects_is_public ON projects(is_public);
 
 -- Agent表索引
 CREATE INDEX IF NOT EXISTS idx_agents_account_id ON agents(account_id);
@@ -659,6 +732,15 @@ CREATE INDEX IF NOT EXISTS idx_oauth_installations_installed_at ON oauth_install
 CREATE INDEX IF NOT EXISTS idx_credential_profiles_account_mcp ON user_mcp_credential_profiles(account_id, mcp_qualified_name);
 CREATE INDEX IF NOT EXISTS idx_credential_profiles_account_active ON user_mcp_credential_profiles(account_id, is_active) WHERE is_active = true;
 
+-- 用户反馈表索引
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_unique
+    ON feedback(thread_id, message_id, account_id)
+    WHERE thread_id IS NOT NULL AND message_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_feedback_thread_id ON feedback(thread_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_message_id ON feedback(message_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_account_id ON feedback(account_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON feedback(created_at DESC);
+
 -- ============================================================================
 -- 6. 创建所有触发器
 -- ============================================================================
@@ -691,6 +773,10 @@ CREATE TRIGGER trigger_add_creator_to_account
 DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
 CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 添加注释
+COMMENT ON COLUMN projects.sandbox IS 'Sandbox metadata including id, password, VNC URL, and website URL';
+COMMENT ON COLUMN projects.description IS 'Project description';
 
 -- Agent表触发器
 DROP TRIGGER IF EXISTS update_agents_updated_at ON agents;
@@ -756,6 +842,30 @@ CREATE TRIGGER update_oauth_installations_updated_at BEFORE UPDATE ON oauth_inst
 DROP TRIGGER IF EXISTS update_credential_profiles_updated_at ON user_mcp_credential_profiles;
 CREATE TRIGGER update_credential_profiles_updated_at BEFORE UPDATE ON user_mcp_credential_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- User Feedback表触发器
+CREATE OR REPLACE FUNCTION update_feedback_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc'::text, NOW());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_feedback_updated_at ON feedback;
+CREATE TRIGGER update_feedback_updated_at
+    BEFORE UPDATE ON feedback
+    FOR EACH ROW
+    EXECUTE FUNCTION update_feedback_updated_at();
+
+-- Comments
+COMMENT ON TABLE feedback IS 'Stores user feedback (ratings and comments). Can be associated with messages/threads or standalone.';
+COMMENT ON COLUMN feedback.rating IS 'Rating from 0.5 to 5.0 in 0.5 increments (half stars)';
+COMMENT ON COLUMN feedback.feedback_text IS 'Optional text feedback from the user';
+COMMENT ON COLUMN feedback.help_improve IS 'Whether the user wants to help improve the service';
+COMMENT ON COLUMN feedback.context IS 'Additional context/metadata as JSONB';
+COMMENT ON COLUMN feedback.thread_id IS 'Optional thread ID if feedback is associated with a thread';
+COMMENT ON COLUMN feedback.message_id IS 'Optional message ID if feedback is associated with a message';
 
 -- ============================================================================
 -- 迁移完成

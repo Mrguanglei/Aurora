@@ -102,7 +102,6 @@ export default function RootLayout({
       <head>
         {/* DNS prefetch for analytics (loaded later but resolve DNS early) */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-        <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
         
         {/* React Scan removed - causing initialization errors */}
@@ -125,29 +124,6 @@ export default function RootLayout({
         <meta name="twitter:site" content="@Aurora " />
         <link rel="canonical" href="https://Aurora .com" />
 
-        <Script id="facebook-pixel" strategy="lazyOnload">
-          {`
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-
-            fbq('init', '1385936776361131');
-            fbq('track', 'PageView');
-          `}
-        </Script>
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1385936776361131&ev=PageView&noscript=1"
-          />
-        </noscript>
 
 
         <script

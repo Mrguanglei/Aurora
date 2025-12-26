@@ -62,8 +62,13 @@ export const useComposioToolkitIcon = (toolkitSlug: string, options?: { enabled?
       return result;
     },
     enabled: options?.enabled !== undefined ? options.enabled : !!toolkitSlug,
-    staleTime: 60 * 60 * 1000,
-    retry: 2,
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+    gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
+    retry: false, // Disable retries for icon requests since they're not critical
+    retryOnMount: false, // Don't retry when component mounts
+    refetchOnMount: false, // Don't refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    refetchOnReconnect: false, // Don't refetch when reconnecting
   });
 };
 

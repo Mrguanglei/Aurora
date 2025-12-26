@@ -210,6 +210,7 @@ export const composioApi = {
       '/composio/categories',
       {
         errorContext: { operation: 'load categories', resource: 'Composio categories' },
+        timeout: 5000, // 5 seconds for categories
       }
     );
 
@@ -332,11 +333,24 @@ export const composioApi = {
   },
 
   async getToolkitIcon(toolkitSlug: string): Promise<{ success: boolean; icon_url?: string }> {
-    const response = await backendApi.get<{ success: boolean; toolkit_slug: string; icon_url?: string; message?: string }>(`/composio/toolkits/${toolkitSlug}/icon`);
-    return {
-      success: response.data.success,
-      icon_url: response.data.icon_url
-    };
+    try {
+      // Use reasonable timeout for icon requests since they're not critical
+      const response = await backendApi.get<{ success: boolean; toolkit_slug: string; icon_url?: string; message?: string }>(
+        `/composio/toolkits/${toolkitSlug}/icon`,
+        { timeout: 5000 } // 5 second timeout for non-critical icon requests
+      );
+      return {
+        success: response.success && response.data?.success,
+        icon_url: response.data?.icon_url
+      };
+    } catch (error) {
+      // Gracefully handle timeouts and other errors - return success: false instead of throwing
+      console.warn(`Failed to fetch toolkit icon for ${toolkitSlug}:`, error);
+      return {
+        success: false,
+        icon_url: undefined
+      };
+    }
   },
 
   async getToolkitDetails(toolkitSlug: string): Promise<DetailedComposioToolkitResponse> {
@@ -344,6 +358,7 @@ export const composioApi = {
       `/composio/toolkits/${toolkitSlug}/details`,
       {
         errorContext: { operation: 'get toolkit details', resource: 'Composio toolkit details' },
+        timeout: 8000, // 8 seconds for detailed toolkit info
       }
     );
 
