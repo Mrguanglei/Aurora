@@ -363,8 +363,8 @@ class TemplateService:
         client = await self._db.client
         update_data = {
             'is_public': True,
-            'marketplace_published_at': datetime.now(timezone.utc).isoformat(),
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'marketplace_published_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         }
         
         if usage_examples is not None:
@@ -388,7 +388,7 @@ class TemplateService:
         result = await client.table('agent_templates').update({
             'is_public': False,
             'marketplace_published_at': None,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }).eq('template_id', template_id)\
           .eq('creator_id', creator_id)\
           .execute()

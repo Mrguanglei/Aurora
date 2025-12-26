@@ -99,7 +99,7 @@ class ScheduleProvider(TriggerProvider):
                 "trigger_id": trigger.trigger_id,
                 "agent_id": trigger.agent_id,
                 "agent_prompt": trigger.config.get('agent_prompt'),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc)
             }
             
             headers: Dict[str, Any] = {
@@ -698,7 +698,7 @@ class ComposioEventProvider(TriggerProvider):
                 "composio_trigger_id": raw.get("id") or trigger.config.get("composio_trigger_id"),
                 "provider_event_id": provider_event_id,
                 "connected_account_id": connected_account_id,
-                "received_at": datetime.now(timezone.utc).isoformat(),
+                "received_at": datetime.now(timezone.utc),
             }
 
             agent_prompt = trigger.config.get("agent_prompt")

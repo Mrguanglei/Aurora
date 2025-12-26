@@ -528,7 +528,7 @@ class SandboxFilesTool(SandboxToolsBase):
                     
                     if "updated_at" in instructions:
                         from datetime import datetime
-                        original_wrapper["updated_at"] = datetime.now().isoformat()
+                        original_wrapper["updated_at"] = datetime.now(timezone.utc)
                     
                     new_content = json.dumps(original_wrapper, indent=2)
                 else:

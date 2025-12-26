@@ -27,7 +27,7 @@ class PresenceService:
     ) -> Tuple[Any, str]:
         # 本地部署不需要真正写入在线状态表，直接跳过 DB 操作，避免 schema 不一致报错
         if config.DISABLE_PRESENCE:
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(timezone.utc)
             logger.debug(
                 f"Skipping presence upsert for session {session_id} (presence disabled): "
                 f"account={account_id}, thread={active_thread_id}"
@@ -35,7 +35,7 @@ class PresenceService:
             return {}, now
 
         client = await self.db.client
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(timezone.utc)
         payload = {
             'session_id': session_id,
             'account_id': account_id,

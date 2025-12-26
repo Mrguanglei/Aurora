@@ -285,7 +285,7 @@ class JsonImportService:
             "version_count": 1,
             "metadata": {
                 "imported_from_json": True,
-                "import_date": datetime.now(timezone.utc).isoformat()
+                "import_date": datetime.now(timezone.utc)
             }
         }
         
@@ -386,7 +386,7 @@ async def export_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
             "description": config.get('description', ''),
             "tags": agent.get('tags', []),
             "export_metadata": export_metadata,
-            "exported_at": datetime.now(timezone.utc).isoformat()
+            "exported_at": datetime.now(timezone.utc)
         }
         
         logger.debug(f"Successfully exported agent {agent_id}")

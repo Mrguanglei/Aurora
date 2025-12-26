@@ -41,8 +41,7 @@ async def extract_memories_from_conversation(
         tier_name = "default"
         
         # Skip memory enabled check - billing removed
-        rpc_call = client.rpc('get_user_memory_enabled', {'p_account_id': account_id})
-        user_memory_result = await rpc_call.execute()
+        user_memory_result = await client.rpc('get_user_memory_enabled', {'p_account_id': account_id})
         user_memory_enabled = user_memory_result.data if user_memory_result.data is not None else True
         if not user_memory_enabled:
             logger.debug(f"Memory disabled by user {account_id}, skipping extraction")
@@ -82,7 +81,7 @@ async def extract_memories_from_conversation(
             logger.info(f"No memories extracted from thread {thread_id}")
             await client.table('memory_extraction_queue').update({
                 'status': ExtractionQueueStatus.COMPLETED.value,
-                'processed_at': datetime.now(timezone.utc).isoformat()
+                'processed_at': datetime.now(timezone.utc)
             }).eq('queue_id', queue_id).execute()
             return
         
@@ -102,7 +101,7 @@ async def extract_memories_from_conversation(
         
         await client.table('memory_extraction_queue').update({
             'status': ExtractionQueueStatus.COMPLETED.value,
-            'processed_at': datetime.now(timezone.utc).isoformat()
+            'processed_at': datetime.now(timezone.utc)
         }).eq('queue_id', queue_id).execute()
         
         logger.info(f"Successfully extracted {len(extracted_memories)} memories from thread {thread_id}")
@@ -113,7 +112,7 @@ async def extract_memories_from_conversation(
             await client.table('memory_extraction_queue').update({
                 'status': ExtractionQueueStatus.FAILED.value,
                 'error_message': str(e),
-                'processed_at': datetime.now(timezone.utc).isoformat()
+                'processed_at': datetime.now(timezone.utc)
             }).eq('thread_id', thread_id).eq('status', ExtractionQueueStatus.PROCESSING.value).execute()
         except:
             pass

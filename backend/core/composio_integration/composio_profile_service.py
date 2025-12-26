@@ -71,7 +71,7 @@ class ComposioProfileService:
             "redirect_url": redirect_url,
             "user_id": user_id,
             "connected_account_id": connected_account_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc)
         }
 
     async def _generate_unique_profile_name(self, base_name: str, account_id: str, mcp_qualified_name: str, client) -> str:

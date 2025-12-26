@@ -101,8 +101,8 @@ class OAuthTokenService:
             'encrypted_token': encoded_token,
             'token_hash': token_hash,
             'expires_at': expires_at.isoformat() if expires_at else None,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         }
         
         result = await client.table('google_oauth_tokens').insert(token_row).execute()
@@ -220,7 +220,7 @@ class OAuthTokenService:
     #     """
     #     client = await self._db.client
     #     await client.table('google_oauth_tokens').update({
-    #         'updated_at': datetime.now(timezone.utc).isoformat()
+    #         'updated_at': datetime.now(timezone.utc)
     #     }).eq('user_id', user_id)\
     #       .execute()
     

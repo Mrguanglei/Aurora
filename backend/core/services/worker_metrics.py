@@ -143,7 +143,7 @@ async def get_worker_metrics() -> dict:
             "threads_per_worker_task": THREADS_PER_WORKER_TASK,
             "worker_details": worker_details,
             "heartbeat_timeout_seconds": heartbeat_timeout_ms / 1000,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc)
         }
     except Exception as e:
         logger.error(f"Failed to get worker metrics: {e}")

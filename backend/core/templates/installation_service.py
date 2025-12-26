@@ -408,8 +408,8 @@ class InstallationService:
             'icon_color': template.icon_color or '#000000',
             'icon_background': template.icon_background or '#F3F4F6',
             'metadata': metadata,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         }
         
         await client.table('agents').insert(agent_data).execute()
@@ -554,8 +554,8 @@ class InstallationService:
                     'description': trigger.get('description'),
                     'is_active': trigger.get('is_active', True),
                     'config': clean_config,
-                    'created_at': datetime.now(timezone.utc).isoformat(),
-                    'updated_at': datetime.now(timezone.utc).isoformat()
+                    'created_at': datetime.now(timezone.utc),
+                    'updated_at': datetime.now(timezone.utc)
                 }
                 result = await client.table('agent_triggers').insert(trigger_data).execute()
                 if result.data:

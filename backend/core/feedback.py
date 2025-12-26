@@ -74,7 +74,7 @@ async def submit_feedback(
             "rating": float(feedback_data.rating),
             "feedback_text": feedback_data.feedback_text,
             "help_improve": feedback_data.help_improve,
-            "updated_at": datetime.now(timezone.utc).isoformat()
+            "updated_at": datetime.now(timezone.utc)
         }
         
         # Add optional fields
@@ -95,7 +95,7 @@ async def submit_feedback(
         else:
             # Insert new feedback
             feedback_payload["feedback_id"] = str(uuid.uuid4())
-            feedback_payload["created_at"] = datetime.now(timezone.utc).isoformat()
+            feedback_payload["created_at"] = datetime.now(timezone.utc)
             feedback_result = await client.table('feedback').insert(feedback_payload).execute()
             if not feedback_result.data:
                 raise HTTPException(status_code=500, detail="Failed to create feedback")

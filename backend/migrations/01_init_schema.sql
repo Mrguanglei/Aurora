@@ -682,6 +682,17 @@ CREATE INDEX IF NOT EXISTS idx_credential_profiles_account_active
 -- 辅助函数
 -- ============================================================================
 
+-- 获取用户记忆启用状态函数
+CREATE OR REPLACE FUNCTION get_user_memory_enabled(p_account_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN COALESCE(
+        (SELECT memory_enabled FROM accounts WHERE id = p_account_id),
+        TRUE
+    );
+END;
+$$ LANGUAGE plpgsql;
+
 -- 获取用户记忆统计函数
 CREATE OR REPLACE FUNCTION get_memory_stats(p_account_id UUID)
 RETURNS TABLE(
@@ -767,6 +778,8 @@ CREATE TABLE IF NOT EXISTS accounts (
     slug VARCHAR(255) UNIQUE,
     -- 是否为个人账户
     personal_account BOOLEAN DEFAULT false NOT NULL,
+    -- 记忆功能启用状态
+    memory_enabled BOOLEAN DEFAULT TRUE,
     -- 元数据
     public_metadata JSONB DEFAULT '{}'::jsonb,
     private_metadata JSONB DEFAULT '{}'::jsonb,

@@ -158,13 +158,13 @@ class SandboxPresentationTool(SandboxToolsBase):
                 "title": "Presentation", 
                 "description": "",
                 "slides": {},
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }
 
     async def _save_presentation_metadata(self, presentation_path: str, metadata: Dict):
         """Save presentation metadata"""
-        metadata["updated_at"] = datetime.now().isoformat()
+        metadata["updated_at"] = datetime.now(timezone.utc)
         metadata_path = f"{presentation_path}/metadata.json"
         await self.sandbox.fs.upload_file(json.dumps(metadata, indent=2).encode(), metadata_path)
 
@@ -242,8 +242,8 @@ class SandboxPresentationTool(SandboxToolsBase):
         metadata["presentation_name"] = presentation_name
         metadata["title"] = template_metadata.get("title", presentation_name)
         metadata["description"] = template_metadata.get("description", "")
-        metadata["created_at"] = datetime.now().isoformat()
-        metadata["updated_at"] = datetime.now().isoformat()
+        metadata["created_at"] = datetime.now(timezone.utc)
+        metadata["updated_at"] = datetime.now(timezone.utc)
         
         # Update slide paths to match new presentation name
         if "slides" in template_metadata:
@@ -255,7 +255,7 @@ class SandboxPresentationTool(SandboxToolsBase):
                     "filename": slide_filename,
                     "file_path": f"{self.presentations_dir}/{safe_name}/{slide_filename}",
                     "preview_url": f"/workspace/{self.presentations_dir}/{safe_name}/{slide_filename}",
-                    "created_at": datetime.now().isoformat()
+                    "created_at": datetime.now(timezone.utc)
                 }
             metadata["slides"] = updated_slides
         
@@ -652,7 +652,7 @@ class SandboxPresentationTool(SandboxToolsBase):
                 "filename": slide_filename,
                 "file_path": f"{self.presentations_dir}/{safe_name}/{slide_filename}",
                 "preview_url": f"/workspace/{self.presentations_dir}/{safe_name}/{slide_filename}",
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now(timezone.utc)
             }
             
             # Save updated metadata

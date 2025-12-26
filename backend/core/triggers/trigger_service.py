@@ -311,7 +311,7 @@ class TriggerService:
             'execution_variables': result.execution_variables,
             'error_message': result.error_message,
             'event_timestamp': event.timestamp.isoformat(),
-            'logged_at': datetime.now(timezone.utc).isoformat()
+            'logged_at': datetime.now(timezone.utc)
         }).execute()
 
 

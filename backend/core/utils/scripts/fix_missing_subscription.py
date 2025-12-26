@@ -233,7 +233,7 @@ async def fix_missing_subscription(user_email: str):
         'stripe_subscription_id': subscription.id,
         'billing_cycle_anchor': start_date.isoformat(),
         'next_credit_grant': next_grant.isoformat(),
-        'updated_at': datetime.now(timezone.utc).isoformat()
+        'updated_at': datetime.now(timezone.utc)
     }
     
     if is_commitment and commitment_duration > 0:

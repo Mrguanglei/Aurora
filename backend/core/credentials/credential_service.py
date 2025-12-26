@@ -160,7 +160,7 @@ class CredentialService:
         if existing.data:
             await client.table('user_mcp_credentials').update({
                 'is_active': False,
-                'updated_at': datetime.now(timezone.utc).isoformat()
+                'updated_at': datetime.now(timezone.utc)
             }).eq('credential_id', existing.data[0]['credential_id']).execute()
         
         result = await client.table('user_mcp_credentials').insert({
@@ -171,8 +171,8 @@ class CredentialService:
             'encrypted_config': encoded_config,
             'config_hash': config_hash,
             'is_active': True,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         }).execute()
         
         logger.debug(f"Stored credential {credential_id} for {mcp_qualified_name}")
@@ -215,7 +215,7 @@ class CredentialService:
         client = await self._db.client
         result = await client.table('user_mcp_credentials').update({
             'is_active': False,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }).eq('account_id', account_id)\
           .eq('mcp_qualified_name', mcp_qualified_name)\
           .eq('is_active', True)\

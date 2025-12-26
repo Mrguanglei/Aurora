@@ -79,7 +79,7 @@ class ProfileService:
         if is_default:
             await client.table('user_mcp_credential_profiles').update({
                 'is_default': False,
-                'updated_at': datetime.now(timezone.utc).isoformat()
+                'updated_at': datetime.now(timezone.utc)
             }).eq('account_id', account_id)\
               .eq('mcp_qualified_name', mcp_qualified_name)\
               .execute()
@@ -94,8 +94,8 @@ class ProfileService:
             'config_hash': config_hash,
             'is_active': True,
             'is_default': is_default,
-            'created_at': datetime.now(timezone.utc).isoformat(),
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc)
         }).execute()
         
         logger.debug(f"Stored profile {profile_id} '{profile_name}' for {mcp_qualified_name}")
@@ -165,14 +165,14 @@ class ProfileService:
         
         await client.table('user_mcp_credential_profiles').update({
             'is_default': False,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }).eq('account_id', account_id)\
           .eq('mcp_qualified_name', profile.mcp_qualified_name)\
           .execute()
         
         result = await client.table('user_mcp_credential_profiles').update({
             'is_default': True,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }).eq('profile_id', profile_id)\
           .eq('account_id', account_id)\
           .execute()

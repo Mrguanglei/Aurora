@@ -123,13 +123,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # 浏览器需要通过主机端口访问 backend
-        - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
+        # 在Docker网络中，前端通过backend服务名连接
+        - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
         - NEXT_PUBLIC_ENV_MODE=staging
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
       - BACKEND_URL=http://backend:8011/v1  # 服务端使用的内部 URL
       - NEXT_PUBLIC_ENV_MODE=staging
       - TZ=Asia/Shanghai

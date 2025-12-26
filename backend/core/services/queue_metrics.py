@@ -54,7 +54,7 @@ async def get_queue_metrics() -> dict:
             "queue_depth": queue_depth,
             "delay_queue_depth": delay_queue_depth,
             "dead_letter_depth": dead_letter_depth,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc)
         }
     except Exception as e:
         logger.error(f"Failed to get queue metrics: {e}")

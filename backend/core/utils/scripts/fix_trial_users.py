@@ -65,7 +65,7 @@ async def fix_trial_users():
             update_result = await client.from_('credit_accounts').update({
                 'non_expiring_credits': float(corrected_non_expiring),
                 'expiring_credits': float(corrected_expiring),
-                'updated_at': datetime.now(timezone.utc).isoformat()
+                'updated_at': datetime.now(timezone.utc)
             }).eq('account_id', account_id).execute()
             
             if update_result.data:

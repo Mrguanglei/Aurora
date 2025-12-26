@@ -527,40 +527,55 @@ async def create_sandbox(password: str, project_id: Optional[str] = None) -> Tup
         
         # Create container with port mappings
         # For Ubuntu base image, use a simple keep-alive command and create workspace
-        container = client.containers.run(
-            image_name,
-            name=container_name,
-            detach=True,
-            command=['sh', '-c', 'mkdir -p /workspace && tail -f /dev/null'],  # Create workspace and keep container running
-            working_dir='/workspace',
-            ports={
+
+        # Debug: Check all parameters for UUID objects
+        create_kwargs = {
+            'image': image_name,
+            'name': container_name,
+            'detach': True,
+            'command': ['sh', '-c', 'mkdir -p /workspace && tail -f /dev/null'],
+            'working_dir': '/workspace',
+            'ports': {
                 '6080/tcp': port_6080,
-                '8888/tcp': port_8080,  # Changed container port from 8080 to 8888 to avoid conflicts
+                '8888/tcp': port_8080,
                 '9222/tcp': port_9222,
                 '8004/tcp': port_8004,
-                '5901/tcp': None,  # VNC port (not exposed to host)
+                '5901/tcp': None,
             },
-            environment={
+            'environment': {
                 'TZ': 'Asia/Shanghai',
             },
-            volumes={
+            'volumes': {
                 '/tmp/.X11-unix': {'bind': '/tmp/.X11-unix', 'mode': 'rw'},
             },
-            shm_size='2gb',
-            cap_add=['SYS_ADMIN'],
-            security_opt=['seccomp=unconfined'],
-            labels={
-                'project_id': project_id or 'none',
+            'shm_size': '2gb',
+            'cap_add': ['SYS_ADMIN'],
+            'security_opt': ['seccomp=unconfined'],
+            'labels': {
+                'project_id': str(project_id) if project_id else 'none',
                 'type': 'aurora-sandbox',
             },
-            restart_policy={'Name': 'unless-stopped'},
-            healthcheck={
-                'Test': ['CMD', 'test', '-d', '/workspace'],
-                'Interval': 10000000000,  # 10 seconds in nanoseconds
-                'Timeout': 5000000000,    # 5 seconds
-                'Retries': 3,
-            }
-        )
+            'restart_policy': {'Name': 'unless-stopped'},
+        }
+
+        # Check for UUID objects in create_kwargs
+        import json
+        from core.services.supabase import UUIDEncoder
+        try:
+            json.dumps(create_kwargs, cls=UUIDEncoder)
+            print("All create_kwargs are JSON serializable")
+        except TypeError as e:
+            print(f"JSON serialization failed: {e}")
+            # Try to find UUID objects
+            for key, value in create_kwargs.items():
+                try:
+                    json.dumps(value, cls=UUIDEncoder)
+                except TypeError:
+                    print(f"Non-serializable value in {key}: {value} (type: {type(value)})")
+            raise
+
+        print(f"About to call containers.run with image: {image_name}")
+        container = client.containers.run(**create_kwargs)
         
         # Wait for container to be healthy
         await _wait_for_container_ready(container, max_retries=30)

@@ -72,7 +72,7 @@ class CleanupFreeTierService:
                         'balance_after': 0,
                         'type': 'adjustment',
                         'description': 'Free tier discontinued - please start a trial to continue',
-                        'created_at': datetime.now(timezone.utc).isoformat()
+                        'created_at': datetime.now(timezone.utc)
                     })
             
             if account_ids:
@@ -89,7 +89,7 @@ class CleanupFreeTierService:
                                 'expiring_credits': 0,
                                 'non_expiring_credits': 0,
                                 'trial_status': None,
-                                'updated_at': datetime.now(timezone.utc).isoformat()
+                                'updated_at': datetime.now(timezone.utc)
                             })\
                             .in_('account_id', chunk_ids)\
                             .execute()

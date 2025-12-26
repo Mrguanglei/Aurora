@@ -124,8 +124,7 @@ async def get_memory_stats(
         
         await db.initialize()
         client = await db.client
-        rpc_call = client.rpc('get_user_memory_enabled', {'p_account_id': user_id})
-        memory_enabled_result = await rpc_call.execute()
+        memory_enabled_result = await client.rpc('get_user_memory_enabled', {'p_account_id': user_id})
         memory_enabled = memory_enabled_result.data if memory_enabled_result.data is not None else True
         
         return MemoryStatsResponse(
@@ -263,8 +262,7 @@ async def get_memory_settings(
         await db.initialize()
         client = await db.client
         
-        rpc_call = client.rpc('get_user_memory_enabled', {'p_account_id': user_id})
-        result = await rpc_call.execute()
+        result = await client.rpc('get_user_memory_enabled', {'p_account_id': user_id})
         memory_enabled = result.data if result.data is not None else True
         
         return MemorySettingsResponse(memory_enabled=memory_enabled)
@@ -304,8 +302,7 @@ async def get_thread_memory_settings(
         await db.initialize()
         client = await db.client
         
-        rpc_call = client.rpc('get_thread_memory_enabled', {'p_thread_id': thread_id})
-        result = await rpc_call.execute()
+        result = await client.rpc('get_thread_memory_enabled', {'p_thread_id': thread_id})
         memory_enabled = result.data if result.data is not None else True
         
         return ThreadMemorySettingsResponse(thread_id=thread_id, memory_enabled=memory_enabled)

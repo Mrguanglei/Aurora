@@ -26,23 +26,23 @@ def list_models() -> List[Dict]:
                 "configured": True,
             })
 
-        # Doubao
+        # Doubao (通过OpenAI兼容API)
         doubao_key = getattr(config, "DOUBAO_API_KEY", None)
         doubao_base = getattr(config, "DOUBAO_API_BASE", None)
         doubao_name = getattr(config, "DOUBAO_MODEL_NAME", None) or "doubao-seed-1-6-251015"
         if doubao_key or doubao_base:
             models.append({
-                "id": f"doubao/{doubao_name}",
+                "id": f"openai/{doubao_name}",
                 "label": f"Doubao ({doubao_name})",
-                "provider": "doubao",
+                "provider": "openai",
                 "configured": True,
             })
         else:
             # include unconfigured entry (frontend may choose to hide or show disabled)
             models.append({
-                "id": f"doubao/{doubao_name}",
+                "id": f"openai/{doubao_name}",
                 "label": f"Doubao ({doubao_name})",
-                "provider": "doubao",
+                "provider": "openai",
                 "configured": False,
             })
 

@@ -135,7 +135,7 @@ class StripeSubscriptionSyncV2:
                 'tier': tier.name,
                 'stripe_subscription_id': sub.id,
                 'billing_cycle_anchor': datetime.fromtimestamp(sub.created).isoformat() if sub.created else None,
-                'updated_at': datetime.now(timezone.utc).isoformat()
+                'updated_at': datetime.now(timezone.utc)
             }
             
             if sub.current_period_end:

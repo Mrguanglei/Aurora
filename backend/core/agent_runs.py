@@ -742,7 +742,7 @@ async def start_agent_run(
                 "project_id": project_id,
                 "account_id": account_id,
                 "name": placeholder_name,
-                "created_at": datetime.now(timezone.utc).isoformat()
+                "created_at": datetime.now(timezone.utc)
             }).execute()
             project_created_here = True
             logger.debug(f"⏱️ [TIMING] Project created: {(time.time() - t_project) * 1000:.1f}ms")
@@ -816,7 +816,7 @@ async def start_agent_run(
             "type": "user",
             "is_llm_message": True,
             "content": {"role": "user", "content": final_message_content},
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc)
         }).execute()
         logger.debug(f"Created user message for thread {thread_id}")
     
@@ -931,7 +931,7 @@ async def unified_agent_start(
                     "project_id": project_id,
                     "account_id": account_id,
                     "name": placeholder_name,
-                    "created_at": datetime.now(timezone.utc).isoformat()
+                    "created_at": datetime.now(timezone.utc)
                 }).execute()
                 
                 # Pre-cache and start naming task

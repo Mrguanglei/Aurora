@@ -240,19 +240,30 @@ class SandboxWebSearchTool(SandboxToolsBase):
         # Use API keys from config
         self.firecrawl_api_key = config.FIRECRAWL_API_KEY
         self.firecrawl_url = config.FIRECRAWL_URL
-        
+        self.tavily_api_key = getattr(config, 'TAVILY_API_KEY', None)
+
+        # Try to initialize QuarkSearch, fallback to Tavily if not available
+        self.quark_search = None
+        self.use_tavily_fallback = False
+
         # Get QuarkSearch base URL from config or use default
         quark_base_url = getattr(config, 'QUARK_SEARCH_URL', None)
         # Ensure we have a valid URL (not None, not empty string)
         if not quark_base_url or not isinstance(quark_base_url, str) or not quark_base_url.strip():
             quark_base_url = 'http://192.168.1.204:9018/search'
-        
-        logging.info(f"Initializing QuarkSearch with URL: {quark_base_url}")
+
+        logging.info(f"Trying to initialize QuarkSearch with URL: {quark_base_url}")
         try:
             self.quark_search = QuarkSearch(base_url=quark_base_url)
+            logging.info("QuarkSearch initialized successfully")
         except Exception as e:
-            logging.error(f"Failed to initialize QuarkSearch: {e}")
-            raise
+            logging.warning(f"Failed to initialize QuarkSearch: {e}")
+            if self.tavily_api_key:
+                logging.info("Falling back to Tavily API for search functionality")
+                self.use_tavily_fallback = True
+            else:
+                logging.error("Neither QuarkSearch nor Tavily API available - search functionality will not work")
+                raise
         
         if not self.firecrawl_api_key:
             logging.warning("FIRECRAWL_API_KEY not configured - Web Scraping Tool will not be available")
@@ -263,7 +274,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "web_search",
-            "description": "Search the web for up-to-date information using local QuarkSearch API. IMPORTANT: For batch searches, pass query as a native array like [\"query1\", \"query2\"], NOT as a JSON string. For num_results, pass an integer like 5, NOT a string like \"5\". This tool supports both single and batch queries for efficient research. You can search for multiple topics simultaneously by providing an array of queries, which executes searches concurrently for faster results. Use batch mode when researching multiple related topics, gathering comprehensive information, or performing parallel searches. Results include titles, URLs, and snippets.",
+            "description": "Search the web for up-to-date information using QuarkSearch API (with Tavily fallback). IMPORTANT: For batch searches, pass query as a native array like [\"query1\", \"query2\"], NOT as a JSON string. For num_results, pass an integer like 5, NOT a string like \"5\". This tool supports both single and batch queries for efficient research. You can search for multiple topics simultaneously by providing an array of queries, which executes searches concurrently for faster results. Use batch mode when researching multiple related topics, gathering comprehensive information, or performing parallel searches. Results include titles, URLs, and snippets.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -420,32 +431,70 @@ class SandboxWebSearchTool(SandboxToolsBase):
     
     async def _execute_single_search(self, query: str, num_results: int) -> dict:
         """
-        Helper function to execute a single search query using QuarkSearch.
-        
+        Helper function to execute a single search query using QuarkSearch or Tavily fallback.
+
         Parameters:
         - query: The search query string
         - num_results: Number of results to return
-        
+
         Returns:
         - dict with success status, results, answer, images, and full response
         """
         try:
-            # Use QuarkSearch instead of Tavily
-            search_result = await self.quark_search.search(
-                query=query,
-                max_results=num_results,
-                snippet_length=1000
-            )
-            
-            # Extract results
-            results = search_result.get('results', [])
-            answer = search_result.get('answer', '')
-            images = search_result.get('images', [])
-            success = search_result.get('success', False)
-            response = search_result.get('response', {})
-            
-            logging.info(f"Retrieved search results for query: '{query}' - {len(results)} results")
-            
+            if self.quark_search and not self.use_tavily_fallback:
+                # Use QuarkSearch
+                search_result = await self.quark_search.search(
+                    query=query,
+                    max_results=num_results,
+                    snippet_length=1000
+                )
+
+                # Extract results
+                results = search_result.get('results', [])
+                answer = search_result.get('answer', '')
+                images = search_result.get('images', [])
+                success = search_result.get('success', False)
+                response = search_result.get('response', {})
+
+                logging.info(f"Retrieved search results for query: '{query}' - {len(results)} results (QuarkSearch)")
+            else:
+                # Use Tavily fallback
+                import httpx
+
+                tavily_url = "https://api.tavily.com/search"
+                headers = {
+                    "Authorization": f"Bearer {self.tavily_api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "query": query,
+                    "max_results": num_results,
+                    "include_answer": True,
+                    "include_images": True
+                }
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(tavily_url, json=payload, headers=headers)
+                    response.raise_for_status()
+                    search_data = response.json()
+
+                # Convert Tavily format to QuarkSearch compatible format
+                results = []
+                for result in search_data.get('results', []):
+                    results.append({
+                        'title': result.get('title', ''),
+                        'url': result.get('url', ''),
+                        'snippet': result.get('content', ''),
+                        'score': result.get('score', 0.0)
+                    })
+
+                answer = search_data.get('answer', '')
+                images = search_data.get('images', [])
+                success = True
+                response = search_data
+
+                logging.info(f"Retrieved search results for query: '{query}' - {len(results)} results (Tavily fallback)")
+
             return {
                 "success": success,
                 "results": results,

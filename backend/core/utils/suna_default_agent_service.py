@@ -146,7 +146,7 @@ class SunaDefaultAgentService:
             "metadata": {
                 "is_suna_default": True,
                 "centrally_managed": True,
-                "installation_date": datetime.now(timezone.utc).isoformat()
+                "installation_date": datetime.now(timezone.utc)
             },
             "version_count": 1
         }

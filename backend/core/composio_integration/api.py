@@ -206,7 +206,7 @@ class ProfileResponse(BaseModel):
             connected_account_id=getattr(profile, 'connected_account_id', None),
             is_connected=profile.is_connected,
             is_default=profile.is_default,
-            created_at=profile.created_at.isoformat() if profile.created_at else datetime.now().isoformat()
+            created_at=profile.created_at.isoformat() if profile.created_at else datetime.now(timezone.utc)
         )
 
 

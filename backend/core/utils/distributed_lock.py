@@ -165,7 +165,7 @@ class WebhookLock:
                     logger.warning(f"[WEBHOOK] Event {event_id} marked as completed but force_reprocess=True - resetting to processing")
                     await client.from_('webhook_events').update({
                         'status': 'processing',
-                        'processing_started_at': datetime.now(timezone.utc).isoformat(),
+                        'processing_started_at': datetime.now(timezone.utc),
                         'retry_count': event.get('retry_count', 0) + 1,
                         'error_message': None  # Clear any previous error
                     }).eq('id', event['id']).execute()
@@ -192,7 +192,7 @@ class WebhookLock:
                             # Now retry it
                             await client.from_('webhook_events').update({
                                 'status': 'processing',
-                                'processing_started_at': datetime.now(timezone.utc).isoformat(),
+                                'processing_started_at': datetime.now(timezone.utc),
                                 'retry_count': event.get('retry_count', 0) + 1
                             }).eq('id', event['id']).execute()
                             return True, None
@@ -205,7 +205,7 @@ class WebhookLock:
                 logger.info(f"[WEBHOOK] Retrying previously failed event {event_id}")
                 await client.from_('webhook_events').update({
                     'status': 'processing',
-                    'processing_started_at': datetime.now(timezone.utc).isoformat(),
+                    'processing_started_at': datetime.now(timezone.utc),
                     'retry_count': event.get('retry_count', 0) + 1
                 }).eq('id', event['id']).execute()
                 return True, None
@@ -215,7 +215,7 @@ class WebhookLock:
                     'event_id': event_id,
                     'event_type': event_type,
                     'status': 'processing',
-                    'processing_started_at': datetime.now(timezone.utc).isoformat(),
+                    'processing_started_at': datetime.now(timezone.utc),
                     'payload': payload
                 }).execute()
                 logger.info(f"[WEBHOOK] Started processing new event {event_id}")
@@ -241,7 +241,7 @@ class WebhookLock:
                             logger.info(f"[WEBHOOK] Race condition resolved - event {event_id} failed, retrying")
                             await client.from_('webhook_events').update({
                                 'status': 'processing',
-                                'processing_started_at': datetime.now(timezone.utc).isoformat(),
+                                'processing_started_at': datetime.now(timezone.utc),
                                 'retry_count': race_event.get('retry_count', 0) + 1
                             }).eq('id', race_event['id']).execute()
                             return True, None
@@ -265,7 +265,7 @@ class WebhookLock:
                                     logger.info(f"[WEBHOOK] Race condition resolved - event {event_id} failed, retrying")
                                     await client.from_('webhook_events').update({
                                         'status': 'processing',
-                                        'processing_started_at': datetime.now(timezone.utc).isoformat(),
+                                        'processing_started_at': datetime.now(timezone.utc),
                                         'retry_count': recheck.data[0].get('retry_count', 0) + 1
                                     }).eq('id', recheck.data[0]['id']).execute()
                                     return True, None
@@ -287,7 +287,7 @@ class WebhookLock:
         
         await client.from_('webhook_events').update({
             'status': 'completed',
-            'processed_at': datetime.now(timezone.utc).isoformat()
+            'processed_at': datetime.now(timezone.utc)
         }).eq('event_id', event_id).execute()
         
         logger.info(f"[WEBHOOK] Marked event {event_id} as completed")
@@ -309,7 +309,7 @@ class WebhookLock:
             await client.from_('webhook_events').update({
                 'status': 'failed',
                 'error_message': safe_error_message,
-                'processed_at': datetime.now(timezone.utc).isoformat()
+                'processed_at': datetime.now(timezone.utc)
             }).eq('event_id', event_id).execute()
             
             logger.error(f"[WEBHOOK] Marked event {event_id} as failed: {safe_error_message}")

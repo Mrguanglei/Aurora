@@ -382,10 +382,10 @@ async def create_thread(
         
         project_name = name or "New Project"
         project = await client.table('projects').insert({
-            "project_id": str(uuid.uuid4()), 
-            "account_id": account_id, 
+            "project_id": str(uuid.uuid4()),
+            "account_id": account_id,
             "name": project_name,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc)
         }).execute()
         project_id = project.data[0]['project_id']
         logger.debug(f"Created new project: {project_id}")
@@ -397,15 +397,9 @@ async def create_thread(
             sandbox_id = sandbox.id
             logger.debug(f"Created new sandbox {sandbox_id} for project {project_id}")
             
-            vnc_link = await sandbox.get_preview_link(6080)
-            website_link = await sandbox.get_preview_link(8888)
-            vnc_url = vnc_link.url if hasattr(vnc_link, 'url') else str(vnc_link).split("url='")[1].split("'")[0]
-            website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
-            token = None
-            if hasattr(vnc_link, 'token'):
-                token = vnc_link.token
-            elif "token='" in str(vnc_link):
-                token = str(vnc_link).split("token='")[1].split("'")[0]
+            vnc_url = await sandbox.get_preview_link(6080)
+            website_url = await sandbox.get_preview_link(8888)
+            token = None  # No token for local Docker sandboxes
         except Exception as e:
             logger.error(f"Error creating sandbox: {str(e)}")
             await client.table('projects').delete().eq('project_id', project_id).execute()
@@ -451,10 +445,10 @@ async def create_thread(
             logger.warning(f"Failed to update project cache: {cache_error}")
 
         thread_data = {
-            "thread_id": str(uuid.uuid4()), 
-            "project_id": project_id, 
+            "thread_id": str(uuid.uuid4()),
+            "project_id": project_id,
             "account_id": account_id,
-            "created_at": datetime.now(timezone.utc).isoformat()  # 转换为 ISO 格式字符串
+            "created_at": datetime.now(timezone.utc)
         }
 
         from core.utils.logger import structlog
@@ -476,7 +470,7 @@ async def create_thread(
             pass
 
         logger.debug(f"Successfully created thread {thread_id} with project {project_id}")
-        return {"thread_id": thread_id, "project_id": project_id}
+        return {"thread_id": str(thread_id), "project_id": str(project_id)}
 
     except Exception as e:
         logger.error(f"Error creating thread: {str(e)}\n{traceback.format_exc()}")
@@ -651,7 +645,7 @@ async def create_message(
             "type": message_data.type,
             "is_llm_message": message_data.is_llm_message,
             "content": message_payload,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc)
         }
         
         message_result = await client.table('messages').insert(insert_data).execute()

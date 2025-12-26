@@ -182,7 +182,7 @@ async def fix_user_account(user_data, credit_account, stripe_data, client, dry_r
             'trial_status': 'none',
             'billing_cycle_anchor': billing_anchor.isoformat(),
             'next_credit_grant': next_grant.isoformat(),
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }
         
         await client.from_('credit_accounts').update(update_data).eq('account_id', account_id).execute()

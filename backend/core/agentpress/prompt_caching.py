@@ -98,7 +98,7 @@ async def store_threshold(thread_id: str, threshold: int, model: str, reason: st
             'system_prompt_tokens': system_prompt_tokens,
             'last_calc_turn': turn,
             'last_calc_reason': reason,
-            'updated_at': datetime.now(timezone.utc).isoformat()
+            'updated_at': datetime.now(timezone.utc)
         }
         
         # Write back

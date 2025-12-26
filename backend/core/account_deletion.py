@@ -57,7 +57,7 @@ async def request_account_deletion(
         deletion_request = await client.table('account_deletion_requests').insert({
             'account_id': account_id,
             'user_id': user_id,
-            'deletion_scheduled_for': deletion_date.isoformat(),
+            'deletion_scheduled_for': deletion_date,
             'reason': body.reason,
             'is_cancelled': False,
             'is_deleted': False
@@ -107,7 +107,7 @@ async def cancel_account_deletion(
         # Cancel by updating the flag (no individual jobs to cancel anymore)
         await client.table('account_deletion_requests').update({
             'is_cancelled': True,
-            'cancelled_at': datetime.now(timezone.utc).isoformat()
+            'cancelled_at': datetime.now(timezone.utc)
         }).eq('id', request_id).execute()
         
         # 已删除账单系统 - 无需处理订阅

@@ -141,7 +141,7 @@ def to_json_string(value: Any) -> str:
             return json.dumps(value)
     
     # For all other types, convert to JSON
-    return json.dumps(value)
+    return json.dumps(value, default=str)
 
 
 def to_json_string_fast(value: Any) -> str:

@@ -12,9 +12,9 @@ SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPI
 # Actual model IDs for LiteLLM
 SHOULD_USE_DOUBAO = bool(getattr(config, 'DOUBAO_API_KEY', None))
 if SHOULD_USE_DOUBAO:
-    # 使用豆包模型
-    _BASIC_MODEL_ID = f"doubao/{getattr(config, 'DOUBAO_MODEL_NAME', 'doubao-seed-1-6-251015')}"
-    _POWER_MODEL_ID = f"doubao/{getattr(config, 'DOUBAO_MODEL_NAME', 'doubao-seed-1-6-251015')}"
+    # 使用豆包模型 (通过OpenAI兼容API)
+    _BASIC_MODEL_ID = f"openai/{getattr(config, 'DOUBAO_MODEL_NAME', 'doubao-seed-1-6-251015')}"
+    _POWER_MODEL_ID = f"openai/{getattr(config, 'DOUBAO_MODEL_NAME', 'doubao-seed-1-6-251015')}"
 elif SHOULD_USE_ANTHROPIC:
     _BASIC_MODEL_ID = "anthropic/claude-haiku-4-5-20251001"
     _POWER_MODEL_ID = "anthropic/claude-sonnet-4-5-20250929"

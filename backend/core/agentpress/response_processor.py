@@ -503,7 +503,7 @@ class ResponseProcessor:
             if auto_continue_count == 0:
                 start_content = {"status_type": "thread_run_start"}
                 # Yield immediately, save to DB in background (non-blocking)
-                now_start = datetime.now(timezone.utc).isoformat()
+                now_start = datetime.now(timezone.utc)
                 yield {
                     "message_id": None, "thread_id": thread_id, "type": "status",
                     "is_llm_message": False,
@@ -521,10 +521,10 @@ class ResponseProcessor:
                 "llm_response_id": llm_response_id,
                 "auto_continue_count": auto_continue_count,
                 "model": llm_model,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc)
             }
             # Yield immediately, save to DB in background (non-blocking)
-            now_llm_start = datetime.now(timezone.utc).isoformat()
+            now_llm_start = datetime.now(timezone.utc)
             yield {
                 "message_id": None, "thread_id": thread_id, "type": "llm_response_start",
                 "is_llm_message": False,
@@ -561,7 +561,7 @@ class ResponseProcessor:
             # Pre-build metadata and timestamp for content chunks (HOT PATH optimization)
             # This avoids json.dumps() and datetime.now() calls per chunk
             _chunk_metadata_cached = to_json_string_fast({"stream_status": "chunk", "thread_run_id": thread_run_id})
-            _stream_start_time = datetime.now(timezone.utc).isoformat()
+            _stream_start_time = datetime.now(timezone.utc)
             
             async for chunk in llm_response:
                 # Check for cancellation before processing each chunk
@@ -819,7 +819,7 @@ class ResponseProcessor:
                                     transformed_tc = self._transform_streaming_execute_tool_call(tc)
                                     transformed_unified_tool_calls.append(transformed_tc)
                                 
-                                now_tool_chunk = datetime.now(timezone.utc).isoformat()
+                                now_tool_chunk = datetime.now(timezone.utc)
                                 assistant_metadata = {
                                     "thread_run_id": thread_run_id,
                                     "stream_status": "tool_call_chunk",

@@ -59,7 +59,7 @@ async def fix_null_trial_status():
                 await client.from_('credit_accounts')\
                     .update({
                         'trial_status': 'none',
-                        'updated_at': datetime.now(timezone.utc).isoformat()
+                        'updated_at': datetime.now(timezone.utc)
                     })\
                     .in_('account_id', none_status_users)\
                     .execute()
@@ -75,7 +75,7 @@ async def fix_null_trial_status():
                 await client.from_('credit_accounts')\
                     .update({
                         'trial_status': 'converted',
-                        'updated_at': datetime.now(timezone.utc).isoformat()
+                        'updated_at': datetime.now(timezone.utc)
                     })\
                     .in_('account_id', converted_status_users)\
                     .execute()

@@ -145,7 +145,7 @@ class FastSyncService:
                     'tier': tier.name,
                     'stripe_subscription_id': sub.id,
                     'billing_cycle_anchor': datetime.fromtimestamp(sub.created).isoformat() if sub.created else None,
-                    'updated_at': datetime.now(timezone.utc).isoformat()
+                    'updated_at': datetime.now(timezone.utc)
                 }
                 
                 if sub.current_period_end:
@@ -198,7 +198,7 @@ class FastSyncService:
                         'balance_after': 0,
                         'type': 'adjustment',
                         'description': 'Free tier discontinued - please start a trial to continue',
-                        'created_at': datetime.now(timezone.utc).isoformat()
+                        'created_at': datetime.now(timezone.utc)
                     })
             
             if account_ids:
@@ -214,7 +214,7 @@ class FastSyncService:
                                 'expiring_credits': 0,
                                 'non_expiring_credits': 0,
                                 'trial_status': None,
-                                'updated_at': datetime.now(timezone.utc).isoformat()
+                                'updated_at': datetime.now(timezone.utc)
                             })\
                             .in_('account_id', chunk_ids)\
                             .execute()
