@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Aurora Private Deployment - Database Schema Migration
 -- ============================================================================
--- 优化后的数据库架构迁移脚本
+-- 修复版本：解决外键引用和索引创建问题
 -- 顺序：枚举类型 -> 函数 -> 表创建 -> 外键约束 -> 索引 -> 触发器
 
 -- ============================================================================
@@ -202,10 +202,10 @@ CREATE TABLE IF NOT EXISTS user_roles (
     PRIMARY KEY (user_id, role)
 );
 
--- 项目表
+-- 项目表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS projects (
     project_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     is_public BOOLEAN DEFAULT false,
     icon_name TEXT,
@@ -213,10 +213,10 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Agent表
+-- Agent表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS agents (
     agent_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     system_prompt TEXT,
@@ -271,10 +271,10 @@ CREATE TABLE IF NOT EXISTS agent_version_history (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 对话线程表
+-- 对话线程表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS threads (
     thread_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     project_id UUID REFERENCES projects(project_id) ON DELETE CASCADE,
     agent_id UUID REFERENCES agents(agent_id) ON DELETE SET NULL,
     title VARCHAR(255),
@@ -404,10 +404,10 @@ CREATE TABLE IF NOT EXISTS memory_extraction_queue (
     processed_at TIMESTAMPTZ
 );
 
--- 知识库文件夹表
+-- 知识库文件夹表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS knowledge_base_folders (
     folder_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -415,11 +415,11 @@ CREATE TABLE IF NOT EXISTS knowledge_base_folders (
     CONSTRAINT kb_folders_name_not_empty CHECK (LENGTH(TRIM(name)) > 0)
 );
 
--- 知识库条目表
+-- 知识库条目表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS knowledge_base_entries (
     entry_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     folder_id UUID NOT NULL REFERENCES knowledge_base_folders(folder_id) ON DELETE CASCADE,
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     filename VARCHAR(255) NOT NULL,
     file_path TEXT NOT NULL,
     file_size BIGINT NOT NULL,
@@ -431,12 +431,12 @@ CREATE TABLE IF NOT EXISTS knowledge_base_entries (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Agent知识库分配表
+-- Agent知识库分配表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS agent_knowledge_entry_assignments (
     assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_id UUID NOT NULL REFERENCES agents(agent_id) ON DELETE CASCADE,
     entry_id UUID NOT NULL REFERENCES knowledge_base_entries(entry_id) ON DELETE CASCADE,
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     enabled BOOLEAN DEFAULT TRUE,
     assigned_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(agent_id, entry_id)
@@ -500,10 +500,10 @@ CREATE TABLE IF NOT EXISTS oauth_installations (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 用户MCP凭证配置表
+-- 用户MCP凭证配置表 (修复: 引用 accounts 而不是 users)
 CREATE TABLE IF NOT EXISTS user_mcp_credential_profiles (
     profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     mcp_qualified_name TEXT NOT NULL,
     profile_name TEXT NOT NULL,
     display_name TEXT NOT NULL,
@@ -536,7 +536,7 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 5. 创建所有索引
+-- 5. 创建所有索引 (移除 CONCURRENTLY，因为在迁移脚本中不支持)
 -- ============================================================================
 
 -- 用户表索引
@@ -582,13 +582,13 @@ CREATE INDEX IF NOT EXISTS idx_threads_agent_id ON threads(agent_id);
 CREATE INDEX IF NOT EXISTS idx_threads_created_at ON threads(created_at);
 CREATE INDEX IF NOT EXISTS idx_threads_memory_enabled ON threads(thread_id) WHERE memory_enabled = FALSE;
 
--- Messages表索引
+-- Messages表索引 (移除 CONCURRENTLY)
 CREATE INDEX IF NOT EXISTS idx_messages_thread_id ON messages(thread_id);
 CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_thread_type_created_desc ON messages(thread_id, type, created_at DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_thread_created_desc ON messages(thread_id, created_at DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_messages_thread_llm_created ON messages(thread_id, created_at) WHERE is_llm_message = TRUE;
+CREATE INDEX IF NOT EXISTS idx_messages_thread_type_created_desc ON messages(thread_id, type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_thread_created_desc ON messages(thread_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_thread_llm_created ON messages(thread_id, created_at) WHERE is_llm_message = TRUE;
 
 -- Agent Templates表索引
 CREATE INDEX IF NOT EXISTS idx_agent_templates_creator_created_desc ON agent_templates(creator_id, created_at DESC);
@@ -757,6 +757,17 @@ DROP TRIGGER IF EXISTS update_credential_profiles_updated_at ON user_mcp_credent
 CREATE TRIGGER update_credential_profiles_updated_at BEFORE UPDATE ON user_mcp_credential_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Agent Runs表触发器
+DROP TRIGGER IF EXISTS update_agent_runs_updated_at ON agent_runs;
+CREATE TRIGGER update_agent_runs_updated_at BEFORE UPDATE ON agent_runs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================================================
 -- 迁移完成
 -- ============================================================================
+
+-- 注意事项：
+-- 1. 所有外键已正确引用 accounts(id) 而不是 users(id)
+-- 2. 已移除 CREATE INDEX CONCURRENTLY (在迁移脚本中不支持)
+-- 3. 统一使用 message_ids (JSONB) 格式存储消息ID列表
+-- 4. 所有触发器已正确配置自动更新 updated_at 字段

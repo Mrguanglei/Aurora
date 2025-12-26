@@ -35,7 +35,6 @@ services:
       PGTZ: Asia/Shanghai  # PostgreSQL specific timezone setting
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aurora_user -d aurora_db"]
       interval: 10s
@@ -81,6 +80,7 @@ services:
       - REDIS_SSL=False
       - TZ=Asia/Shanghai
       - ENV_MODE=staging
+      - RUN_MIGRATIONS=true  # 只有backend服务运行迁移
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,6 +109,7 @@ services:
       - REDIS_SSL=False
       - TZ=Asia/Shanghai
       - ENV_MODE=staging
+      - RUN_MIGRATIONS=false  # worker服务不运行迁移
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,14 +124,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # 在Docker网络中，前端通过backend服务名连接
-        - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
+        # 在Docker网络中，前端通过localhost服务名连接
+        - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
         - NEXT_PUBLIC_ENV_MODE=staging
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://backend:8011/v1
-      - BACKEND_URL=http://backend:8011/v1  # 服务端使用的内部 URL
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8011/v1
+      - BACKEND_URL=http://localhost:8011/v1  # 服务端使用的内部 URL
       - NEXT_PUBLIC_ENV_MODE=staging
       - TZ=Asia/Shanghai
     depends_on:

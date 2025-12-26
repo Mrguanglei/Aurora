@@ -52,8 +52,9 @@ class PostgresConnection:
             self._initialized = True
             logger.info("✅ PostgreSQL 连接池初始化成功")
             
-            # 运行数据库迁移（仅执行一次）
-            if not PostgresConnection._migration_done:
+            # 运行数据库迁移（仅执行一次，根据环境变量控制）
+            run_migrations = os.getenv('RUN_MIGRATIONS', 'true').lower() == 'true'
+            if run_migrations and not PostgresConnection._migration_done:
                 with PostgresConnection._migration_lock:
                     if not PostgresConnection._migration_done:
                         await self._run_migrations()
@@ -71,37 +72,46 @@ class PostgresConnection:
                 "migrations",
                 "01_init_schema.sql"
             )
-            
+
             if not os.path.exists(migration_file):
                 logger.warning(f"⚠️  迁移文件不存在: {migration_file}")
                 return
-            
+
             logger.debug(f"Loading migration file from: {migration_file}")
             with open(migration_file, 'r', encoding='utf-8') as f:
                 migration_sql = f.read()
-            
+
             # 智能分割 SQL 语句，正确处理 $$ 美元引号
             statements = self._split_sql_statements(migration_sql)
             logger.debug(f"Found {len(statements)} SQL statements")
-            
+
             pool = await self.pool
             async with pool.acquire() as conn:
-                for i, statement in enumerate(statements):
-                    try:
-                        await conn.execute(statement)
-                        logger.debug(f"Executed migration statement {i+1}/{len(statements)}")
-                    except Exception as e:
-                        error_msg = str(e).lower()
-                        # 忽略 "already exists" 类的错误（包括触发器、表、索引等）
-                        # 因为我们使用了 IF NOT EXISTS 或 DROP IF EXISTS
-                        if ("already exists" not in error_msg and 
-                            "duplicate" not in error_msg and
-                            "trigger" not in error_msg):
-                            logger.warning(f"⚠️  执行 SQL 语句时出错 ({i+1}): {statement[:80]}... Error: {e}")
-                        else:
-                            # 静默忽略已存在的对象错误
-                            logger.debug(f"跳过已存在的对象: {statement[:60]}...")
-            
+                # 使用数据库级别的advisory lock防止并发迁移
+                # 锁ID: 123456789 (任意唯一数字)
+                await conn.execute("SELECT pg_advisory_lock(123456789)")
+
+                try:
+                    for i, statement in enumerate(statements):
+                        try:
+                            await conn.execute(statement)
+                            logger.debug(f"Executed migration statement {i+1}/{len(statements)}")
+                        except Exception as e:
+                            error_msg = str(e).lower()
+                            # 忽略 "already exists" 类的错误（包括触发器、表、索引等）
+                            # 因为我们使用了 IF NOT EXISTS 或 DROP IF EXISTS
+                            if ("already exists" not in error_msg and
+                                "duplicate" not in error_msg and
+                                "trigger" not in error_msg and
+                                "does not exist" not in error_msg):  # 也忽略不存在的对象
+                                logger.warning(f"⚠️  执行 SQL 语句时出错 ({i+1}): {statement[:80]}... Error: {e}")
+                            else:
+                                # 静默忽略已存在的对象错误
+                                logger.debug(f"跳过已存在的对象: {statement[:60]}...")
+                finally:
+                    # 确保释放锁
+                    await conn.execute("SELECT pg_advisory_unlock(123456789)")
+
             logger.info("✅ 数据库迁移执行成功")
         except Exception as e:
             logger.error(f"❌ 数据库迁移错误: {e}", exc_info=True)
@@ -109,65 +119,36 @@ class PostgresConnection:
     
     @staticmethod
     def _split_sql_statements(sql_content: str) -> list:
-        """智能分割 SQL 语句，正确处理 $$ 美元引号
-        
-        PostgreSQL 允许使用 $tag$ 作为字符串分隔符，常用于函数定义。
-        我们需要避免在这些引号内部分割语句。
-        """
+        """简单分割 SQL 语句，按分号分割并处理美元引号"""
+        # 预处理：将美元引号内容替换为占位符
+        import re
+
+        # 匹配 $$ ... $$ 或 $tag$ ... $tag$ 的内容
+        dollar_pattern = r'\$\$[\s\S]*?\$\$|\$[a-zA-Z_][a-zA-Z0-9_]*\$[\s\S]*?\$[a-zA-Z_][a-zA-Z0-9_]*\$'
+
+        placeholders = []
+        def replace_dollar(match):
+            placeholders.append(match.group(0))
+            return f"__DOLLAR_PLACEHOLDER_{len(placeholders)-1}__"
+
+        # 替换美元引号内容
+        processed_content = re.sub(dollar_pattern, replace_dollar, sql_content)
+
+        # 按分号分割
+        raw_statements = processed_content.split(';')
+
         statements = []
-        current_statement = []
-        in_dollar_quote = False
-        dollar_tag = None
-        i = 0
-        
-        while i < len(sql_content):
-            # 检查美元引号的开始或结束
-            if sql_content[i] == '$':
-                # 找到美元标签（例如 $$ 或 $func_name$）
-                j = i + 1
-                tag_chars = []
-                while j < len(sql_content) and sql_content[j] != '$':
-                    tag_chars.append(sql_content[j])
-                    j += 1
-                
-                if j < len(sql_content):  # 找到了闭合的 $
-                    found_tag = ''.join(tag_chars)
-                    
-                    if not in_dollar_quote:
-                        # 进入美元引号
-                        in_dollar_quote = True
-                        dollar_tag = found_tag
-                        current_statement.append(sql_content[i:j+1])
-                        i = j + 1
-                        continue
-                    elif found_tag == dollar_tag:
-                        # 退出美元引号
-                        in_dollar_quote = False
-                        dollar_tag = None
-                        current_statement.append(sql_content[i:j+1])
-                        i = j + 1
-                        continue
-            
-            # 检查语句分隔符（仅在不在美元引号内时）
-            if not in_dollar_quote and sql_content[i] == ';':
-                current_statement.append(';')
-                stmt = ''.join(current_statement).strip()
-                # 过滤掉空语句和纯注释语句
-                if stmt and not stmt.startswith('--'):
-                    statements.append(stmt)
-                current_statement = []
-                i += 1
+        for stmt in raw_statements:
+            stmt = stmt.strip()
+            if not stmt or stmt.startswith('--'):
                 continue
-            
-            current_statement.append(sql_content[i])
-            i += 1
-        
-        # 处理最后一个语句（可能没有以 ; 结尾）
-        stmt = ''.join(current_statement).strip()
-        # 过滤掉空语句和纯注释语句
-        if stmt and not stmt.startswith('--'):
-            statements.append(stmt)
-        
+
+            # 恢复美元引号内容
+            for i, placeholder in enumerate(placeholders):
+                stmt = stmt.replace(f"__DOLLAR_PLACEHOLDER_{i}__", placeholder)
+
+            statements.append(stmt + ';')
+
         return statements
 
     @classmethod
