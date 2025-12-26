@@ -469,6 +469,7 @@ async def create_thread(
         except Exception:
             pass
 
+
         logger.debug(f"Successfully created thread {thread_id} with project {project_id}")
         return {"thread_id": str(thread_id), "project_id": str(project_id)}
 

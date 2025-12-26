@@ -138,6 +138,8 @@ services:
         condition: service_started
     networks:
       - aurora-network
+    # Force clean rebuild to ensure environment variables are embedded correctly
+    pull_policy: build
 
 volumes:
   postgres_data:
